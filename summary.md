@@ -1,6 +1,6 @@
 # Project Summary
 
-Summary of the work done on Multiplication Trainer: the cleanup pass and the new-feature work so far.
+Summary of the work done on Timez (the Multiplication Trainer): the cleanup pass and the new-feature work so far.
 
 ## 1. Cleanup and fixes (complete)
 

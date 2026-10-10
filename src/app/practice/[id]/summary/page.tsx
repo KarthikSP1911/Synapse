@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { and, asc, desc, eq, gt, isNotNull, ne } from "drizzle-orm";
+import { ArrowRight, BarChart3, Check, Trophy } from "lucide-react";
 import { db } from "@/db";
 import { practiceSessions, questionAttempts } from "@/db/schema";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { buttonVariants } from "@/components/ui/button";
+import { Page, StatTile } from "@/components/page-header";
 import ReviewButton from "@/components/review-button";
 import { parseId } from "@/lib/validation";
 
@@ -13,6 +16,14 @@ export const metadata = { title: "Session summary" };
 function formatDuration(ms: number) {
   const total = Math.max(0, Math.round(ms / 1000));
   return `${Math.floor(total / 60)}m ${String(total % 60).padStart(2, "0")}s`;
+}
+
+function verdict(accuracy: number) {
+  if (accuracy >= 95) return "Outstanding";
+  if (accuracy >= 85) return "Great work";
+  if (accuracy >= 70) return "Solid session";
+  if (accuracy >= 50) return "Getting there";
+  return "Keep practising";
 }
 
 export default async function SummaryPage({ params }: { params: Promise<{ id: string }> }) {
@@ -58,43 +69,44 @@ export default async function SummaryPage({ params }: { params: Promise<{ id: st
           ? `${session.targetQuestionCount} questions`
           : "Endless";
   const elapsed = session.endedAt ? formatDuration(session.endedAt.getTime() - session.startedAt.getTime()) : "—";
-
-  const tiles = [
-    { label: session.mode === "timed" ? "Score" : "Correct", value: `${session.totalCorrect} / ${session.actualQuestionCount}` },
-    { label: "Accuracy", value: `${session.accuracy}%` },
-    { label: "Avg response", value: `${(session.averageResponseTimeMs / 1000).toFixed(1)}s` },
-    { label: "Time", value: elapsed },
-  ];
+  const answered = session.actualQuestionCount > 0;
 
   return (
-    <div className="space-y-8 max-w-3xl mx-auto">
-      <div>
-        <div className="flex items-center gap-3">
-          <h1 className="text-3xl font-bold tracking-tight">Session summary</h1>
+    <Page narrow>
+      <div className="space-y-3">
+        <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">{modeLabel}</p>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+            {answered ? verdict(session.accuracy) : "Session summary"}
+          </h1>
           {isRecord && (
-            <span className="rounded-full bg-primary/15 text-primary text-xs font-semibold px-2.5 py-1">New record!</span>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-warning-soft px-3 py-1 text-xs font-medium text-warning">
+              <Trophy className="size-3.5" /> New personal best
+            </span>
           )}
         </div>
-        <p className="text-muted-foreground">
-          {modeLabel}
-          {bestPrevious !== null && bestPrevious > 0 && ` · previous best ${bestPrevious}`}
-        </p>
+        {bestPrevious !== null && bestPrevious > 0 && (
+          <p className="text-muted-foreground">Previous best for this length: {bestPrevious} correct.</p>
+        )}
       </div>
 
-      {session.actualQuestionCount === 0 ? (
-        <p className="text-muted-foreground">No questions were answered in this session.</p>
+      {!answered ? (
+        <div className="rounded-xl border border-dashed border-border p-10 text-center text-muted-foreground">
+          No questions were answered in this session.
+        </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {tiles.map(({ label, value }) => (
-            <Card key={label}>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold tabular-nums">{value}</div>
-              </CardContent>
-            </Card>
-          ))}
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
+          <StatTile
+            label={session.mode === "timed" ? "Score" : "Correct"}
+            value={`${session.totalCorrect}/${session.actualQuestionCount}`}
+          />
+          <StatTile
+            label="Accuracy"
+            value={`${session.accuracy}%`}
+            tone={session.accuracy >= 85 ? "success" : session.accuracy >= 60 ? "warning" : "danger"}
+          />
+          <StatTile label="Avg response" value={`${(session.averageResponseTimeMs / 1000).toFixed(1)}s`} />
+          <StatTile label="Time" value={elapsed} />
         </div>
       )}
 
@@ -105,18 +117,27 @@ export default async function SummaryPage({ params }: { params: Promise<{ id: st
         </CardHeader>
         <CardContent>
           {missed.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              {session.actualQuestionCount > 0 ? "Perfect session, nothing missed!" : "Nothing to review."}
+            <p className="flex items-center gap-2 text-sm text-muted-foreground">
+              {answered ? (
+                <>
+                  <Check className="size-4 text-success" /> Perfect session, nothing missed.
+                </>
+              ) : (
+                "Nothing to review."
+              )}
             </p>
           ) : (
-            <ul className="divide-y divide-border">
+            <ul className="-my-1 divide-y divide-border">
               {missed.map((m) => (
-                <li key={m.id} className="flex items-center justify-between py-2 text-sm">
-                  <span className="font-bold text-base">
-                    {m.leftNumber} &times; {m.rightNumber} = {m.correctAnswer}
+                <li key={m.id} className="flex items-center justify-between gap-4 py-3 text-sm">
+                  <span className="font-mono text-base font-semibold tabular-nums">
+                    {m.leftNumber} × {m.rightNumber} = {m.correctAnswer}
                   </span>
                   <span className="text-muted-foreground">
-                    you answered <span className="text-destructive font-medium">{m.userAnswer}</span>
+                    You answered{" "}
+                    <span className="rounded bg-destructive-soft px-1.5 py-0.5 font-mono font-medium text-destructive">
+                      {m.userAnswer}
+                    </span>
                   </span>
                 </li>
               ))}
@@ -126,22 +147,14 @@ export default async function SummaryPage({ params }: { params: Promise<{ id: st
       </Card>
 
       <div className="flex flex-wrap items-start gap-3">
-        {missed.length > 0 && (
-          <ReviewButton source={{ reviewSessionId: sessionId }} label="Retry missed" />
-        )}
-        <Link
-          href="/"
-          className="h-10 px-5 inline-flex items-center rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:brightness-110"
-        >
-          Practice again
+        <Link href="/" className={buttonVariants({ size: "lg" })}>
+          Practice again <ArrowRight />
         </Link>
-        <Link
-          href="/progress"
-          className="h-10 px-5 inline-flex items-center rounded-lg border border-border text-sm font-medium hover:bg-secondary"
-        >
-          View progress
+        {missed.length > 0 && <ReviewButton source={{ reviewSessionId: sessionId }} label="Retry missed" variant="outline" className="h-11 px-6 text-[15px]" />}
+        <Link href="/progress" className={buttonVariants({ variant: "outline", size: "lg" })}>
+          <BarChart3 /> View progress
         </Link>
       </div>
-    </div>
+    </Page>
   );
 }

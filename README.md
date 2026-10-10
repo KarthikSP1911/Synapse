@@ -1,6 +1,6 @@
-# Multiplication Trainer
+# Timez
 
-An adaptive multiplication practice app. Choose the numbers (1–20) you want to drill, pick a session length, and the trainer records your accuracy and speed for every pair, then steers practice toward the facts you find hardest.
+Timez is an adaptive multiplication practice app. Choose the numbers (1–20) you want to drill, pick a session length, and the trainer records your accuracy and speed for every pair, then steers practice toward the facts you find hardest.
 
 ## Features
 

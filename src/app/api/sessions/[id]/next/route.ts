@@ -48,6 +48,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       ...question,
       startedAt: session.startedAt.toISOString(),
       durationSeconds: session.durationSeconds,
+      targetQuestionCount: session.targetQuestionCount,
+      answeredCount: session.actualQuestionCount,
     });
   } catch (error) {
     console.error("Failed to get next question:", error);

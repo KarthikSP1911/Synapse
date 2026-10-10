@@ -2,91 +2,113 @@ import { db } from "@/db";
 import { pairStatistics } from "@/db/schema";
 import type { InferSelectModel } from "drizzle-orm";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Page, PageHeader } from "@/components/page-header";
+import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = { title: "Tables" };
 
+const numbers = Array.from({ length: 20 }, (_, i) => i + 1);
+
+/** Weakness score: 0 = mastered, 100 = critical. Colour is paired with the number, never used alone. */
+const bands = [
+  { max: 20, label: "Strong", cell: "bg-success/25 text-success", swatch: "bg-success/25" },
+  { max: 40, label: "Good", cell: "bg-success/12 text-success", swatch: "bg-success/12" },
+  { max: 60, label: "Developing", cell: "bg-warning/18 text-warning", swatch: "bg-warning/18" },
+  { max: 80, label: "Weak", cell: "bg-destructive/15 text-destructive", swatch: "bg-destructive/15" },
+  { max: 101, label: "Critical", cell: "bg-destructive/30 text-destructive", swatch: "bg-destructive/30" },
+] as const;
+
+const bandFor = (score: number) => bands.find((b) => score < b.max) ?? bands[bands.length - 1];
+
 export default async function TablesPage() {
   const pairs = await db.select().from(pairStatistics);
 
-  // create a lookup map
   const pairMap = new Map<string, InferSelectModel<typeof pairStatistics>>();
   for (const p of pairs) {
     pairMap.set(`${p.leftNumber}x${p.rightNumber}`, p);
   }
 
-  const numbers = Array.from({ length: 20 }, (_, i) => i + 1);
-
-  // Helper to determine color based on weakness score
-  // Low score (0) = strong = green/neutral
-  // High score (100) = critical = red/orange
-  const getColor = (score?: number) => {
-    if (score === undefined) return "bg-card"; // not attempted
-    if (score < 20) return "bg-green-500/20 text-green-500 border-green-500/30";
-    if (score < 40) return "bg-emerald-500/20 text-emerald-500 border-emerald-500/30";
-    if (score < 60) return "bg-yellow-500/20 text-yellow-500 border-yellow-500/30";
-    if (score < 80) return "bg-orange-500/20 text-orange-500 border-orange-500/30";
-    return "bg-destructive/20 text-destructive border-destructive/30";
-  };
+  const attempted = pairs.filter((p) => p.totalAttempts > 0).length;
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Tables Performance</h1>
-        <p className="text-muted-foreground">Interactive heatmap of all multiplication pairs. Red indicates weak areas needing practice.</p>
-      </div>
+    <Page>
+      <PageHeader
+        eyebrow="Heatmap"
+        title="Times tables"
+        description="Every multiplication pair from 1×1 to 20×20. Lower scores mean you know the pair well; higher scores need more practice."
+      />
 
       <Card>
         <CardHeader>
-          <CardTitle>Performance Matrix</CardTitle>
-          <CardDescription>Hover over a cell to see detailed pair statistics.</CardDescription>
+          <CardTitle>Performance matrix</CardTitle>
+          <CardDescription>
+            {attempted} of 400 pairs attempted. Hover or focus a cell for accuracy and speed.
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto pb-4">
-            <div className="inline-block min-w-max">
-              {/* Header row */}
-              <div className="flex">
-                <div className="w-12 h-12 flex items-center justify-center font-bold border-b border-r border-border bg-muted/50">&times;</div>
-                {numbers.map(n => (
-                  <div key={`header-${n}`} className="w-12 h-12 flex items-center justify-center font-bold border-b border-border bg-muted/20">
-                    {n}
-                  </div>
+          <div className="-mx-1 overflow-x-auto pb-2">
+            <table className="mx-1 border-separate border-spacing-[3px] text-xs" aria-label="Weakness score by multiplication pair">
+              <thead>
+                <tr>
+                  <th scope="col" className="size-9 rounded-md bg-secondary font-mono text-muted-foreground sm:size-10">
+                    ×
+                  </th>
+                  {numbers.map((n) => (
+                    <th key={n} scope="col" className="size-9 font-mono font-medium text-muted-foreground sm:size-10">
+                      {n}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {numbers.map((left) => (
+                  <tr key={left}>
+                    <th scope="row" className="size-9 font-mono font-medium text-muted-foreground sm:size-10">
+                      {left}
+                    </th>
+                    {numbers.map((right) => {
+                      const pair = pairMap.get(`${left}x${right}`);
+                      const tried = pair && pair.totalAttempts > 0;
+                      return (
+                        <td
+                          key={right}
+                          tabIndex={tried ? 0 : undefined}
+                          title={
+                            tried
+                              ? `${left} × ${right}\nAccuracy: ${pair.accuracy}%\nAvg time: ${(pair.averageResponseTimeMs / 1000).toFixed(1)}s\nScore: ${pair.weaknessScore}`
+                              : `${left} × ${right} · not attempted`
+                          }
+                          className={cn(
+                            "size-9 rounded-md text-center font-mono tabular-nums transition-transform sm:size-10",
+                            tried
+                              ? cn(bandFor(pair.weaknessScore).cell, "cursor-default hover:scale-110 hover:ring-1 hover:ring-foreground/30")
+                              : "bg-secondary/60 text-muted-foreground/40"
+                          )}
+                        >
+                          {tried ? pair.weaknessScore : "·"}
+                        </td>
+                      );
+                    })}
+                  </tr>
                 ))}
-              </div>
-              
-              {/* Grid */}
-              {numbers.map(left => (
-                <div key={`row-${left}`} className="flex">
-                  <div className="w-12 h-12 flex items-center justify-center font-bold border-r border-border bg-muted/20">
-                    {left}
-                  </div>
-                  {numbers.map(right => {
-                    const pairData = pairMap.get(`${left}x${right}`);
-                    
-                    return (
-                      <div 
-                        key={`cell-${left}-${right}`}
-                        title={pairData ? `${left} × ${right}\nAccuracy: ${pairData.accuracy}%\nAvg Time: ${pairData.averageResponseTimeMs}ms\nScore: ${pairData.weaknessScore}` : "Unattempted"}
-                        className={`w-12 h-12 flex items-center justify-center text-xs border border-border/50 transition-colors hover:brightness-125 ${getColor(pairData?.weaknessScore)}`}
-                      >
-                        {pairData?.weaknessScore !== undefined ? pairData.weaknessScore : "-"}
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
-            </div>
+              </tbody>
+            </table>
           </div>
-          
-          <div className="flex items-center space-x-6 mt-8 text-sm">
-            <div className="flex items-center space-x-2"><div className="w-4 h-4 bg-green-500/20 border border-green-500/30"></div><span>Strong</span></div>
-            <div className="flex items-center space-x-2"><div className="w-4 h-4 bg-yellow-500/20 border border-yellow-500/30"></div><span>Developing</span></div>
-            <div className="flex items-center space-x-2"><div className="w-4 h-4 bg-destructive/20 border border-destructive/30"></div><span>Critical</span></div>
-            <div className="flex items-center space-x-2"><div className="w-4 h-4 bg-card border border-border"></div><span>Unattempted</span></div>
-          </div>
+
+          <ul className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-border pt-5 text-xs text-muted-foreground">
+            {bands.map((b) => (
+              <li key={b.label} className="flex items-center gap-2">
+                <span className={cn("size-3.5 rounded", b.swatch)} /> {b.label}
+              </li>
+            ))}
+            <li className="flex items-center gap-2">
+              <span className="size-3.5 rounded bg-secondary/60" /> Not attempted
+            </li>
+          </ul>
         </CardContent>
       </Card>
-    </div>
+    </Page>
   );
 }

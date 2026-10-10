@@ -1,15 +1,17 @@
 import SettingsForm from "@/components/settings-form";
+import { Page, PageHeader } from "@/components/page-header";
 
 export const metadata = { title: "Settings" };
 
 export default function SettingsPage() {
   return (
-    <div className="space-y-8">
-      <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground">Manage your training preferences. They are stored in this browser.</p>
-      </div>
+    <Page narrow>
+      <PageHeader
+        eyebrow="Preferences"
+        title="Settings"
+        description="Tune how questions are chosen. Preferences are stored in this browser."
+      />
       <SettingsForm />
-    </div>
+    </Page>
   );
 }

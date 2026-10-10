@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { RotateCcw } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { loadSettings } from "@/lib/settings";
+import { Button } from "@/components/ui/button";
 
 type ReviewSource = { reviewSessionId: number } | { reviewRecentDays: number };
 
@@ -12,10 +12,11 @@ interface ReviewButtonProps {
   source: ReviewSource;
   label: string;
   variant?: "primary" | "outline";
+  className?: string;
 }
 
 /** Starts a review session made of the pairs answered wrong in the given source. */
-export default function ReviewButton({ source, label, variant = "primary" }: ReviewButtonProps) {
+export default function ReviewButton({ source, label, variant = "primary", className }: ReviewButtonProps) {
   const router = useRouter();
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,20 +47,16 @@ export default function ReviewButton({ source, label, variant = "primary" }: Rev
 
   return (
     <div className="space-y-2">
-      <button
+      <Button
         type="button"
+        variant={variant === "primary" ? "default" : "outline"}
         onClick={start}
         disabled={starting}
-        className={cn(
-          "h-10 px-5 inline-flex items-center gap-2 rounded-lg text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed",
-          variant === "primary"
-            ? "bg-primary text-primary-foreground hover:brightness-110"
-            : "border border-border font-medium hover:bg-secondary"
-        )}
+        className={className}
       >
-        <RotateCcw className="h-4 w-4" />
+        <RotateCcw />
         {starting ? "Starting…" : label}
-      </button>
+      </Button>
       {error && (
         <p role="alert" className="text-sm text-destructive">
           {error}

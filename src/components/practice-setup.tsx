@@ -2,74 +2,120 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Zap } from "lucide-react";
+import { ArrowRight, Infinity as InfinityIcon, ListOrdered, Timer } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { loadSettings } from "@/lib/settings";
+import { Button } from "@/components/ui/button";
 import ReviewButton from "@/components/review-button";
 
 const numbers = Array.from({ length: 20 }, (_, i) => i + 1);
-const sessionModes = [
-  { value: "endless", label: "∞ Endless" },
-  { value: "10",      label: "10 Qs" },
-  { value: "20",      label: "20 Qs" },
-  { value: "30",      label: "30 Qs" },
-  { value: "50",      label: "50 Qs" },
-  { value: "100",     label: "100 Qs" },
+
+const countModes = [
+  { value: "10", label: "10" },
+  { value: "20", label: "20" },
+  { value: "30", label: "30" },
+  { value: "50", label: "50" },
+  { value: "100", label: "100" },
+  { value: "endless", label: "Endless" },
 ] as const;
 
 const timedModes = [
-  { value: "timed:30",  label: "30 sec" },
-  { value: "timed:60",  label: "60 sec" },
+  { value: "timed:30", label: "30 sec" },
+  { value: "timed:60", label: "1 min" },
   { value: "timed:120", label: "2 min" },
 ] as const;
 
-function NumberGrid({ selected, onToggle, onSelectAll, onClearAll }: {
-  selected: number[];
-  onToggle: (n: number) => void;
-  onSelectAll: () => void;
-  onClearAll: () => void;
-}) {
+const presets = [
+  { label: "1–5", range: [1, 5] },
+  { label: "6–10", range: [6, 10] },
+  { label: "11–20", range: [11, 20] },
+  { label: "All", range: [1, 20] },
+] as const;
+
+const rangeOf = (from: number, to: number) => numbers.filter((n) => n >= from && n <= to);
+
+function Chip({ active, onClick, children, className }: { active: boolean; onClick: () => void; children: React.ReactNode; className?: string }) {
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-5 gap-2">
-        {numbers.map((n) => {
-          const isSelected = selected.includes(n);
-          return (
-            <button
-              key={n}
-              type="button"
-              aria-pressed={isSelected}
-              onClick={() => onToggle(n)}
-              className={cn(
-                "h-8 w-full rounded-md font-mono text-xs font-semibold transition-all duration-150 select-none",
-                "border focus:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-                isSelected
-                  ? "bg-primary text-primary-foreground border-primary shadow-[0_0_10px_rgba(59,130,246,0.5)] scale-[1.05]"
-                  : "bg-muted text-muted-foreground border-border hover:border-primary/50 hover:text-foreground hover:bg-secondary"
-              )}
-            >
-              {n}
-            </button>
-          );
-        })}
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      className={cn(
+        "inline-flex h-9 items-center justify-center rounded-md border text-sm font-medium transition-colors select-none",
+        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+        active
+          ? "border-foreground bg-foreground text-background"
+          : "border-border bg-background text-muted-foreground hover:border-input hover:bg-accent hover:text-foreground",
+        className
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function NumberPicker({
+  title,
+  description,
+  selected,
+  onChange,
+}: {
+  title: string;
+  description: string;
+  selected: number[];
+  onChange: (next: number[]) => void;
+}) {
+  const toggle = (n: number) => onChange(selected.includes(n) ? selected.filter((x) => x !== n) : [...selected, n].sort((a, b) => a - b));
+  const matches = (from: number, to: number) => {
+    const r = rangeOf(from, to);
+    return r.length === selected.length && r.every((n) => selected.includes(n));
+  };
+
+  return (
+    <section className="rounded-xl border border-border bg-card p-5 shadow-card" aria-label={title}>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-[15px] font-semibold tracking-tight">{title}</h2>
+          <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
+        </div>
+        <span className="rounded-full border border-border px-2.5 py-0.5 font-mono text-xs tabular-nums text-muted-foreground">
+          {selected.length}/20
+        </span>
       </div>
-      <div className="flex gap-2">
+
+      <div className="mt-4 flex flex-wrap gap-1.5">
+        {presets.map(({ label, range }) => (
+          <button
+            key={label}
+            type="button"
+            onClick={() => onChange(rangeOf(range[0], range[1]))}
+            className={cn(
+              "h-7 rounded-full border px-3 text-xs font-medium transition-colors",
+              matches(range[0], range[1])
+                ? "border-foreground/40 bg-accent text-foreground"
+                : "border-border text-muted-foreground hover:bg-accent hover:text-foreground"
+            )}
+          >
+            {label}
+          </button>
+        ))}
         <button
           type="button"
-          onClick={onSelectAll}
-          className="flex-1 h-8 text-xs font-medium rounded-md border border-primary/40 text-primary hover:bg-primary/10 transition-colors"
-        >
-          Select All
-        </button>
-        <button
-          type="button"
-          onClick={onClearAll}
-          className="flex-1 h-8 text-xs font-medium rounded-md border border-border text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+          onClick={() => onChange([])}
+          className="h-7 rounded-full px-3 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
           Clear
         </button>
       </div>
-    </div>
+
+      <div className="mt-4 grid grid-cols-5 gap-2 sm:grid-cols-10 lg:grid-cols-5 xl:grid-cols-10">
+        {numbers.map((n) => (
+          <Chip key={n} active={selected.includes(n)} onClick={() => toggle(n)} className="font-mono tabular-nums">
+            {n}
+          </Chip>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -77,12 +123,15 @@ export default function PracticeSetup() {
   const router = useRouter();
   const [leftSelected, setLeftSelected] = useState<number[]>(numbers);
   const [rightSelected, setRightSelected] = useState<number[]>(numbers);
+  const [kind, setKind] = useState<"count" | "timed">("count");
   const [sessionMode, setSessionMode] = useState<string>("20");
   const [isStarting, setIsStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const toggleLeft  = (n: number) => setLeftSelected(prev  => prev.includes(n) ? prev.filter(x => x !== n) : [...prev, n]);
-  const toggleRight = (n: number) => setRightSelected(prev => prev.includes(n) ? prev.filter(x => x !== n) : [...prev, n]);
+  const switchKind = (next: "count" | "timed") => {
+    setKind(next);
+    setSessionMode(next === "count" ? "20" : "timed:60");
+  };
 
   const handleStart = async () => {
     if (leftSelected.length === 0 || rightSelected.length === 0) return;
@@ -90,20 +139,28 @@ export default function PracticeSetup() {
     setError(null);
     try {
       const isTimed = sessionMode.startsWith("timed:");
-      const mode  = isTimed ? "timed" : sessionMode === "endless" ? "endless" : "fixed";
+      const mode = isTimed ? "timed" : sessionMode === "endless" ? "endless" : "fixed";
       const count = mode === "fixed" ? parseInt(sessionMode, 10) : null;
       const durationSeconds = isTimed ? parseInt(sessionMode.slice(6), 10) : null;
       const { weakFocusPercent, recentWindow } = loadSettings();
       const response = await fetch("/api/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode, targetQuestionCount: count, durationSeconds, weakFocusPercent, recentWindow, selectedLeftNumbers: leftSelected, selectedRightNumbers: rightSelected }),
+        body: JSON.stringify({
+          mode,
+          targetQuestionCount: count,
+          durationSeconds,
+          weakFocusPercent,
+          recentWindow,
+          selectedLeftNumbers: leftSelected,
+          selectedRightNumbers: rightSelected,
+        }),
       });
       if (!response.ok) throw new Error("Failed to start session");
       const session = await response.json();
       router.push(`/practice/${session.id}`);
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      console.error(err);
       setError("Could not start the session. Please try again.");
       setIsStarting(false);
     }
@@ -111,129 +168,110 @@ export default function PracticeSetup() {
 
   const canStart = leftSelected.length > 0 && rightSelected.length > 0;
   const totalPairs = leftSelected.length * rightSelected.length;
+  const options = kind === "count" ? countModes : timedModes;
+  const summary =
+    sessionMode === "endless"
+      ? "Endless session"
+      : sessionMode.startsWith("timed:")
+        ? `${timedModes.find((m) => m.value === sessionMode)?.label} challenge`
+        : `${sessionMode} questions`;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-
-      {/* Number selectors */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {/* Left */}
-        <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold text-foreground">Left Numbers</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">{leftSelected.length} selected</p>
-            </div>
-            <span className="inline-flex items-center justify-center h-7 px-2.5 rounded-full bg-primary/15 text-primary text-xs font-semibold">
-              Left operand
-            </span>
-          </div>
-          <NumberGrid
-            selected={leftSelected}
-            onToggle={toggleLeft}
-            onSelectAll={() => setLeftSelected(numbers)}
-            onClearAll={() => setLeftSelected([])}
-          />
-        </div>
-
-        {/* Right */}
-        <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold text-foreground">Right Numbers</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">{rightSelected.length} selected</p>
-            </div>
-            <span className="inline-flex items-center justify-center h-7 px-2.5 rounded-full bg-primary/15 text-primary text-xs font-semibold">
-              Right operand
-            </span>
-          </div>
-          <NumberGrid
-            selected={rightSelected}
-            onToggle={toggleRight}
-            onSelectAll={() => setRightSelected(numbers)}
-            onClearAll={() => setRightSelected([])}
-          />
-        </div>
+    <div className="grid items-start gap-6 lg:grid-cols-[1fr_380px]">
+      <div className="grid gap-6 xl:grid-cols-1">
+        <NumberPicker
+          title="First number"
+          description="Numbers that can appear on the left of ×."
+          selected={leftSelected}
+          onChange={setLeftSelected}
+        />
+        <NumberPicker
+          title="Second number"
+          description="Numbers that can appear on the right of ×."
+          selected={rightSelected}
+          onChange={setRightSelected}
+        />
       </div>
 
-      {/* Session length + Start */}
-      <div className="rounded-xl border border-border bg-card p-5 space-y-5">
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-foreground">Session Type</h3>
-          {canStart && (
-            <span className="text-xs text-muted-foreground">
-              {totalPairs} pairs selected
-            </span>
-          )}
+      <aside className="rounded-xl border border-border bg-card p-5 shadow-card lg:sticky lg:top-20" aria-label="Session options">
+        <h2 className="text-[15px] font-semibold tracking-tight">Session</h2>
+
+        <div role="tablist" aria-label="Session type" className="mt-4 grid grid-cols-2 gap-1 rounded-lg bg-secondary p-1">
+          {([
+            { id: "count", label: "Questions", icon: ListOrdered },
+            { id: "timed", label: "Timed", icon: Timer },
+          ] as const).map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={kind === id}
+              onClick={() => switchKind(id)}
+              className={cn(
+                "flex h-8 items-center justify-center gap-1.5 rounded-md text-sm font-medium transition-colors",
+                kind === id ? "bg-background text-foreground shadow-card" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Icon className="size-3.5" />
+              {label}
+            </button>
+          ))}
         </div>
 
-        {[
-          { title: "Question count", options: sessionModes },
-          { title: "Timed challenge", options: timedModes },
-        ].map(({ title, options }) => (
-          <div key={title} className="space-y-2">
-            <p className="text-xs font-medium text-muted-foreground">{title}</p>
-            <div className="flex flex-wrap gap-2">
-              {options.map(({ value, label }) => (
-                <button
-                  key={value}
-                  type="button"
-                  aria-pressed={sessionMode === value}
-                  onClick={() => setSessionMode(value)}
-                  className={cn(
-                    "h-9 px-4 rounded-lg text-sm font-medium transition-all duration-150 border",
-                    sessionMode === value
-                      ? "bg-primary text-primary-foreground border-primary shadow-[0_0_14px_rgba(59,130,246,0.45)]"
-                      : "bg-muted text-muted-foreground border-border hover:border-primary/50 hover:text-foreground"
-                  )}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+        <div className="mt-4 grid grid-cols-3 gap-2" role="group" aria-label={kind === "count" ? "Number of questions" : "Duration"}>
+          {options.map(({ value, label }) => (
+            <Chip key={value} active={sessionMode === value} onClick={() => setSessionMode(value)} className="gap-1">
+              {value === "endless" && <InfinityIcon className="size-3.5" />}
+              {label}
+            </Chip>
+          ))}
+        </div>
+        <p className="mt-3 text-xs text-muted-foreground">
+          {kind === "count"
+            ? "Finish a fixed number of questions, or practise endlessly and end whenever you like."
+            : "Answer as many as you can before the clock runs out. Beat your personal best."}
+        </p>
+
+        <dl className="mt-5 space-y-2 border-t border-border pt-4 text-sm">
+          <div className="flex justify-between">
+            <dt className="text-muted-foreground">Format</dt>
+            <dd className="font-medium">{summary}</dd>
           </div>
-        ))}
-
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-muted-foreground">Review</p>
-          <ReviewButton
-            source={{ reviewRecentDays: 7 }}
-            label="Review mistakes from the last 7 days"
-            variant="outline"
-          />
-        </div>
+          <div className="flex justify-between">
+            <dt className="text-muted-foreground">Question pool</dt>
+            <dd className="font-mono font-medium tabular-nums">{totalPairs} pairs</dd>
+          </div>
+        </dl>
 
         {error && (
-          <p role="alert" className="text-sm text-destructive">
+          <p role="alert" className="mt-4 rounded-md bg-destructive-soft px-3 py-2 text-sm text-destructive">
             {error}
           </p>
         )}
+        {!canStart && (
+          <p role="status" className="mt-4 rounded-md bg-warning-soft px-3 py-2 text-sm text-warning">
+            Select at least one number on each side to begin.
+          </p>
+        )}
 
-        <button
-          type="button"
-          onClick={handleStart}
-          disabled={!canStart || isStarting}
-          className={cn(
-            "w-full h-14 rounded-xl text-base font-bold tracking-wide transition-all duration-200",
-            "flex items-center justify-center gap-2",
-            canStart && !isStarting
-              ? "bg-primary text-primary-foreground hover:brightness-110 shadow-[0_0_24px_rgba(59,130,246,0.45)] hover:shadow-[0_0_36px_rgba(59,130,246,0.65)] active:scale-[0.98]"
-              : "bg-muted text-muted-foreground cursor-not-allowed opacity-50"
-          )}
-        >
+        <Button size="xl" className="mt-5 w-full" onClick={handleStart} disabled={!canStart || isStarting}>
           {isStarting ? (
             <>
-              <span className="h-4 w-4 rounded-full border-2 border-primary-foreground/40 border-t-primary-foreground animate-spin" />
+              <span className="size-4 animate-spin rounded-full border-2 border-primary-foreground/30 border-t-primary-foreground" />
               Starting…
             </>
           ) : (
             <>
-              <Zap className="h-5 w-5" />
-              Start Practice
+              Start practice
+              <ArrowRight />
             </>
           )}
-        </button>
-      </div>
+        </Button>
+
+        <div className="mt-3 border-t border-border pt-4">
+          <ReviewButton source={{ reviewRecentDays: 7 }} label="Review mistakes from the last 7 days" variant="outline" className="w-full" />
+        </div>
+      </aside>
     </div>
   );
 }
