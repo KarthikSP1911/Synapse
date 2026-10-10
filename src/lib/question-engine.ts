@@ -1,123 +1,108 @@
 import { db } from "@/db";
-import { pairStatistics, questionAttempts } from "@/db/schema";
-import { and, desc, eq, gt, isNull, lte, or, sql } from "drizzle-orm";
+import { questionAttempts, questionStats } from "@/db/schema";
+import { and, desc, eq, gt, inArray, isNull, lte, or, sql } from "drizzle-orm";
+import { questionFromId } from "@/lib/skills/build";
+import { buildPool } from "@/lib/skills/pools";
+import type { Focus, Question } from "@/lib/skills/types";
+import { WEAK_SCORE_THRESHOLD, selectNext, selectReview, type StatLite } from "@/lib/selection";
+import { reviewQuestionIds, sessionConfig, type SessionShape } from "@/lib/sessions";
 
-export interface Question {
-  left: number;
-  right: number;
-}
-
-export interface EngineSettings {
-  /** Percentage (0-100) of questions drawn from the weakest selected pairs. */
+export interface EngineSession extends SessionShape {
+  id: number;
+  focus: string;
   weakFocusPercent: number;
-  /** How many of the session's latest questions must not repeat. */
   recentWindow: number;
 }
 
-const WEAK_SCORE_THRESHOLD = 50;
-/** Chance of drawing a pair that is due for spaced-repetition review, when one exists. */
-const DUE_PICK_PROBABILITY = 0.6;
-
-const key = (q: Question) => `${q.left}x${q.right}`;
-
-function pickRandom<T>(items: T[]): T {
-  return items[Math.floor(Math.random() * items.length)];
-}
+/** How many of a session's attempts are inspected to know what was asked already. */
+const HISTORY_LIMIT = 500;
+const WEAK_ROWS_LIMIT = 400;
+const DUE_ROWS_LIMIT = 600;
+const CONCEPT_ROWS_LIMIT = 300;
+/** A concept needs this many attempts before it can lift its unseen variations. */
+const MIN_CONCEPT_ATTEMPTS = 3;
 
 /**
- * Picks the next question for a session.
- *
- * - Review sessions (`pairList` set) ask each listed pair once, in random order,
- *   then fall back to random repeats.
- * - Otherwise, with `weakFocusPercent` chance the question comes from the weakest
- *   selected pairs (weighted by weakness); failing that, with a 60% chance from
- *   pairs that are due for spaced-repetition review; failing that, uniformly from
- *   the selected numbers.
- *
- * Recently asked pairs and the optional `exclude` pair (the question currently on
- * screen) are avoided unless that would leave nothing to ask.
+ * Picks the next question for a session using its configuration, the session's own history and the
+ * user's long-term statistics for the same skill. Selection logic itself lives in `selection.ts`.
  */
-export async function getNextQuestion(
-  sessionId: number,
-  leftNumbers: number[],
-  rightNumbers: number[],
-  pairList: Question[] | null,
-  settings: EngineSettings,
-  exclude?: Question
-): Promise<Question> {
-  const isReview = pairList !== null && pairList.length > 0;
+export async function getNextQuestion(session: EngineSession, excludeId?: string): Promise<Question> {
+  const history = await db
+    .select({ id: questionAttempts.questionId })
+    .from(questionAttempts)
+    .where(eq(questionAttempts.sessionId, session.id))
+    .orderBy(desc(questionAttempts.createdAt))
+    .limit(HISTORY_LIMIT);
+  const askedIds = history.map((h) => h.id);
 
-  const [recent, weakRows, dueRows] = await Promise.all([
-    // Review sessions need every pair asked so far; others only the recent window.
-    isReview || settings.recentWindow > 0
-      ? db
-          .select({ left: questionAttempts.leftNumber, right: questionAttempts.rightNumber })
-          .from(questionAttempts)
-          .where(eq(questionAttempts.sessionId, sessionId))
-          .orderBy(desc(questionAttempts.createdAt))
-          .limit(isReview ? 500 : settings.recentWindow)
-      : Promise.resolve([]),
-    isReview
-      ? Promise.resolve([])
-      : db
-          .select()
-          .from(pairStatistics)
-          .where(sql`${pairStatistics.weaknessScore} > ${WEAK_SCORE_THRESHOLD}`)
-          .orderBy(desc(pairStatistics.weaknessScore))
-          .limit(200),
-    isReview
-      ? Promise.resolve([])
-      : db
-          .select({ left: pairStatistics.leftNumber, right: pairStatistics.rightNumber })
-          .from(pairStatistics)
-          .where(
-            and(
-              gt(pairStatistics.totalAttempts, 0),
-              or(isNull(pairStatistics.dueAt), lte(pairStatistics.dueAt, sql`NOW()`))
-            )
-          )
-          .limit(400),
+  if (session.mode === "review") {
+    const id = selectReview(reviewQuestionIds(session), new Set(askedIds), excludeId);
+    return rebuild(id);
+  }
+
+  const config = sessionConfig(session);
+  if (!config) throw new Error(`Session ${session.id} has no practice configuration`);
+  const pool = buildPool(config);
+
+  // Statistics are narrowed to this skill and, where the configuration says so, to its exercise types
+  // and difficulty, so one skill's history can never distort another's.
+  const scope = [
+    eq(questionStats.skill, config.skill),
+    inArray(questionStats.exerciseType, config.exerciseTypes),
+    ...("difficulty" in config ? [eq(questionStats.difficulty, config.difficulty)] : []),
+    gt(questionStats.totalAttempts, 0),
+  ];
+
+  const [weakRows, dueRows, conceptRows] = await Promise.all([
+    db
+      .select()
+      .from(questionStats)
+      .where(and(...scope, gt(questionStats.weaknessScore, WEAK_SCORE_THRESHOLD)))
+      .orderBy(desc(questionStats.weaknessScore))
+      .limit(WEAK_ROWS_LIMIT),
+    db
+      .select()
+      .from(questionStats)
+      .where(and(...scope, or(isNull(questionStats.dueAt), lte(questionStats.dueAt, sql`NOW()`))))
+      .limit(DUE_ROWS_LIMIT),
+    db
+      .select({
+        concept: questionStats.concept,
+        weakness: sql<number>`AVG(${questionStats.weaknessScore})`,
+      })
+      .from(questionStats)
+      .where(and(...scope))
+      .groupBy(questionStats.concept)
+      .having(
+        and(
+          sql`AVG(${questionStats.weaknessScore}) > ${WEAK_SCORE_THRESHOLD}`,
+          sql`SUM(${questionStats.totalAttempts}) >= ${MIN_CONCEPT_ATTEMPTS}`
+        )
+      )
+      .limit(CONCEPT_ROWS_LIMIT),
   ]);
 
-  if (isReview) {
-    const asked = new Set(recent.map(key));
-    const unasked = pairList.filter((p) => !asked.has(key(p)));
-    const pool = unasked.length > 0 ? unasked : pairList;
-    const fresh = pool.filter((p) => !exclude || key(p) !== key(exclude));
-    return pickRandom(fresh.length > 0 ? fresh : pool);
+  const stats = new Map<string, StatLite>();
+  for (const row of [...weakRows, ...dueRows]) {
+    stats.set(row.questionId, { weaknessScore: row.weaknessScore, totalAttempts: row.totalAttempts, dueAt: row.dueAt });
   }
+  const conceptWeakness = new Map(conceptRows.map((r) => [r.concept, Number(r.weakness)]));
 
-  const avoid = new Set(recent.map(key));
-  if (exclude) avoid.add(key(exclude));
+  const item = selectNext({
+    pool,
+    stats,
+    conceptWeakness,
+    recentIds: session.recentWindow > 0 ? askedIds.slice(0, session.recentWindow) : [],
+    seenIds: new Set(askedIds),
+    excludeId,
+    weakFocusPercent: session.weakFocusPercent,
+    focus: session.focus as Focus,
+  });
+  return rebuild(item.id);
+}
 
-  const allPairs: Question[] = leftNumbers.flatMap((left) => rightNumbers.map((right) => ({ left, right })));
-  const withoutRecent = (pairs: Question[]) => {
-    const fresh = pairs.filter((p) => !avoid.has(key(p)));
-    return fresh.length > 0 ? fresh : pairs;
-  };
-
-  // Only pairs that fall inside the user's selection are eligible.
-  const selected = new Set(allPairs.map(key));
-  const weakPairs = weakRows
-    .map((w) => ({ left: w.leftNumber, right: w.rightNumber, weight: w.weaknessScore }))
-    .filter((w) => selected.has(key(w)));
-
-  if (weakPairs.length > 0 && Math.random() * 100 < settings.weakFocusPercent) {
-    const pool = weakPairs.filter((w) => !avoid.has(key(w)));
-    if (pool.length > 0) {
-      let roll = Math.random() * pool.reduce((sum, w) => sum + w.weight, 0);
-      for (const w of pool) {
-        roll -= w.weight;
-        if (roll <= 0) return { left: w.left, right: w.right };
-      }
-      return { left: pool[0].left, right: pool[0].right };
-    }
-  }
-
-  const duePairs = dueRows.filter((d) => selected.has(key(d)) && !avoid.has(key(d)));
-  if (duePairs.length > 0 && Math.random() < DUE_PICK_PROBABILITY) {
-    return pickRandom(duePairs);
-  }
-
-  return pickRandom(withoutRecent(allPairs));
+function rebuild(id: string): Question {
+  const question = questionFromId(id);
+  if (!question) throw new Error(`Stored question id is no longer valid: ${id}`);
+  return question;
 }

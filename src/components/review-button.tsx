@@ -6,7 +6,12 @@ import { RotateCcw } from "lucide-react";
 import { loadSettings } from "@/lib/settings";
 import { Button } from "@/components/ui/button";
 
-type ReviewSource = { reviewSessionId: number } | { reviewRecentDays: number };
+import type { Skill } from "@/lib/skills/types";
+
+/** Where the mistakes come from: one session, or the last few days (optionally narrowed to a skill and exercise type). */
+export type ReviewSource =
+  | { reviewSessionId: number }
+  | { reviewRecentDays: number; skill?: Skill; exerciseType?: string };
 
 interface ReviewButtonProps {
   source: ReviewSource;
@@ -15,7 +20,7 @@ interface ReviewButtonProps {
   className?: string;
 }
 
-/** Starts a review session made of the pairs answered wrong in the given source. */
+/** Starts a review session made of the questions answered wrong in the given source. */
 export default function ReviewButton({ source, label, variant = "primary", className }: ReviewButtonProps) {
   const router = useRouter();
   const [starting, setStarting] = useState(false);
@@ -25,11 +30,17 @@ export default function ReviewButton({ source, label, variant = "primary", class
     setStarting(true);
     setError(null);
     try {
-      const { weakFocusPercent, recentWindow } = loadSettings();
+      const { weakFocusPercent, recentWindow, questionTimeLimit } = loadSettings();
       const res = await fetch("/api/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode: "review", weakFocusPercent, recentWindow, ...source }),
+        body: JSON.stringify({
+          mode: "review",
+          weakFocusPercent,
+          recentWindow,
+          questionTimeLimitSeconds: questionTimeLimit,
+          ...source,
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {

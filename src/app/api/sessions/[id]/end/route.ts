@@ -11,14 +11,20 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
   }
 
   try {
-    const [session] = await db.select({ id: practiceSessions.id }).from(practiceSessions).where(eq(practiceSessions.id, sessionId));
+    const [session] = await db
+      .select({ id: practiceSessions.id, pausedAt: practiceSessions.pausedAt, pausedMs: practiceSessions.pausedMs })
+      .from(practiceSessions)
+      .where(eq(practiceSessions.id, sessionId));
     if (!session) {
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
 
+    // Ending a paused session closes the open pause, so the elapsed-time figure excludes it.
+    const now = new Date();
+    const pausedMs = session.pausedAt ? session.pausedMs + Math.max(0, now.getTime() - session.pausedAt.getTime()) : session.pausedMs;
     await db
       .update(practiceSessions)
-      .set({ endedAt: new Date() })
+      .set({ endedAt: now, pausedAt: null, pausedMs })
       .where(and(eq(practiceSessions.id, sessionId), isNull(practiceSessions.endedAt)));
 
     return NextResponse.json({ ended: true });

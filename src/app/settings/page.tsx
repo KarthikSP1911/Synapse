@@ -9,7 +9,7 @@ export default function SettingsPage() {
       <PageHeader
         eyebrow="Preferences"
         title="Settings"
-        description="Tune how questions are chosen. Preferences are stored in this browser."
+        description="Tune how questions are chosen and how practice feels. Preferences are stored in this browser."
       />
       <SettingsForm />
     </Page>

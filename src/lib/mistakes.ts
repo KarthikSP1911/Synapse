@@ -1,30 +1,43 @@
 import { db } from "@/db";
 import { questionAttempts } from "@/db/schema";
 import { and, desc, eq, gte, max } from "drizzle-orm";
-import type { Question } from "@/lib/question-engine";
+import { questionFromId } from "@/lib/skills/build";
+import { MAX_REVIEW_DAYS, MAX_REVIEW_QUESTIONS, type ReviewRequest } from "@/lib/sessions";
+import type { Skill } from "@/lib/skills/types";
 
-export const MAX_REVIEW_PAIRS = 50;
-export const MAX_REVIEW_DAYS = 30;
+export { MAX_REVIEW_DAYS, MAX_REVIEW_QUESTIONS };
+
+export interface MistakeScope {
+  sessionId?: number;
+  sinceDays?: number;
+  skill?: Skill;
+  exerciseType?: string;
+}
 
 /**
- * Distinct pairs answered incorrectly, most recent mistake first, capped at
- * MAX_REVIEW_PAIRS. Scope with a session id, a look-back window in days, or both.
+ * Distinct questions answered incorrectly (wrong, skipped or timed out), most recent mistake first,
+ * capped at MAX_REVIEW_QUESTIONS. Scope with a session, a look-back window in days, a skill and an
+ * exercise type, in any combination. Original attempts are never modified: retrying a mistake
+ * creates a new session with its own attempts.
  */
-export async function getMistakePairs(scope: { sessionId?: number; sinceDays?: number }): Promise<Question[]> {
+export async function getMistakeQuestionIds(scope: MistakeScope | ReviewRequest): Promise<string[]> {
   const conditions = [eq(questionAttempts.isCorrect, false)];
   if (scope.sessionId !== undefined) conditions.push(eq(questionAttempts.sessionId, scope.sessionId));
   if (scope.sinceDays !== undefined) {
     conditions.push(gte(questionAttempts.createdAt, new Date(Date.now() - scope.sinceDays * 24 * 60 * 60 * 1000)));
   }
+  if (scope.skill) conditions.push(eq(questionAttempts.skill, scope.skill));
+  if (scope.exerciseType) conditions.push(eq(questionAttempts.exerciseType, scope.exerciseType));
 
   const lastMissed = max(questionAttempts.createdAt);
   const rows = await db
-    .select({ left: questionAttempts.leftNumber, right: questionAttempts.rightNumber })
+    .select({ id: questionAttempts.questionId })
     .from(questionAttempts)
     .where(and(...conditions))
-    .groupBy(questionAttempts.leftNumber, questionAttempts.rightNumber)
+    .groupBy(questionAttempts.questionId)
     .orderBy(desc(lastMissed))
-    .limit(MAX_REVIEW_PAIRS);
+    .limit(MAX_REVIEW_QUESTIONS);
 
-  return rows;
+  // Drop ids the generators no longer recognise, so a review session can never contain a broken question.
+  return rows.map((r) => r.id).filter((id) => questionFromId(id) !== null);
 }

@@ -3,7 +3,8 @@ import { db } from "@/db";
 import { practiceSessions } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { getNextQuestion } from "@/lib/question-engine";
-import { isOperand, isTimedOut, parseId } from "@/lib/validation";
+import { toPublicQuestion } from "@/lib/skills/build";
+import { isOperand, isTimedOut, parseId, sessionDeadline } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
 
@@ -21,40 +22,39 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     }
 
     const isComplete =
+      session.endedAt !== null ||
       isTimedOut(session) ||
       (session.targetQuestionCount !== null && session.actualQuestionCount >= session.targetQuestionCount);
 
     if (isComplete) {
       if (!session.endedAt) {
         // A timed session ended when its clock ran out, not when this request happened to arrive.
-        const endedAt =
-          isTimedOut(session) && session.durationSeconds !== null
-            ? new Date(session.startedAt.getTime() + session.durationSeconds * 1000)
-            : new Date();
+        const endedAt = sessionDeadline(session) ?? new Date();
         await db.update(practiceSessions).set({ endedAt }).where(eq(practiceSessions.id, sessionId));
       }
       return NextResponse.json({ finished: true });
     }
 
+    // The question on screen is excluded so the next one never repeats it. Older clients sent its operands.
     const searchParams = new URL(request.url).searchParams;
     const left = Number(searchParams.get("left"));
     const right = Number(searchParams.get("right"));
-    const exclude = isOperand(left) && isOperand(right) ? { left, right } : undefined;
+    const excludeId = searchParams.get("exclude") ?? (isOperand(left) && isOperand(right) ? `multiplication:${left}:${right}` : undefined);
 
-    const question = await getNextQuestion(
-      sessionId,
-      session.selectedLeftNumbers,
-      session.selectedRightNumbers,
-      session.pairList,
-      { weakFocusPercent: session.weakFocusPercent, recentWindow: session.recentWindow },
-      exclude
-    );
+    const question = await getNextQuestion(session, excludeId);
     return NextResponse.json({
-      ...question,
+      question: toPublicQuestion(question),
+      // Kept for older multiplication clients.
+      ...(question.skill === "multiplication" ? { left: question.left, right: question.right } : {}),
+      skill: session.skill,
+      mode: session.mode,
       startedAt: session.startedAt.toISOString(),
       // Lets the client correct for a clock that differs from the server's when counting down.
       serverNow: Date.now(),
       durationSeconds: session.durationSeconds,
+      pausedMs: session.pausedMs,
+      paused: session.pausedAt !== null,
+      questionTimeLimitSeconds: session.questionTimeLimitSeconds,
       targetQuestionCount: session.targetQuestionCount,
       answeredCount: session.actualQuestionCount,
     });

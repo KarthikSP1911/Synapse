@@ -1,119 +1,28 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { practiceSessions, questionAttempts, pairStatistics, tableStatistics } from "@/db/schema";
-import { eq, sql, and } from "drizzle-orm";
-import { dueDateForBox, nextBox } from "@/lib/spaced-repetition";
-import { MAX_RESPONSE_TIME_MS, TIMED_GRACE_MS, isOperand, isTimedOut, parseId, readJson } from "@/lib/validation";
+import { practiceSessions } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import { recordAttempt } from "@/lib/attempts";
+import { checkAnswer } from "@/lib/skills/answers";
+import { questionFromId } from "@/lib/skills/build";
+import type { Outcome } from "@/lib/skills/types";
+import { isQuestionInSession } from "@/lib/sessions";
+import {
+  MAX_RESPONSE_TIME_MS,
+  QUESTION_LIMIT_SLACK_MS,
+  TIMED_GRACE_MS,
+  isOperand,
+  isTimedOut,
+  parseId,
+  readJson,
+} from "@/lib/validation";
 
-const SLOW_RESPONSE_MS = 5000;
-
-function clampScore(score: number) {
-  return Math.max(0, Math.min(100, score));
-}
-
-async function recordPair(left: number, right: number, isCorrect: boolean, responseTimeMs: number) {
-  const [pair] = await db
-    .select()
-    .from(pairStatistics)
-    .where(and(eq(pairStatistics.leftNumber, left), eq(pairStatistics.rightNumber, right)))
-    .limit(1);
-
-  if (!pair) {
-    const box = nextBox(1, isCorrect);
-    await db.insert(pairStatistics).values({
-      leftNumber: left,
-      rightNumber: right,
-      totalAttempts: 1,
-      correctAttempts: isCorrect ? 1 : 0,
-      incorrectAttempts: isCorrect ? 0 : 1,
-      accuracy: isCorrect ? 100 : 0,
-      currentCorrectStreak: isCorrect ? 1 : 0,
-      bestCorrectStreak: isCorrect ? 1 : 0,
-      currentIncorrectStreak: isCorrect ? 0 : 1,
-      averageResponseTimeMs: responseTimeMs,
-      fastestResponseTimeMs: responseTimeMs,
-      slowestResponseTimeMs: responseTimeMs,
-      weaknessScore: isCorrect ? 20 : 80,
-      box,
-      dueAt: dueDateForBox(box),
-      lastAttemptedAt: new Date(),
-    });
-    return;
-  }
-
-  const box = nextBox(pair.box, isCorrect);
-  const total = pair.totalAttempts + 1;
-  const correct = pair.correctAttempts + (isCorrect ? 1 : 0);
-  const accuracy = Math.round((correct / total) * 100);
-  const correctStreak = isCorrect ? pair.currentCorrectStreak + 1 : 0;
-  const incorrectStreak = isCorrect ? 0 : pair.currentIncorrectStreak + 1;
-  const avgTime = Math.round((pair.averageResponseTimeMs * pair.totalAttempts + responseTimeMs) / total);
-
-  // Weakness score (0-100): error rate, penalised for slowness and error streaks.
-  let weakness = 100 - accuracy;
-  if (avgTime > SLOW_RESPONSE_MS) weakness += 10;
-  if (incorrectStreak > 1) weakness += 10 * (incorrectStreak - 1);
-  if (correctStreak > 3) weakness -= 20;
-
-  await db
-    .update(pairStatistics)
-    .set({
-      totalAttempts: total,
-      correctAttempts: correct,
-      incorrectAttempts: pair.incorrectAttempts + (isCorrect ? 0 : 1),
-      accuracy,
-      currentCorrectStreak: correctStreak,
-      bestCorrectStreak: Math.max(pair.bestCorrectStreak, correctStreak),
-      currentIncorrectStreak: incorrectStreak,
-      averageResponseTimeMs: avgTime,
-      fastestResponseTimeMs: Math.min(pair.fastestResponseTimeMs ?? responseTimeMs, responseTimeMs),
-      slowestResponseTimeMs: Math.max(pair.slowestResponseTimeMs ?? responseTimeMs, responseTimeMs),
-      weaknessScore: clampScore(weakness),
-      box,
-      dueAt: dueDateForBox(box),
-      lastAttemptedAt: new Date(),
-      updatedAt: new Date(),
-    })
-    .where(and(eq(pairStatistics.leftNumber, left), eq(pairStatistics.rightNumber, right)));
-}
-
-async function recordTable(num: number, isCorrect: boolean, responseTimeMs: number) {
-  const [table] = await db.select().from(tableStatistics).where(eq(tableStatistics.number, num)).limit(1);
-
-  if (!table) {
-    await db.insert(tableStatistics).values({
-      number: num,
-      totalAttempts: 1,
-      correctAttempts: isCorrect ? 1 : 0,
-      incorrectAttempts: isCorrect ? 0 : 1,
-      accuracy: isCorrect ? 100 : 0,
-      averageResponseTimeMs: responseTimeMs,
-      weaknessScore: isCorrect ? 20 : 80,
-      lastAttemptedAt: new Date(),
-    });
-    return;
-  }
-
-  const total = table.totalAttempts + 1;
-  const correct = table.correctAttempts + (isCorrect ? 1 : 0);
-  const accuracy = Math.round((correct / total) * 100);
-  const avgTime = Math.round((table.averageResponseTimeMs * table.totalAttempts + responseTimeMs) / total);
-
-  await db
-    .update(tableStatistics)
-    .set({
-      totalAttempts: total,
-      correctAttempts: correct,
-      incorrectAttempts: table.incorrectAttempts + (isCorrect ? 0 : 1),
-      accuracy,
-      averageResponseTimeMs: avgTime,
-      weaknessScore: clampScore(100 - accuracy + (avgTime > SLOW_RESPONSE_MS ? 10 : 0)),
-      lastAttemptedAt: new Date(),
-      updatedAt: new Date(),
-    })
-    .where(eq(tableStatistics.number, num));
-}
-
+/**
+ * Body: { questionId, userAnswer, responseTimeMs, hinted?, outcome? }
+ *  - `outcome` is "answered" (default), "skipped" or "timed_out"; the latter two carry no answer.
+ *  - Older multiplication clients may send { left, right, userAnswer } instead of questionId.
+ * The server rebuilds the question from its id and decides correctness itself.
+ */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const sessionId = parseId((await params).id);
   if (sessionId === null) {
@@ -125,18 +34,26 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { left, right, userAnswer, responseTimeMs } = body;
+  const { left, right, responseTimeMs, hinted = false, outcome: reported = "answered" } = body;
+  const questionId = body.questionId ?? (isOperand(left) && isOperand(right) ? `multiplication:${left}:${right}` : undefined);
+  const userAnswer = typeof body.userAnswer === "number" && Number.isSafeInteger(body.userAnswer) ? String(body.userAnswer) : body.userAnswer;
+
   if (
-    !isOperand(left) ||
-    !isOperand(right) ||
-    !Number.isSafeInteger(userAnswer) ||
+    typeof questionId !== "string" ||
     !Number.isInteger(responseTimeMs) ||
-    (responseTimeMs as number) < 0
+    (responseTimeMs as number) < 0 ||
+    typeof hinted !== "boolean" ||
+    (reported !== "answered" && reported !== "skipped" && reported !== "timed_out") ||
+    (reported === "answered" && typeof userAnswer !== "string")
   ) {
     return NextResponse.json({ error: "Invalid attempt payload" }, { status: 400 });
   }
-  const answer = userAnswer as number;
   const elapsedMs = Math.min(responseTimeMs as number, MAX_RESPONSE_TIME_MS);
+
+  const question = questionFromId(questionId);
+  if (!question) {
+    return NextResponse.json({ error: "Unknown question" }, { status: 400 });
+  }
 
   try {
     const [session] = await db.select().from(practiceSessions).where(eq(practiceSessions.id, sessionId));
@@ -149,54 +66,54 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (target !== null && session.actualQuestionCount >= target) {
       return NextResponse.json({ error: "Session already completed" }, { status: 409 });
     }
-
     if (isTimedOut(session, TIMED_GRACE_MS)) {
       return NextResponse.json({ error: "Session already completed" }, { status: 409 });
     }
+    if (session.pausedAt) {
+      return NextResponse.json({ error: "Session is paused" }, { status: 409 });
+    }
 
-    // Only pairs the session can ask are accepted, so stray requests cannot skew the statistics.
-    const allowed = session.pairList?.length
-      ? session.pairList.some((p) => p.left === left && p.right === right)
-      : session.selectedLeftNumbers.includes(left) && session.selectedRightNumbers.includes(right);
-    if (!allowed) {
+    if (!isQuestionInSession(session, question.id)) {
       return NextResponse.json({ error: "Question is not part of this session" }, { status: 400 });
     }
 
-    const correctAnswer = left * right;
-    const isCorrect = answer === correctAnswer;
-
-    await db.insert(questionAttempts).values({
-      sessionId,
-      leftNumber: left,
-      rightNumber: right,
-      correctAnswer,
-      userAnswer: answer,
-      isCorrect,
-      responseTimeMs: elapsedMs,
-    });
+    let outcome: Outcome;
+    if (reported === "answered") {
+      const check = checkAnswer(question, userAnswer);
+      if (check.status === "invalid") {
+        return NextResponse.json({ error: check.reason }, { status: 400 });
+      }
+      outcome = check.status;
+    } else if (reported === "skipped") {
+      outcome = "skipped";
+    } else {
+      // A timeout is only believable when the session has a per-question limit and it really elapsed.
+      const limitMs = (session.questionTimeLimitSeconds ?? 0) * 1000;
+      if (limitMs === 0 || elapsedMs < limitMs - QUESTION_LIMIT_SLACK_MS) {
+        return NextResponse.json({ error: "Question has not timed out" }, { status: 400 });
+      }
+      outcome = "timed_out";
+    }
 
     const finished = (target !== null && session.actualQuestionCount + 1 >= target) || isTimedOut(session);
 
-    // The session counters (updated in SQL so concurrent requests don't lose increments), the pair
-    // and the table rows are independent of each other, so they run in parallel to keep the answer fast.
-    await Promise.all([
-      db
-        .update(practiceSessions)
-        .set({
-          actualQuestionCount: sql`${practiceSessions.actualQuestionCount} + 1`,
-          totalCorrect: sql`${practiceSessions.totalCorrect} + ${isCorrect ? 1 : 0}`,
-          totalIncorrect: sql`${practiceSessions.totalIncorrect} + ${isCorrect ? 0 : 1}`,
-          accuracy: sql`(${practiceSessions.totalCorrect} + ${isCorrect ? 1 : 0}) * 100 / (${practiceSessions.actualQuestionCount} + 1)`,
-          averageResponseTimeMs: sql`(${practiceSessions.averageResponseTimeMs} * ${practiceSessions.actualQuestionCount} + ${elapsedMs}) / (${practiceSessions.actualQuestionCount} + 1)`,
-          ...(finished ? { endedAt: new Date() } : {}),
-        })
-        .where(eq(practiceSessions.id, sessionId)),
-      recordPair(left, right, isCorrect, elapsedMs),
-      recordTable(left, isCorrect, elapsedMs),
-      left !== right ? recordTable(right, isCorrect, elapsedMs) : Promise.resolve(),
-    ]);
+    await recordAttempt({
+      sessionId,
+      question,
+      outcome,
+      hinted,
+      userAnswer: reported === "answered" ? (userAnswer as string) : null,
+      responseTimeMs: elapsedMs,
+      finished,
+    });
 
-    return NextResponse.json({ isCorrect, correctAnswer, finished });
+    return NextResponse.json({
+      isCorrect: outcome === "correct",
+      outcome,
+      correctAnswer: question.answerText,
+      explanation: question.explanation ?? null,
+      finished,
+    });
   } catch (error) {
     console.error("Failed to process attempt:", error);
     return NextResponse.json({ error: "Failed to process attempt" }, { status: 500 });
