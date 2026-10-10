@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>Offline · Mathz</title>
+  <style>
+    :root { color-scheme: light dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100dvh; display: grid; place-items: center; padding: 1.25rem;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background: #fff; color: #0a0a0a;
+    }
+    main { max-width: 22rem; text-align: center; }
+    img { width: 4rem; height: 4rem; border-radius: 1rem; }
+    h1 { margin: 1.25rem 0 .5rem; font-size: 1.5rem; letter-spacing: -.02em; }
+    p { margin: 0 0 1.5rem; color: #666; line-height: 1.5; }
+    button {
+      min-height: 2.75rem; padding: 0 1.5rem; border: 0; border-radius: .5rem; font: inherit; font-weight: 500;
+      background: #0a0a0a; color: #fafafa; cursor: pointer;
+    }
+    @media (prefers-color-scheme: dark) {
+      body { background: #000; color: #ededed; }
+      p { color: #a1a1a1; }
+      button { background: #ededed; color: #0a0a0a; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <img src="/icons/icon-192.png" alt="" width="64" height="64">
+    <h1>You're offline</h1>
+    <p>Mathz needs a connection to load your questions and save your progress. Reconnect and try again.</p>
+    <button type="button" onclick="location.reload()">Try again</button>
+  </main>
+</body>
+</html>

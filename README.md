@@ -17,6 +17,7 @@ Mathz is an adaptive mental-maths trainer. It drills four skills — **multiplic
 - **Accounts**: sign up and log in with email and password. Every account has its own statistics, history and streak; "Remember me" keeps you signed in for 12 months. Practice requires an account. The first account to sign up inherits any data recorded before accounts existed.
 - **Profile** (the user icon in the header): a year-long practice calendar heatmap (one square per day, darker for busier days), current and longest streak, active days, and a per-skill summary. Days follow the time zone your browser reports at login.
 - **Settings** (stored in this browser): weak-question share, recent-question window, default difficulty, enabled exercise types per skill, default session length, per-question time limit, explanations, hints and live stats.
+- **Installable app (PWA)**: a web app manifest, generated icons (including a maskable one) and a small service worker. On phones and tablets a non-intrusive "Install Mathz" banner appears when installation is supported (the native prompt on Chromium, Share-sheet steps on iOS Safari); it stays away once installed, running as an app, or dismissed. The service worker never caches pages or API responses, only build assets and an offline fallback page, and is registered in production builds only.
 - **Keyboard-first** practice with visible focus rings, light/dark themes, and respect for `prefers-reduced-motion`.
 
 ## Skills and exercises
