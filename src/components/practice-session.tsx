@@ -54,7 +54,12 @@ export default function PracticeSession({ sessionId }: PracticeSessionProps) {
     return () => timeouts.forEach(clearTimeout);
   }, []);
 
+  const finishingRef = useRef(false);
+
   const finishSession = useCallback(async () => {
+    // The countdown calls this on every tick once it reaches zero; only the first call may run.
+    if (finishingRef.current) return;
+    finishingRef.current = true;
     try {
       await fetch(`/api/sessions/${sessionId}/end`, { method: "POST" });
     } catch (err) {
@@ -75,7 +80,9 @@ export default function PracticeSession({ sessionId }: PracticeSessionProps) {
           return;
         }
         if (data.durationSeconds) {
-          setDeadline(new Date(data.startedAt).getTime() + data.durationSeconds * 1000);
+          // Express the server's deadline on this device's clock so a skewed clock cannot shift the countdown.
+          const serverDeadline = new Date(data.startedAt).getTime() + data.durationSeconds * 1000;
+          setDeadline(Date.now() + (serverDeadline - data.serverNow));
           setDurationSeconds(data.durationSeconds);
         }
         if (typeof data.targetQuestionCount === "number") setTargetCount(data.targetQuestionCount);
@@ -158,7 +165,7 @@ export default function PracticeSession({ sessionId }: PracticeSessionProps) {
 
   if (loading && !question) {
     return (
-      <div className="grid min-h-screen place-items-center" role="status">
+      <div className="grid min-h-dvh place-items-center" role="status">
         <div className="flex flex-col items-center gap-4">
           <div className="size-7 animate-spin rounded-full border-2 border-border border-t-foreground" />
           <p className="text-sm text-muted-foreground">Preparing your session…</p>
@@ -169,7 +176,7 @@ export default function PracticeSession({ sessionId }: PracticeSessionProps) {
 
   if (!question) {
     return (
-      <div className="grid min-h-screen place-items-center px-5">
+      <div className="grid min-h-dvh place-items-center px-5">
         <div className="max-w-sm space-y-4 text-center" role="alert">
           <p className="text-lg font-semibold">Something went wrong</p>
           <p className="text-sm text-muted-foreground">{error ?? "The session could not be loaded."}</p>
@@ -205,7 +212,7 @@ export default function PracticeSession({ sessionId }: PracticeSessionProps) {
   const lowTime = secondsLeft !== null && secondsLeft <= 10;
 
   return (
-    <div className="relative isolate flex min-h-screen flex-col overflow-hidden">
+    <div className="relative isolate flex min-h-dvh flex-col overflow-hidden">
       <div aria-hidden className="bg-grid absolute inset-0 -z-10 opacity-70" />
 
       {/* Progress rail */}

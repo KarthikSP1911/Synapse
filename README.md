@@ -15,7 +15,8 @@ Timez is an adaptive multiplication practice app. Choose the numbers (1–20) yo
 - **Light and dark themes** (follows the system, switchable in the header).
 - **Validated API**: all inputs are checked server-side, and attempts on finished sessions are rejected.
 
-> The API and database already support timed sessions (30/60/120 s) and per-session tuning of weak-pair focus and the recent-question window. The UI for these is still being built.
+- **Timed challenges** (30, 60 or 120 seconds) with a personal best per length, and a session summary page after every session.
+- **Settings**: tune the weak-pair focus and the recent-question window; they are saved in your browser.
 
 ## Tech stack
 

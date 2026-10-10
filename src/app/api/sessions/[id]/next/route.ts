@@ -26,7 +26,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
     if (isComplete) {
       if (!session.endedAt) {
-        await db.update(practiceSessions).set({ endedAt: new Date() }).where(eq(practiceSessions.id, sessionId));
+        // A timed session ended when its clock ran out, not when this request happened to arrive.
+        const endedAt =
+          isTimedOut(session) && session.durationSeconds !== null
+            ? new Date(session.startedAt.getTime() + session.durationSeconds * 1000)
+            : new Date();
+        await db.update(practiceSessions).set({ endedAt }).where(eq(practiceSessions.id, sessionId));
       }
       return NextResponse.json({ finished: true });
     }
@@ -47,6 +52,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     return NextResponse.json({
       ...question,
       startedAt: session.startedAt.toISOString(),
+      // Lets the client correct for a clock that differs from the server's when counting down.
+      serverNow: Date.now(),
       durationSeconds: session.durationSeconds,
       targetQuestionCount: session.targetQuestionCount,
       answeredCount: session.actualQuestionCount,

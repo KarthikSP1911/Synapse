@@ -52,7 +52,7 @@ async function recordPair(left: number, right: number, isCorrect: boolean, respo
   // Weakness score (0-100): error rate, penalised for slowness and error streaks.
   let weakness = 100 - accuracy;
   if (avgTime > SLOW_RESPONSE_MS) weakness += 10;
-  if (incorrectStreak > 1) weakness += 10 * incorrectStreak;
+  if (incorrectStreak > 1) weakness += 10 * (incorrectStreak - 1);
   if (correctStreak > 3) weakness -= 20;
 
   await db
@@ -154,6 +154,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: "Session already completed" }, { status: 409 });
     }
 
+    // Only pairs the session can ask are accepted, so stray requests cannot skew the statistics.
+    const allowed = session.pairList?.length
+      ? session.pairList.some((p) => p.left === left && p.right === right)
+      : session.selectedLeftNumbers.includes(left) && session.selectedRightNumbers.includes(right);
+    if (!allowed) {
+      return NextResponse.json({ error: "Question is not part of this session" }, { status: 400 });
+    }
+
     const correctAnswer = left * right;
     const isCorrect = answer === correctAnswer;
 
@@ -169,22 +177,24 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     const finished = (target !== null && session.actualQuestionCount + 1 >= target) || isTimedOut(session);
 
-    // Session counters are updated in SQL so concurrent requests don't lose increments.
-    await db
-      .update(practiceSessions)
-      .set({
-        actualQuestionCount: sql`${practiceSessions.actualQuestionCount} + 1`,
-        totalCorrect: sql`${practiceSessions.totalCorrect} + ${isCorrect ? 1 : 0}`,
-        totalIncorrect: sql`${practiceSessions.totalIncorrect} + ${isCorrect ? 0 : 1}`,
-        accuracy: sql`(${practiceSessions.totalCorrect} + ${isCorrect ? 1 : 0}) * 100 / (${practiceSessions.actualQuestionCount} + 1)`,
-        averageResponseTimeMs: sql`(${practiceSessions.averageResponseTimeMs} * ${practiceSessions.actualQuestionCount} + ${elapsedMs}) / (${practiceSessions.actualQuestionCount} + 1)`,
-        ...(finished ? { endedAt: new Date() } : {}),
-      })
-      .where(eq(practiceSessions.id, sessionId));
-
-    await recordPair(left, right, isCorrect, elapsedMs);
-    await recordTable(left, isCorrect, elapsedMs);
-    if (left !== right) await recordTable(right, isCorrect, elapsedMs);
+    // The session counters (updated in SQL so concurrent requests don't lose increments), the pair
+    // and the table rows are independent of each other, so they run in parallel to keep the answer fast.
+    await Promise.all([
+      db
+        .update(practiceSessions)
+        .set({
+          actualQuestionCount: sql`${practiceSessions.actualQuestionCount} + 1`,
+          totalCorrect: sql`${practiceSessions.totalCorrect} + ${isCorrect ? 1 : 0}`,
+          totalIncorrect: sql`${practiceSessions.totalIncorrect} + ${isCorrect ? 0 : 1}`,
+          accuracy: sql`(${practiceSessions.totalCorrect} + ${isCorrect ? 1 : 0}) * 100 / (${practiceSessions.actualQuestionCount} + 1)`,
+          averageResponseTimeMs: sql`(${practiceSessions.averageResponseTimeMs} * ${practiceSessions.actualQuestionCount} + ${elapsedMs}) / (${practiceSessions.actualQuestionCount} + 1)`,
+          ...(finished ? { endedAt: new Date() } : {}),
+        })
+        .where(eq(practiceSessions.id, sessionId)),
+      recordPair(left, right, isCorrect, elapsedMs),
+      recordTable(left, isCorrect, elapsedMs),
+      left !== right ? recordTable(right, isCorrect, elapsedMs) : Promise.resolve(),
+    ]);
 
     return NextResponse.json({ isCorrect, correctAnswer, finished });
   } catch (error) {
