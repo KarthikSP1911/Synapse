@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { practiceSessions } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
+import { getCurrentUser, unauthorized } from "@/lib/auth";
 import { getNextQuestion } from "@/lib/question-engine";
 import { toPublicQuestion } from "@/lib/skills/build";
 import { isOperand, isTimedOut, parseId, sessionDeadline } from "@/lib/validation";
@@ -9,13 +10,16 @@ import { isOperand, isTimedOut, parseId, sessionDeadline } from "@/lib/validatio
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = await getCurrentUser();
+  if (!user) return unauthorized();
+
   const sessionId = parseId((await params).id);
   if (sessionId === null) {
     return NextResponse.json({ error: "Invalid session id" }, { status: 400 });
   }
 
   try {
-    const [session] = await db.select().from(practiceSessions).where(eq(practiceSessions.id, sessionId));
+    const [session] = await db.select().from(practiceSessions).where(and(eq(practiceSessions.id, sessionId), eq(practiceSessions.userId, user.id)));
 
     if (!session) {
       return NextResponse.json({ error: "Session not found" }, { status: 404 });

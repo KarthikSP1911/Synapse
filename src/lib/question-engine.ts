@@ -9,6 +9,7 @@ import { reviewQuestionIds, sessionConfig, type SessionShape } from "@/lib/sessi
 
 export interface EngineSession extends SessionShape {
   id: number;
+  userId: number | null;
   focus: string;
   weakFocusPercent: number;
   recentWindow: number;
@@ -47,6 +48,8 @@ export async function getNextQuestion(session: EngineSession, excludeId?: string
   // Statistics are narrowed to this skill and, where the configuration says so, to its exercise types
   // and difficulty, so one skill's history can never distort another's.
   const scope = [
+    // A session's owner is always set; the explicit check keeps another user's history out regardless.
+    ...(session.userId === null ? [isNull(questionStats.userId)] : [eq(questionStats.userId, session.userId)]),
     eq(questionStats.skill, config.skill),
     inArray(questionStats.exerciseType, config.exerciseTypes),
     ...("difficulty" in config ? [eq(questionStats.difficulty, config.difficulty)] : []),

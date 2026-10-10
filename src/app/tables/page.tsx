@@ -3,6 +3,7 @@ import { getMultiplicationCells, getSquareCells, type MatrixCell, type SquareCel
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Page, PageHeader } from "@/components/page-header";
 import { cn } from "@/lib/utils";
+import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +39,8 @@ function Legend() {
 }
 
 export default async function TablesPage() {
-  const [multiplication, squares] = await Promise.all([getMultiplicationCells(), getSquareCells()]);
+  const { id: userId } = await requireUser();
+  const [multiplication, squares] = await Promise.all([getMultiplicationCells(userId), getSquareCells(userId)]);
 
   const pairMap = new Map<string, MatrixCell>();
   for (const p of multiplication) pairMap.set(`${p.left}x${p.right}`, p);

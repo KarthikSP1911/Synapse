@@ -4,11 +4,15 @@ import { practiceSessions } from "@/db/schema";
 import { readJson } from "@/lib/validation";
 import { getMistakeQuestionIds } from "@/lib/mistakes";
 import { parseSessionRequest } from "@/lib/sessions";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
+import { getCurrentUser, unauthorized } from "@/lib/auth";
 import { isSkill } from "@/lib/sessions";
 import { EXERCISE_TYPES } from "@/lib/skills/types";
 
 export async function POST(request: Request) {
+  const user = await getCurrentUser();
+  if (!user) return unauthorized();
+
   const body = await readJson(request);
   if (!body) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
@@ -28,7 +32,7 @@ export async function POST(request: Request) {
         const [source] = await db
           .select({ skill: practiceSessions.skill })
           .from(practiceSessions)
-          .where(eq(practiceSessions.id, review.sessionId));
+          .where(and(eq(practiceSessions.id, review.sessionId), eq(practiceSessions.userId, user.id)));
         if (!source) return NextResponse.json({ error: "Session not found" }, { status: 404 });
         if (!isSkill(source.skill)) return NextResponse.json({ error: "Session has an unknown skill" }, { status: 400 });
         skill = source.skill;
@@ -37,7 +41,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: `Unknown exercise type for ${skill}` }, { status: 400 });
       }
 
-      const questionIds = await getMistakeQuestionIds({ ...review, skill });
+      const questionIds = await getMistakeQuestionIds({ ...review, skill, userId: user.id });
       if (questionIds.length === 0) {
         return NextResponse.json({ error: "No mistakes to review" }, { status: 400 });
       }
@@ -45,6 +49,7 @@ export async function POST(request: Request) {
       const [session] = await db
         .insert(practiceSessions)
         .values({
+          userId: user.id,
           skill,
           mode: "review",
           targetQuestionCount: questionIds.length,
@@ -59,7 +64,7 @@ export async function POST(request: Request) {
       return NextResponse.json(session, { status: 201 });
     }
 
-    const [session] = await db.insert(practiceSessions).values(parsed.session).returning();
+    const [session] = await db.insert(practiceSessions).values({ ...parsed.session, userId: user.id }).returning();
     return NextResponse.json(session, { status: 201 });
   } catch (error) {
     console.error("Failed to create session:", error);

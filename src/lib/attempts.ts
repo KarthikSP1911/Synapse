@@ -1,12 +1,13 @@
 import { db } from "@/db";
 import { practiceSessions, questionAttempts, questionStats, tableStatistics } from "@/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { applyAttempt, type ItemStats } from "@/lib/item-stats";
 import type { Outcome, Question } from "@/lib/skills/types";
 
 const SLOW_TABLE_RESPONSE_MS = 5000;
 
 export interface AttemptRecord {
+  userId: number;
   sessionId: number;
   question: Question;
   outcome: Outcome;
@@ -18,9 +19,9 @@ export interface AttemptRecord {
   finished: boolean;
 }
 
-async function recordQuestionStats(question: Question, outcome: Outcome, hinted: boolean, responseTimeMs: number) {
+async function recordQuestionStats(userId: number, question: Question, outcome: Outcome, hinted: boolean, responseTimeMs: number) {
   const now = new Date();
-  const [row] = await db.select().from(questionStats).where(eq(questionStats.questionId, question.id)).limit(1);
+  const [row] = await db.select().from(questionStats).where(and(eq(questionStats.userId, userId), eq(questionStats.questionId, question.id))).limit(1);
   const next: ItemStats = applyAttempt(row ?? null, { outcome, hinted, responseTimeMs }, question.skill, now);
 
   // Descriptive fields are refreshed too, so a generator wording fix reaches existing rows.
@@ -31,11 +32,11 @@ async function recordQuestionStats(question: Question, outcome: Outcome, hinted:
     ...next,
     updatedAt: now,
   };
-  // Upsert so two first attempts at the same new question cannot collide on the primary key.
+  // Upsert so two first attempts at the same new question cannot collide on the (user, question) index.
   await db
     .insert(questionStats)
-    .values({ questionId: question.id, skill: question.skill, exerciseType: question.exerciseType, ...updates })
-    .onConflictDoUpdate({ target: questionStats.questionId, set: updates });
+    .values({ userId, questionId: question.id, skill: question.skill, exerciseType: question.exerciseType, ...updates })
+    .onConflictDoUpdate({ target: [questionStats.userId, questionStats.questionId], set: updates });
 }
 
 /** Legacy per-table roll-up for multiplication (kept as before; one row per factor). */
@@ -85,12 +86,13 @@ async function recordTable(num: number, isCorrect: boolean, responseTimeMs: numb
  * The independent writes run in parallel to keep the answer fast.
  */
 export async function recordAttempt(record: AttemptRecord): Promise<void> {
-  const { sessionId, question, outcome, hinted, userAnswer, responseTimeMs, finished } = record;
+  const { userId, sessionId, question, outcome, hinted, userAnswer, responseTimeMs, finished } = record;
   const isCorrect = outcome === "correct";
   const mult = question.skill === "multiplication" ? question : null;
   const asInt = (text: string | null) => (text !== null && /^\d{1,9}$/.test(text) ? Number(text) : null);
 
   await db.insert(questionAttempts).values({
+    userId,
     sessionId,
     skill: question.skill,
     exerciseType: question.exerciseType,
@@ -123,7 +125,7 @@ export async function recordAttempt(record: AttemptRecord): Promise<void> {
         ...(finished ? { endedAt: new Date() } : {}),
       })
       .where(eq(practiceSessions.id, sessionId)),
-    recordQuestionStats(question, outcome, hinted, responseTimeMs),
+    recordQuestionStats(userId, question, outcome, hinted, responseTimeMs),
     ...(mult
       ? [
           recordTable(mult.left, isCorrect, responseTimeMs),

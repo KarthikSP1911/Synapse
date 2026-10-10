@@ -8,6 +8,7 @@ import type { Skill } from "@/lib/skills/types";
 export { MAX_REVIEW_DAYS, MAX_REVIEW_QUESTIONS };
 
 export interface MistakeScope {
+  userId: number;
   sessionId?: number;
   sinceDays?: number;
   skill?: Skill;
@@ -20,8 +21,8 @@ export interface MistakeScope {
  * exercise type, in any combination. Original attempts are never modified: retrying a mistake
  * creates a new session with its own attempts.
  */
-export async function getMistakeQuestionIds(scope: MistakeScope | ReviewRequest): Promise<string[]> {
-  const conditions = [eq(questionAttempts.isCorrect, false)];
+export async function getMistakeQuestionIds(scope: MistakeScope | (ReviewRequest & { userId: number })): Promise<string[]> {
+  const conditions = [eq(questionAttempts.userId, scope.userId), eq(questionAttempts.isCorrect, false)];
   if (scope.sessionId !== undefined) conditions.push(eq(questionAttempts.sessionId, scope.sessionId));
   if (scope.sinceDays !== undefined) {
     conditions.push(gte(questionAttempts.createdAt, new Date(Date.now() - scope.sinceDays * 24 * 60 * 60 * 1000)));

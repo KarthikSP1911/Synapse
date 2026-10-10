@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { practiceSessions } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { recordAttempt } from "@/lib/attempts";
+import { getCurrentUser, unauthorized } from "@/lib/auth";
 import { checkAnswer } from "@/lib/skills/answers";
 import { questionFromId } from "@/lib/skills/build";
 import type { Outcome } from "@/lib/skills/types";
@@ -24,6 +25,9 @@ import {
  * The server rebuilds the question from its id and decides correctness itself.
  */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = await getCurrentUser();
+  if (!user) return unauthorized();
+
   const sessionId = parseId((await params).id);
   if (sessionId === null) {
     return NextResponse.json({ error: "Invalid session id" }, { status: 400 });
@@ -56,7 +60,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   try {
-    const [session] = await db.select().from(practiceSessions).where(eq(practiceSessions.id, sessionId));
+    const [session] = await db.select().from(practiceSessions).where(and(eq(practiceSessions.id, sessionId), eq(practiceSessions.userId, user.id)));
     if (!session) {
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
@@ -98,6 +102,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const finished = (target !== null && session.actualQuestionCount + 1 >= target) || isTimedOut(session);
 
     await recordAttempt({
+      userId: user.id,
       sessionId,
       question,
       outcome,

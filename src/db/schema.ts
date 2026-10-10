@@ -1,10 +1,41 @@
-import { pgTable, serial, integer, timestamp, boolean, varchar, primaryKey, jsonb, text, index } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, timestamp, boolean, varchar, primaryKey, jsonb, text, index, uniqueIndex } from "drizzle-orm/pg-core";
 import type { PracticeConfig } from "@/lib/skills/types";
+
+export const users = pgTable(
+  "users",
+  {
+    id: serial("id").primaryKey(),
+    /** Stored lower-cased, so the unique index makes sign-ups case-insensitive. */
+    email: varchar("email", { length: 254 }).notNull(),
+    /** `scrypt$<salt>$<hash>`; see `src/lib/password.ts`. */
+    passwordHash: text("password_hash").notNull(),
+    /** IANA zone name (e.g. "Asia/Kolkata"), refreshed at each login; decides which day an attempt counts toward. */
+    timezone: varchar("timezone", { length: 64 }).default("UTC").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [uniqueIndex("users_email_idx").on(table.email)]
+);
+
+/** Login sessions. Only a SHA-256 hash of the cookie token is stored, so a leaked table cannot be replayed. */
+export const authSessions = pgTable(
+  "auth_sessions",
+  {
+    tokenHash: varchar("token_hash", { length: 64 }).primaryKey(),
+    userId: integer("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("auth_sessions_user_idx").on(table.userId), index("auth_sessions_expires_idx").on(table.expiresAt)]
+);
 
 export const practiceSessions = pgTable(
   "practice_sessions",
   {
     id: serial("id").primaryKey(),
+    /** Owner. Null only for sessions that predate accounts; the first account to sign up claims them. */
+    userId: integer("user_id").references(() => users.id),
     skill: varchar("skill", { length: 20 }).default("multiplication").notNull(), // multiplication | percentage | fraction | square
     mode: varchar("mode", { length: 20 }).notNull(), // "fixed", "endless", "timed" or "review"
     focus: varchar("focus", { length: 10 }).default("adaptive").notNull(), // adaptive | weak | due
@@ -35,7 +66,10 @@ export const practiceSessions = pgTable(
     averageResponseTimeMs: integer("average_response_time_ms").default(0).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
-  (table) => [index("practice_sessions_skill_started_idx").on(table.skill, table.startedAt)]
+  (table) => [
+    index("practice_sessions_skill_started_idx").on(table.skill, table.startedAt),
+    index("practice_sessions_user_started_idx").on(table.userId, table.startedAt),
+  ]
 );
 
 export const questionAttempts = pgTable(
@@ -43,6 +77,7 @@ export const questionAttempts = pgTable(
   {
     id: serial("id").primaryKey(),
     sessionId: integer("session_id").references(() => practiceSessions.id).notNull(),
+    userId: integer("user_id").references(() => users.id),
     skill: varchar("skill", { length: 20 }).default("multiplication").notNull(),
     exerciseType: varchar("exercise_type", { length: 20 }).default("multiply").notNull(),
     /** Stable id of the question, e.g. `percentage:of:25:80`. */
@@ -69,18 +104,21 @@ export const questionAttempts = pgTable(
     index("question_attempts_session_idx").on(table.sessionId),
     index("question_attempts_question_idx").on(table.questionId),
     index("question_attempts_skill_created_idx").on(table.skill, table.createdAt),
+    index("question_attempts_user_created_idx").on(table.userId, table.createdAt),
   ]
 );
 
 /**
- * Per-question performance and review state for every skill (the learning item is the stable
- * question id). Multiplication pairs were copied here from `pair_statistics` by the multi-skill
+ * Per-user, per-question performance and review state for every skill (the learning item is the
+ * stable question id; each user has their own row for it). Multiplication pairs were copied here from `pair_statistics` by the multi-skill
  * migration, which is no longer written to.
  */
 export const questionStats = pgTable(
   "question_stats",
   {
-    questionId: varchar("question_id", { length: 120 }).primaryKey(),
+    id: serial("id").primaryKey(),
+    userId: integer("user_id").references(() => users.id),
+    questionId: varchar("question_id", { length: 120 }).notNull(),
     skill: varchar("skill", { length: 20 }).notNull(),
     exerciseType: varchar("exercise_type", { length: 20 }).notNull(),
     /** Related questions share a concept, e.g. `square:17` or `percentage:pct:25`. */
@@ -105,6 +143,7 @@ export const questionStats = pgTable(
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => [
+    uniqueIndex("question_stats_user_question_idx").on(table.userId, table.questionId),
     index("question_stats_skill_type_idx").on(table.skill, table.exerciseType),
     index("question_stats_skill_weakness_idx").on(table.skill, table.weaknessScore),
     index("question_stats_skill_due_idx").on(table.skill, table.dueAt),

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { practiceSessions } from "@/db/schema";
 import { and, eq, isNotNull } from "drizzle-orm";
+import { getCurrentUser, unauthorized } from "@/lib/auth";
 import { parseId } from "@/lib/validation";
 
 /**
@@ -9,13 +10,16 @@ import { parseId } from "@/lib/validation";
  * session's deadline back by the same amount. Resuming a session that is not paused is a no-op.
  */
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = await getCurrentUser();
+  if (!user) return unauthorized();
+
   const sessionId = parseId((await params).id);
   if (sessionId === null) {
     return NextResponse.json({ error: "Invalid session id" }, { status: 400 });
   }
 
   try {
-    const [session] = await db.select().from(practiceSessions).where(eq(practiceSessions.id, sessionId));
+    const [session] = await db.select().from(practiceSessions).where(and(eq(practiceSessions.id, sessionId), eq(practiceSessions.userId, user.id)));
     if (!session) {
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }

@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { getCurrentUser } from "@/lib/auth";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -21,11 +22,15 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // The header only needs to know whether anyone is signed in. If the database is unreachable the
+  // page itself reports the problem; the shell should still render.
+  const user = await getCurrentUser().catch(() => null);
+
   return (
     <html lang="en" suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable}`}>
       <body className="min-h-dvh bg-background font-sans text-foreground antialiased flex flex-col">
@@ -36,7 +41,7 @@ export default function RootLayout({
           >
             Skip to content
           </a>
-          <SiteHeader />
+          <SiteHeader signedIn={user !== null} />
           <main id="main" className="flex-1">
             {children}
           </main>

@@ -12,6 +12,7 @@ import { SkillIcon } from "@/components/skill-icon";
 import { exerciseLabel, modeLabel, skillTitle } from "@/lib/skills/meta";
 import { questionFromId } from "@/lib/skills/build";
 import { SKILLS, type Skill } from "@/lib/skills/types";
+import { requireUser } from "@/lib/auth";
 import { parseId } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
@@ -33,10 +34,15 @@ function verdict(accuracy: number) {
 const missLabel: Record<string, string> = { incorrect: "", skipped: "Skipped", timed_out: "Timed out" };
 
 export default async function SummaryPage({ params }: { params: Promise<{ id: string }> }) {
+  const user = await requireUser();
   const sessionId = parseId((await params).id);
   if (sessionId === null) notFound();
 
-  const [session] = await db.select().from(practiceSessions).where(eq(practiceSessions.id, sessionId));
+  // Another user's session id is indistinguishable from one that does not exist.
+  const [session] = await db
+    .select()
+    .from(practiceSessions)
+    .where(and(eq(practiceSessions.id, sessionId), eq(practiceSessions.userId, user.id)));
   if (!session) notFound();
   const skill = (SKILLS.includes(session.skill as Skill) ? session.skill : "multiplication") as Skill;
 
@@ -67,6 +73,7 @@ export default async function SummaryPage({ params }: { params: Promise<{ id: st
       .from(practiceSessions)
       .where(
         and(
+          eq(practiceSessions.userId, user.id),
           eq(practiceSessions.mode, "timed"),
           eq(practiceSessions.skill, session.skill),
           eq(practiceSessions.durationSeconds, session.durationSeconds),

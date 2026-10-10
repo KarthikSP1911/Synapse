@@ -1,9 +1,12 @@
 import { db } from "@/db";
-import { practiceSessions, questionStats } from "@/db/schema";
+import { practiceSessions, questionAttempts, questionStats } from "@/db/schema";
 import { and, asc, desc, eq, gt, sql } from "drizzle-orm";
 import { SKILLS, type Skill } from "@/lib/skills/types";
 
-/** Read-side queries for the home, progress and tables pages. Every figure comes from the database. */
+/**
+ * Read-side queries for the home, progress, tables and profile pages. Every figure comes from the
+ * database and is scoped to one user: each function takes the signed-in user's id first.
+ */
 
 export type SkillFilter = Skill | "all";
 
@@ -17,7 +20,9 @@ export const WEAK_MIN_WEAKNESS = 50;
 
 const isDueSql = sql`(${questionStats.dueAt} IS NULL OR ${questionStats.dueAt} <= NOW())`;
 const attempted = gt(questionStats.totalAttempts, 0);
-const forSkill = (filter: SkillFilter) => (filter === "all" ? undefined : eq(questionStats.skill, filter));
+/** One user's statistics, optionally narrowed to a skill. */
+const scoped = (userId: number, filter: SkillFilter = "all") =>
+  and(eq(questionStats.userId, userId), filter === "all" ? undefined : eq(questionStats.skill, filter));
 
 // ---------------------------------------------------------------------------
 // Per-skill summaries (home page cards, progress overview)
@@ -39,7 +44,7 @@ export interface SkillSummary {
 }
 
 /** One summary per skill, including skills with no history yet. */
-export async function getSkillSummaries(): Promise<Record<Skill, SkillSummary>> {
+export async function getSkillSummaries(userId: number): Promise<Record<Skill, SkillSummary>> {
   const rows = await db
     .select({
       skill: questionStats.skill,
@@ -52,6 +57,7 @@ export async function getSkillSummaries(): Promise<Record<Skill, SkillSummary>> 
       weak: sql<string>`COUNT(*) FILTER (WHERE ${questionStats.totalAttempts} > 0 AND ${questionStats.weaknessScore} > ${WEAK_MIN_WEAKNESS})`,
     })
     .from(questionStats)
+    .where(eq(questionStats.userId, userId))
     .groupBy(questionStats.skill);
 
   const summaries = {} as Record<Skill, SkillSummary>;
@@ -105,7 +111,7 @@ export interface ExerciseBreakdown {
   weak: number;
 }
 
-export async function getExerciseBreakdown(filter: SkillFilter): Promise<ExerciseBreakdown[]> {
+export async function getExerciseBreakdown(userId: number, filter: SkillFilter): Promise<ExerciseBreakdown[]> {
   const rows = await db
     .select({
       skill: questionStats.skill,
@@ -117,7 +123,7 @@ export async function getExerciseBreakdown(filter: SkillFilter): Promise<Exercis
       weak: sql<string>`COUNT(*) FILTER (WHERE ${questionStats.weaknessScore} > ${WEAK_MIN_WEAKNESS})`,
     })
     .from(questionStats)
-    .where(and(attempted, forSkill(filter)))
+    .where(and(attempted, scoped(userId, filter)))
     .groupBy(questionStats.skill, questionStats.exerciseType)
     .orderBy(asc(questionStats.skill), asc(questionStats.exerciseType));
 
@@ -163,21 +169,21 @@ const itemColumns = {
   box: questionStats.box,
 };
 
-export async function getWeakItems(filter: SkillFilter, limit = 10): Promise<ItemRow[]> {
+export async function getWeakItems(userId: number, filter: SkillFilter, limit = 10): Promise<ItemRow[]> {
   const rows = await db
     .select(itemColumns)
     .from(questionStats)
-    .where(and(attempted, forSkill(filter)))
+    .where(and(attempted, scoped(userId, filter)))
     .orderBy(desc(questionStats.weaknessScore), desc(questionStats.totalAttempts))
     .limit(limit);
   return rows as ItemRow[];
 }
 
-export async function getMasteredItems(filter: SkillFilter, limit = 5): Promise<ItemRow[]> {
+export async function getMasteredItems(userId: number, filter: SkillFilter, limit = 5): Promise<ItemRow[]> {
   const rows = await db
     .select(itemColumns)
     .from(questionStats)
-    .where(and(gt(questionStats.totalAttempts, MASTERED_MIN_ATTEMPTS - 1), forSkill(filter)))
+    .where(and(gt(questionStats.totalAttempts, MASTERED_MIN_ATTEMPTS - 1), scoped(userId, filter)))
     .orderBy(asc(questionStats.weaknessScore), desc(questionStats.totalAttempts))
     .limit(limit);
   return rows as ItemRow[];
@@ -196,7 +202,7 @@ export interface ConceptRow {
  * Concepts (a percentage, a fraction, a square) ranked by how weak their questions are on average.
  * Multiplication concepts are single pairs, so they would only repeat the weak-question list.
  */
-export async function getWeakConcepts(filter: SkillFilter, limit = 8): Promise<ConceptRow[]> {
+export async function getWeakConcepts(userId: number, filter: SkillFilter, limit = 8): Promise<ConceptRow[]> {
   const rows = await db
     .select({
       concept: questionStats.concept,
@@ -207,7 +213,7 @@ export async function getWeakConcepts(filter: SkillFilter, limit = 8): Promise<C
       weakness: sql<string>`AVG(${questionStats.weaknessScore})`,
     })
     .from(questionStats)
-    .where(and(attempted, forSkill(filter), sql`${questionStats.skill} <> 'multiplication'`))
+    .where(and(attempted, scoped(userId, filter), sql`${questionStats.skill} <> 'multiplication'`))
     .groupBy(questionStats.concept)
     .having(sql`SUM(${questionStats.totalAttempts}) >= 2`)
     .orderBy(desc(sql`AVG(${questionStats.weaknessScore})`), desc(sql`SUM(${questionStats.totalAttempts})`))
@@ -238,7 +244,7 @@ export interface UpcomingReviews {
   boxes: number[];
 }
 
-export async function getUpcomingReviews(filter: SkillFilter): Promise<UpcomingReviews> {
+export async function getUpcomingReviews(userId: number, filter: SkillFilter): Promise<UpcomingReviews> {
   const [row] = await db
     .select({
       dueNow: sql<string>`COUNT(*) FILTER (WHERE ${isDueSql})`,
@@ -253,7 +259,7 @@ export async function getUpcomingReviews(filter: SkillFilter): Promise<UpcomingR
       b5: sql<string>`COUNT(*) FILTER (WHERE ${questionStats.box} = 5)`,
     })
     .from(questionStats)
-    .where(and(attempted, forSkill(filter)));
+    .where(and(attempted, scoped(userId, filter)));
 
   return {
     dueNow: Number(row.dueNow),
@@ -272,11 +278,11 @@ export async function getUpcomingReviews(filter: SkillFilter): Promise<UpcomingR
 // ---------------------------------------------------------------------------
 
 /** Sessions with at least one answer, newest first. */
-export async function getRecentSessions(filter: SkillFilter, limit: number) {
+export async function getRecentSessions(userId: number, filter: SkillFilter, limit: number) {
   return db
     .select()
     .from(practiceSessions)
-    .where(and(gt(practiceSessions.actualQuestionCount, 0), filter === "all" ? undefined : eq(practiceSessions.skill, filter)))
+    .where(and(eq(practiceSessions.userId, userId), gt(practiceSessions.actualQuestionCount, 0), filter === "all" ? undefined : eq(practiceSessions.skill, filter)))
     .orderBy(desc(practiceSessions.startedAt))
     .limit(limit);
 }
@@ -295,7 +301,7 @@ export interface MatrixCell {
 }
 
 /** Every multiplication pair that has been attempted, for the 20×20 heatmap. */
-export async function getMultiplicationCells(): Promise<MatrixCell[]> {
+export async function getMultiplicationCells(userId: number): Promise<MatrixCell[]> {
   const rows = await db
     .select({
       questionId: questionStats.questionId,
@@ -305,7 +311,7 @@ export async function getMultiplicationCells(): Promise<MatrixCell[]> {
       weaknessScore: questionStats.weaknessScore,
     })
     .from(questionStats)
-    .where(and(eq(questionStats.skill, "multiplication"), attempted));
+    .where(and(eq(questionStats.userId, userId), eq(questionStats.skill, "multiplication"), attempted));
 
   const cells: MatrixCell[] = [];
   for (const row of rows) {
@@ -330,7 +336,7 @@ export interface SquareCell {
  * Squares performance per base number n (value, root and missing-value questions for the same n
  * share the concept `square:n`, so they are combined).
  */
-export async function getSquareCells(): Promise<SquareCell[]> {
+export async function getSquareCells(userId: number): Promise<SquareCell[]> {
   const rows = await db
     .select({
       concept: questionStats.concept,
@@ -340,7 +346,7 @@ export async function getSquareCells(): Promise<SquareCell[]> {
       weakness: sql<string>`AVG(${questionStats.weaknessScore})`,
     })
     .from(questionStats)
-    .where(and(eq(questionStats.skill, "square"), attempted))
+    .where(and(eq(questionStats.userId, userId), eq(questionStats.skill, "square"), attempted))
     .groupBy(questionStats.concept);
 
   const cells: SquareCell[] = [];
@@ -359,4 +365,37 @@ export async function getSquareCells(): Promise<SquareCell[]> {
     }
   }
   return cells;
+}
+
+// ---------------------------------------------------------------------------
+// Activity (profile heatmap and streaks)
+// ---------------------------------------------------------------------------
+
+/**
+ * Questions answered per calendar day, in the user's time zone, for the last `days` days.
+ * Days are `YYYY-MM-DD` strings; days with no activity are absent.
+ */
+export async function getActivityByDay(userId: number, timeZone: string, days: number): Promise<Map<string, number>> {
+  // The zone is a bind parameter, never interpolated into the SQL text.
+  const day = sql<string>`to_char((${questionAttempts.createdAt} AT TIME ZONE 'UTC') AT TIME ZONE ${timeZone}, 'YYYY-MM-DD')`;
+  const rows = await db
+    .select({ day, count: sql<string>`COUNT(*)` })
+    .from(questionAttempts)
+    .where(
+      and(
+        eq(questionAttempts.userId, userId),
+        // A day of slack on each side of the window, so zone offsets can never clip the first or last day.
+        gt(questionAttempts.createdAt, sql`NOW() - ${`${days + 1} days`}::interval`)
+      )
+    )
+    // By position: the zone is a bind parameter, so a second copy of the expression in GROUP BY would
+    // carry a different parameter and Postgres could not tell it matches the selected one.
+    .groupBy(sql`1`);
+  return new Map(rows.map((r) => [r.day, Number(r.count)]));
+}
+
+/** Questions answered by a user since they started, across all skills. */
+export async function getTotalAnswered(userId: number): Promise<number> {
+  const [row] = await db.select({ total: sql<string>`COUNT(*)` }).from(questionAttempts).where(eq(questionAttempts.userId, userId));
+  return Number(row?.total ?? 0);
 }

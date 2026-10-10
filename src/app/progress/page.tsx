@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { buttonVariants } from "@/components/ui/button";
 import { Page, PageHeader, StatTile } from "@/components/page-header";
 import { cn } from "@/lib/utils";
+import { requireUser } from "@/lib/auth";
 import {
   getExerciseBreakdown,
   getMasteredItems,
@@ -132,17 +133,18 @@ function conceptLabel(concept: string): string {
 }
 
 export default async function ProgressPage({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
+  const { id: userId } = await requireUser();
   const filter = parseSkillFilter((await searchParams).skill);
 
   const [summaries, breakdown, weakItems, masteredItems, weakConcepts, reviews, recent, squareCells] = await Promise.all([
-    getSkillSummaries(),
-    getExerciseBreakdown(filter),
-    getWeakItems(filter, 10),
-    getMasteredItems(filter, 5),
-    getWeakConcepts(filter, 8),
-    getUpcomingReviews(filter),
-    getRecentSessions(filter, 30),
-    filter === "square" ? getSquareCells() : Promise.resolve([]),
+    getSkillSummaries(userId),
+    getExerciseBreakdown(userId, filter),
+    getWeakItems(userId, filter, 10),
+    getMasteredItems(userId, filter, 5),
+    getWeakConcepts(userId, filter, 8),
+    getUpcomingReviews(userId, filter),
+    getRecentSessions(userId, filter, 30),
+    filter === "square" ? getSquareCells(userId) : Promise.resolve([]),
   ]);
 
   const overview = overviewOf(summaries, filter);

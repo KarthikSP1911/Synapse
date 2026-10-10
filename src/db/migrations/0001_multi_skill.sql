@@ -143,4 +143,10 @@ SELECT
   "current_correct_streak", "current_incorrect_streak", "best_correct_streak",
   "weakness_score", "box", "due_at", "last_attempted_at", "updated_at"
 FROM "pair_statistics"
-ON CONFLICT ("question_id") DO NOTHING;
+-- Skip pairs that already have a row. This used to be `ON CONFLICT ("question_id")`, which stopped
+-- working once 0002 replaced that primary key with a per-user unique index; the runner re-applies
+-- every file, so this statement has to stay valid after 0002.
+WHERE NOT EXISTS (
+  SELECT 1 FROM "question_stats" q
+  WHERE q."question_id" = 'multiplication:' || "pair_statistics"."left_number" || ':' || "pair_statistics"."right_number"
+);
