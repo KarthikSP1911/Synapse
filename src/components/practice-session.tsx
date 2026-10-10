@@ -459,7 +459,7 @@ export default function PracticeSession({ sessionId }: PracticeSessionProps) {
       </header>
 
       {/* Question */}
-      <div className={cn("container flex flex-1 flex-col items-center justify-center", settings.showLiveStats ? "pb-24" : "pb-10")} aria-hidden={paused || undefined}>
+      <div className={cn("container flex flex-1 flex-col items-center justify-center", settings.showLiveStats ? "pb-[calc(6rem+env(safe-area-inset-bottom))]" : "pb-10")} aria-hidden={paused || undefined}>
         <p className="mb-5 font-mono text-xs uppercase tracking-widest text-muted-foreground">
           {SKILL_META[question.skill].title} · {exerciseLabel(question.skill, question.exerciseType)}
         </p>
@@ -605,7 +605,7 @@ export default function PracticeSession({ sessionId }: PracticeSessionProps) {
 
       {/* Live stats */}
       {settings.showLiveStats && (
-        <footer className="fixed inset-x-0 bottom-0 border-t border-border bg-background/80 backdrop-blur-md">
+        <footer className="fixed inset-x-0 bottom-0 border-t border-border bg-background/80 pb-[env(safe-area-inset-bottom)] backdrop-blur-md">
           <div className="container grid h-14 grid-cols-3 items-center text-center text-sm">
             <Stat label="Correct" value={`${stats.correct}/${stats.total}`} />
             <Stat label="Accuracy" value={`${accuracy}%`} />

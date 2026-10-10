@@ -49,7 +49,7 @@ function SkillFilterNav({ active }: { active: SkillFilter }) {
           href={value === "all" ? "/progress" : `/progress?skill=${value}`}
           aria-current={value === active ? "page" : undefined}
           className={cn(
-            "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md border px-3 text-sm font-medium transition-colors",
+            "inline-flex h-9 shrink-0 items-center gap-1.5 pointer-coarse:h-11 rounded-md border px-3 text-sm font-medium transition-colors",
             value === active
               ? "border-foreground bg-foreground text-background"
               : "border-border bg-background text-muted-foreground hover:border-input hover:bg-accent hover:text-foreground"

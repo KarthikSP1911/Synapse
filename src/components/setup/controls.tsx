@@ -22,7 +22,7 @@ export function Chip({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "inline-flex h-9 items-center justify-center rounded-md border text-sm font-medium transition-colors select-none",
+        "inline-flex h-9 items-center justify-center rounded-md border text-sm pointer-coarse:h-11 font-medium transition-colors select-none",
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50",
         active
           ? "border-foreground bg-foreground text-background"
@@ -142,7 +142,7 @@ export function NumberField({
         aria-label={`${label} (${min} to ${max})`}
         onChange={(e) => onChange(e.target.value.replace(/\D/g, "").slice(0, 5))}
         className={cn(
-          "h-9 w-full rounded-md border bg-background px-3 font-mono tabular-nums outline-none transition-colors",
+          "h-9 w-full rounded-md border bg-background px-3 text-base font-mono tabular-nums md:text-sm pointer-coarse:h-11 outline-none transition-colors",
           "focus:border-foreground focus:ring-4 focus:ring-ring/20",
           invalid ? "border-destructive" : "border-input"
         )}

@@ -24,6 +24,31 @@ export function Logo() {
   );
 }
 
+function NavLinks({ pathname, className, linkClassName }: { pathname: string; className: string; linkClassName: string }) {
+  return (
+    <nav aria-label="Main" className={className}>
+      {links.map(({ href, label }) => {
+        const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
+        return (
+          <Link
+            key={href}
+            href={href}
+            aria-current={active ? "page" : undefined}
+            className={cn(
+              "relative flex items-center text-sm transition-colors",
+              linkClassName,
+              active ? "font-medium text-foreground" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            {label}
+            {active && <span className="absolute inset-x-2.5 bottom-0 h-px bg-foreground sm:inset-x-3" />}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
 export function SiteHeader({ signedIn }: { signedIn: boolean }) {
   const pathname = usePathname();
 
@@ -35,31 +60,12 @@ export function SiteHeader({ signedIn }: { signedIn: boolean }) {
   const profileActive = pathname.startsWith("/profile");
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
+    <header className="sticky top-0 z-50 border-b border-border bg-background/80 pt-[env(safe-area-inset-top)] backdrop-blur-md">
       <div className="container flex h-14 items-center justify-between gap-4">
         <Logo />
         <div className="flex items-center gap-1 sm:gap-3">
-          {showNav && (
-            <nav aria-label="Main" className="no-scrollbar -mr-1 flex h-14 items-stretch overflow-x-auto sm:mr-0">
-              {links.map(({ href, label }) => {
-                const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
-                return (
-                  <Link
-                    key={href}
-                    href={href}
-                    aria-current={active ? "page" : undefined}
-                    className={cn(
-                      "relative flex items-center px-2.5 text-sm transition-colors sm:px-3",
-                      active ? "font-medium text-foreground" : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    {label}
-                    {active && <span className="absolute inset-x-2.5 bottom-0 h-px bg-foreground sm:inset-x-3" />}
-                  </Link>
-                );
-              })}
-            </nav>
-          )}
+          {/* From `sm` up the links sit beside the logo; on phones they get their own row below, so nothing is clipped. */}
+          {showNav && <NavLinks pathname={pathname} className="hidden h-14 items-stretch sm:flex" linkClassName="px-3" />}
           <ThemeToggle />
           {showNav && (
             <Link
@@ -76,6 +82,11 @@ export function SiteHeader({ signedIn }: { signedIn: boolean }) {
           )}
         </div>
       </div>
+      {showNav && (
+        <div className="container border-t border-border sm:hidden">
+          <NavLinks pathname={pathname} className="grid h-11 grid-cols-4" linkClassName="justify-center" />
+        </div>
+      )}
     </header>
   );
 }

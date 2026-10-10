@@ -228,7 +228,7 @@ export default function PracticeSetup({
                 aria-selected={kind === id}
                 onClick={() => switchKind(id)}
                 className={cn(
-                  "flex h-8 items-center justify-center gap-1.5 rounded-md text-sm font-medium transition-colors",
+                  "flex h-8 items-center justify-center gap-1.5 rounded-md text-sm font-medium transition-colors pointer-coarse:h-10",
                   kind === id ? "bg-background text-foreground shadow-card" : "text-muted-foreground hover:text-foreground"
                 )}
               >
@@ -314,7 +314,7 @@ export default function PracticeSetup({
                   value={reviewType}
                   onChange={(e) => setReviewType(e.target.value)}
                   aria-label="Exercise type to review"
-                  className="h-8 rounded-md border border-input bg-background px-2 text-sm outline-none focus:border-foreground focus:ring-4 focus:ring-ring/20"
+                  className="h-8 rounded-md border border-input bg-background px-2 text-base outline-none md:text-sm pointer-coarse:h-11 focus:border-foreground focus:ring-4 focus:ring-ring/20"
                 >
                   <option value="">All {SKILL_META[skill].short.toLowerCase()}</option>
                   {EXERCISE_TYPES[skill].map((type) => (
