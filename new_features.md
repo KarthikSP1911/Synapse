@@ -1,6 +1,6 @@
 # New Features
 
-The features for Timez: four approved features already in progress, plus proposed ideas that have not been approved yet. Each entry says what the feature does, how it would be built and where it stands. The app stays single-user (no accounts).
+The features for Mathz: four approved features already in progress, plus proposed ideas that have not been approved yet. Each entry says what the feature does, how it would be built and where it stands. The app stays single-user (no accounts).
 
 Legend: **Done** = implemented, **Partial** = backend done and UI missing, **Todo** = approved but not started, **Proposed** = idea only, not approved. Nothing below has been tested at runtime yet.
 

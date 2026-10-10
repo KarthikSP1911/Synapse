@@ -15,9 +15,9 @@ const links = [
 
 export function Logo() {
   return (
-    <Link href="/" className="flex items-center gap-2.5 rounded-md" aria-label="Timez home">
+    <Link href="/" className="flex items-center gap-2.5 rounded-md" aria-label="Mathz home">
       <LogoMark className="size-7" />
-      <span className="text-[15px] font-semibold tracking-tight">Timez</span>
+      <span className="text-[15px] font-semibold tracking-tight">Mathz</span>
     </Link>
   );
 }

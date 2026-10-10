@@ -1,6 +1,6 @@
-# Timez
+# Mathz
 
-Timez is an adaptive mental-maths trainer. It drills four skills — **multiplication, percentages, fractions and squares** — in short sessions, records your accuracy and speed for every individual question, and steers practice toward what you find hardest and what is due for review.
+Mathz is an adaptive mental-maths trainer. It drills four skills — **multiplication, percentages, fractions and squares** — in short sessions, records your accuracy and speed for every individual question, and steers practice toward what you find hardest and what is due for review.
 
 ## Features
 

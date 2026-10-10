@@ -9,9 +9,9 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: { default: "Timez · Multiplication practice", template: "%s · Timez" },
+  title: { default: "Mathz · Mental maths practice", template: "%s · Mathz" },
   description:
-    "Build mental-math speed with adaptive multiplication practice, spaced repetition and detailed progress tracking.",
+    "Build mental-maths speed with adaptive practice in multiplication, percentages, fractions and squares, plus spaced repetition and detailed progress tracking.",
 };
 
 export const viewport: Viewport = {
