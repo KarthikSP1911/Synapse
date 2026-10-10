@@ -193,7 +193,7 @@ export default function PracticeSetup() {
         />
       </div>
 
-      <aside className="rounded-xl border border-border bg-card p-5 shadow-card lg:sticky lg:top-20" aria-label="Session options">
+      <aside className="rounded-xl border border-border bg-card p-5 shadow-card lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto" aria-label="Session options">
         <h2 className="text-[15px] font-semibold tracking-tight">Session</h2>
 
         <div role="tablist" aria-label="Session type" className="mt-4 grid grid-cols-2 gap-1 rounded-lg bg-secondary p-1">

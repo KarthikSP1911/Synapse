@@ -33,7 +33,7 @@ export function SiteHeader() {
       <div className="container flex h-14 items-center justify-between gap-4">
         <Logo />
         <div className="flex items-center gap-1 sm:gap-3">
-          <nav aria-label="Main" className="-mr-1 flex items-center overflow-x-auto sm:mr-0">
+          <nav aria-label="Main" className="no-scrollbar -mr-1 flex h-14 items-stretch overflow-x-auto sm:mr-0">
             {links.map(({ href, label }) => {
               const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
               return (
@@ -42,12 +42,12 @@ export function SiteHeader() {
                   href={href}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "relative rounded-md px-2.5 py-1.5 text-sm transition-colors sm:px-3",
+                    "relative flex items-center px-2.5 text-sm transition-colors sm:px-3",
                     active ? "font-medium text-foreground" : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   {label}
-                  {active && <span className="absolute inset-x-2.5 -bottom-[13px] h-px bg-foreground sm:inset-x-3" />}
+                  {active && <span className="absolute inset-x-2.5 bottom-0 h-px bg-foreground sm:inset-x-3" />}
                 </Link>
               );
             })}
