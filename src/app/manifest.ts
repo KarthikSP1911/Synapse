@@ -10,8 +10,10 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: "/",
     display: "standalone",
     orientation: "any",
-    background_color: "#ffffff",
-    theme_color: "#ffffff",
+    // Android colours the installed app's system navigation bar from these, and a manifest cannot switch
+    // by colour scheme, so they match dark mode. The page's own theme-color meta still follows the scheme.
+    background_color: "#000000",
+    theme_color: "#000000",
     categories: ["education", "productivity"],
     icons: [
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
