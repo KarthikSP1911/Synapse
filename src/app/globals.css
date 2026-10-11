@@ -142,6 +142,8 @@
     border-color: var(--border);
   }
   html {
+    /* On the root so overscroll and the area behind the body never show the browser's default white. */
+    background: var(--background);
     -webkit-text-size-adjust: 100%;
     /* Reserve the scrollbar's width so pages of different heights do not shift sideways. */
     scrollbar-gutter: stable;
