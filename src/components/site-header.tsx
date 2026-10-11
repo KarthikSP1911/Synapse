@@ -49,14 +49,16 @@ function NavLinks({ pathname, className, linkClassName }: { pathname: string; cl
   );
 }
 
-export function SiteHeader({ signedIn }: { signedIn: boolean }) {
+export function SiteHeader({ viewer }: { viewer: "user" | "guest" | null }) {
   const pathname = usePathname();
 
   // The live practice screen is a focus view: no navigation to distract from the question.
   if (/^\/practice\/\d+$/.test(pathname)) return null;
 
-  // Signed-out visitors only see the login and sign-up screens, so there is nothing to navigate to.
-  const showNav = signedIn;
+  // Visitors with neither an account nor guest mode only see the login and sign-up screens, so there is nothing to navigate to.
+  // The same goes for a guest who opens those screens to sign up: they keep the compact header the screens are sized for.
+  const onAuthScreen = pathname === "/login" || pathname === "/signup";
+  const showNav = viewer !== null && !onAuthScreen;
   const profileActive = pathname.startsWith("/profile");
 
   return (
@@ -67,7 +69,20 @@ export function SiteHeader({ signedIn }: { signedIn: boolean }) {
           {/* From `sm` up the links sit beside the logo; on phones they get their own row below, so nothing is clipped. */}
           {showNav && <NavLinks pathname={pathname} className="hidden h-14 items-stretch sm:flex" linkClassName="px-3" />}
           <ThemeToggle />
-          {showNav && (
+          {viewer === "guest" && !onAuthScreen && (
+            <>
+              <span
+                className="hidden rounded-full border border-border px-2.5 py-0.5 text-xs font-medium text-muted-foreground sm:inline"
+                title="Your progress is saved in this browser only"
+              >
+                Guest
+              </span>
+              <Link href="/signup" className={buttonVariants({ size: "sm" })}>
+                Sign up
+              </Link>
+            </>
+          )}
+          {viewer === "user" && (
             <Link
               href="/profile"
               aria-label="Profile"

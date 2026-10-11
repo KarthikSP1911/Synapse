@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, Check, Flame, Lightbulb, Pause, Play, SkipForward, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { guestFetch } from "@/lib/guest/api";
 import { DEFAULT_SETTINGS, loadSettings, type Settings } from "@/lib/settings";
 import { inputProblem } from "@/lib/skills/answers";
 import { SKILL_META, exerciseLabel } from "@/lib/skills/meta";
@@ -12,6 +13,8 @@ import type { AnswerFormat, Outcome, PublicQuestion } from "@/lib/skills/types";
 
 interface PracticeSessionProps {
   sessionId: string;
+  /** Guest sessions live in this browser's localStorage, so requests are answered locally instead of by the server. */
+  guest?: boolean;
 }
 
 interface Feedback {
@@ -54,8 +57,9 @@ function promptSize(prompt: string) {
   return "text-balance text-2xl font-medium leading-snug tracking-tight sm:text-3xl md:text-4xl";
 }
 
-export default function PracticeSession({ sessionId }: PracticeSessionProps) {
+export default function PracticeSession({ sessionId, guest = false }: PracticeSessionProps) {
   const router = useRouter();
+  const request = guest ? guestFetch : fetch;
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [question, setQuestion] = useState<PublicQuestion | null>(null);
   const [answer, setAnswer] = useState("");
@@ -108,12 +112,12 @@ export default function PracticeSession({ sessionId }: PracticeSessionProps) {
     if (finishingRef.current) return;
     finishingRef.current = true;
     try {
-      await fetch(`/api/sessions/${sessionId}/end`, { method: "POST" });
+      await request(`/api/sessions/${sessionId}/end`, { method: "POST" });
     } catch (err) {
       console.error(err);
     }
     router.push(`/practice/${sessionId}/summary`);
-  }, [sessionId, router]);
+  }, [sessionId, router, request]);
 
   /** Expresses the server's deadline on this device's clock so a skewed clock cannot shift the countdown. */
   const syncDeadline = useCallback((startedAt: string, duration: number, pausedMs: number, serverNow: number) => {
@@ -126,7 +130,7 @@ export default function PracticeSession({ sessionId }: PracticeSessionProps) {
     async (previousId?: string) => {
       try {
         const query = previousId ? `?exclude=${encodeURIComponent(previousId)}` : "";
-        const res = await fetch(`/api/sessions/${sessionId}/next${query}`);
+        const res = await request(`/api/sessions/${sessionId}/next${query}`);
         if (!res.ok) throw new Error(`Request failed (${res.status})`);
         const data = await res.json();
         if (data.finished) {
@@ -159,7 +163,7 @@ export default function PracticeSession({ sessionId }: PracticeSessionProps) {
         setLoading(false);
       }
     },
-    [sessionId, router, later, syncDeadline]
+    [sessionId, router, request, later, syncDeadline]
   );
 
   useEffect(() => {
@@ -189,7 +193,7 @@ export default function PracticeSession({ sessionId }: PracticeSessionProps) {
       const responseTimeMs = Date.now() - startTimeRef.current;
 
       try {
-        const res = await fetch(`/api/sessions/${sessionId}/attempt`, {
+        const res = await request(`/api/sessions/${sessionId}/attempt`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ questionId: question.id, userAnswer, outcome: kind, hinted: hintShown, responseTimeMs }),
@@ -244,7 +248,7 @@ export default function PracticeSession({ sessionId }: PracticeSessionProps) {
         setSubmitting(false);
       }
     },
-    [question, submitting, feedback, paused, hintShown, sessionId, settings.showExplanations, isTimed, router, summaryHref, loadQuestion, later]
+    [question, submitting, feedback, paused, hintShown, sessionId, request, settings.showExplanations, isTimed, router, summaryHref, loadQuestion, later]
   );
 
   const proceed = useCallback(() => {
@@ -256,12 +260,12 @@ export default function PracticeSession({ sessionId }: PracticeSessionProps) {
     if (!question || submitting) return;
     try {
       if (!paused) {
-        const res = await fetch(`/api/sessions/${sessionId}/pause`, { method: "POST" });
+        const res = await request(`/api/sessions/${sessionId}/pause`, { method: "POST" });
         if (!res.ok) throw new Error(`Request failed (${res.status})`);
         pausedAtRef.current = Date.now();
         setPaused(true);
       } else {
-        const res = await fetch(`/api/sessions/${sessionId}/resume`, { method: "POST" });
+        const res = await request(`/api/sessions/${sessionId}/resume`, { method: "POST" });
         if (!res.ok) throw new Error(`Request failed (${res.status})`);
         const data = await res.json();
         // Time spent paused must not count towards this question's response time.
@@ -274,7 +278,7 @@ export default function PracticeSession({ sessionId }: PracticeSessionProps) {
       console.error(err);
       setError(paused ? "Could not resume. Please try again." : "Could not pause. Please try again.");
     }
-  }, [question, submitting, paused, sessionId, syncDeadline, later]);
+  }, [question, submitting, paused, sessionId, request, syncDeadline, later]);
 
   // Per-question time limit.
   useEffect(() => {

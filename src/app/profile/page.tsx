@@ -6,7 +6,8 @@ import { SkillIcon } from "@/components/skill-icon";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { buildHeatmap, dayKey, streaks } from "@/lib/activity";
-import { requireUser } from "@/lib/auth";
+import { GuestGate } from "@/components/guest-gate";
+import { requireViewer } from "@/lib/auth";
 import { logoutAction } from "@/lib/auth-actions";
 import { getActivityByDay, getSkillSummaries, getTotalAnswered } from "@/lib/progress-queries";
 import { SKILL_META, SKILL_ORDER } from "@/lib/skills/meta";
@@ -20,7 +21,16 @@ const accuracyColor = (accuracy: number) => (accuracy >= 85 ? "text-success" : a
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 export default async function ProfilePage() {
-  const user = await requireUser();
+  const viewer = await requireViewer();
+  if (viewer.kind === "guest") {
+    return (
+      <GuestGate
+        title="Your profile"
+        description="Your profile, practice calendar and streaks are tied to an account. Create one to keep them across devices."
+      />
+    );
+  }
+  const user = viewer.user;
   const today = dayKey(new Date(), user.timezone);
 
   const [counts, summaries, totalAnswered] = await Promise.all([

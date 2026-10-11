@@ -7,6 +7,8 @@ export const WEAK_SCORE_THRESHOLD = 50;
 export const DUE_PICK_PROBABILITY = 0.6;
 /** Unseen questions inherit this share of their concept's weakness score. */
 export const CONCEPT_WEIGHT = 0.5;
+/** A concept needs this many attempts before it can lift its unseen variations. */
+export const MIN_CONCEPT_ATTEMPTS = 3;
 
 export interface StatLite {
   weaknessScore: number;

@@ -22,7 +22,8 @@ export interface SessionShape {
   selectedLeftNumbers: number[];
   selectedRightNumbers: number[];
   questionList: string[] | null;
-  pairList: { left: number; right: number }[] | null;
+  /** Only multiplication reviews created before multi-skill support carry this; guest sessions never do. */
+  pairList?: { left: number; right: number }[] | null;
 }
 
 export const MAX_REVIEW_QUESTIONS = 50;

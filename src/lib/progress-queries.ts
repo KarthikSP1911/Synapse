@@ -2,6 +2,7 @@ import { db } from "@/db";
 import { practiceSessions, questionAttempts, questionStats } from "@/db/schema";
 import { and, asc, desc, eq, gt, sql } from "drizzle-orm";
 import { SKILLS, type Skill } from "@/lib/skills/types";
+import { MASTERED_MAX_WEAKNESS, MASTERED_MIN_ATTEMPTS, WEAK_MIN_WEAKNESS, overviewOf } from "@/lib/progress-shared";
 
 /**
  * Read-side queries for the home, progress, tables and profile pages. Every figure comes from the
@@ -14,9 +15,7 @@ export function parseSkillFilter(value: unknown): SkillFilter {
   return SKILLS.includes(value as Skill) ? (value as Skill) : "all";
 }
 
-export const MASTERED_MAX_WEAKNESS = 30;
-export const MASTERED_MIN_ATTEMPTS = 5;
-export const WEAK_MIN_WEAKNESS = 50;
+export { MASTERED_MAX_WEAKNESS, MASTERED_MIN_ATTEMPTS, WEAK_MIN_WEAKNESS, overviewOf };
 
 const isDueSql = sql`(${questionStats.dueAt} IS NULL OR ${questionStats.dueAt} <= NOW())`;
 const attempted = gt(questionStats.totalAttempts, 0);
@@ -77,23 +76,6 @@ export async function getSkillSummaries(userId: number): Promise<Record<Skill, S
     };
   }
   return summaries;
-}
-
-/** Combines per-skill summaries into the figures for a filter. */
-export function overviewOf(summaries: Record<Skill, SkillSummary>, filter: SkillFilter) {
-  const picked = filter === "all" ? Object.values(summaries) : [summaries[filter]];
-  const attempts = picked.reduce((sum, s) => sum + s.attempts, 0);
-  const correct = picked.reduce((sum, s) => sum + s.correct, 0);
-  const timeWeighted = picked.reduce((sum, s) => sum + s.averageResponseTimeMs * s.attempts, 0);
-  return {
-    attempts,
-    correct,
-    accuracy: attempts > 0 ? Math.round((correct / attempts) * 100) : 0,
-    averageResponseTimeMs: attempts > 0 ? Math.round(timeWeighted / attempts) : 0,
-    due: picked.reduce((sum, s) => sum + s.due, 0),
-    weak: picked.reduce((sum, s) => sum + s.weak, 0),
-    mastered: picked.reduce((sum, s) => sum + s.mastered, 0),
-  };
 }
 
 // ---------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { endSession, normalizeEmail, passwordProblem, registerUser, safeNextPath, startSession, verifyLogin } from "@/lib/auth";
+import { endSession, normalizeEmail, passwordProblem, registerUser, safeNextPath, startGuest, startSession, verifyLogin } from "@/lib/auth";
 
 export interface AuthFormState {
   error?: string;
@@ -40,6 +40,11 @@ export async function signupAction(_previous: AuthFormState, form: FormData): Pr
   if (!result.ok) return { error: result.error, email: typed };
 
   await startSession(result.userId, form.get("remember") === "on");
+  redirect("/");
+}
+
+export async function guestAction(): Promise<void> {
+  await startGuest();
   redirect("/");
 }
 

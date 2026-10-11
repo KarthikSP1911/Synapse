@@ -5,7 +5,7 @@ import { useActionState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { loginAction, signupAction, type AuthFormState } from "@/lib/auth-actions";
+import { guestAction, loginAction, signupAction, type AuthFormState } from "@/lib/auth-actions";
 
 const initial: AuthFormState = {};
 
@@ -80,6 +80,11 @@ export default function AuthForm({ mode, next }: { mode: "login" | "signup"; nex
 
       <Button type="submit" size="lg" className="col-span-full w-full" disabled={pending}>
         {pending ? (signup ? "Creating account…" : "Logging in…") : signup ? "Create account" : "Log in"}
+      </Button>
+
+      {/* A second submit button with its own action: it skips the account fields entirely (the form is noValidate). */}
+      <Button type="submit" formAction={guestAction} variant="outline" className="col-span-full w-full" disabled={pending}>
+        Try without an account
       </Button>
 
       <p className="col-span-full text-center text-sm text-muted-foreground">
