@@ -7,7 +7,7 @@ import { and, count, eq, gt, isNull, lt } from "drizzle-orm";
 import { db } from "@/db";
 import { authSessions, practiceSessions, questionAttempts, questionStats, users } from "@/db/schema";
 import { isValidTimeZone } from "@/lib/activity";
-import { SESSION_COOKIE } from "@/lib/auth-constants";
+import { GUEST_COOKIE, SESSION_COOKIE } from "@/lib/auth-constants";
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, decoyHash, hashPassword, verifyPassword } from "@/lib/password";
 
 /**
@@ -69,13 +69,27 @@ export async function startSession(userId: number, remember: boolean): Promise<v
   // Housekeeping: drop this user's dead sessions so the table does not grow without bound.
   await db.delete(authSessions).where(and(eq(authSessions.userId, userId), lt(authSessions.expiresAt, new Date())));
 
-  (await cookies()).set(SESSION_COOKIE, token, {
+  const store = await cookies();
+  store.set(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
     // No maxAge for a plain login: the cookie is a browser-session cookie.
     ...(remember ? { expires: expiresAt } : {}),
+  });
+  // An account replaces guest mode. The guest's browser-only progress is not carried over.
+  store.delete(GUEST_COOKIE);
+}
+
+/** Lets this browser use the app as a guest, with progress kept in the browser only. */
+export async function startGuest(): Promise<void> {
+  (await cookies()).set(GUEST_COOKIE, "1", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    expires: new Date(Date.now() + REMEMBER_MS),
   });
 }
 
@@ -99,6 +113,22 @@ export const getCurrentUser = cache(async (): Promise<AuthUser | null> => {
     .limit(1);
   return row ?? null;
 });
+
+/** Who is looking at a page: a signed-in user, a guest, or nobody (who belongs on the login screen). */
+export type Viewer = { kind: "user"; user: AuthUser } | { kind: "guest" };
+
+export async function getViewer(): Promise<Viewer | null> {
+  const user = await getCurrentUser();
+  if (user) return { kind: "user", user };
+  return (await cookies()).get(GUEST_COOKIE)?.value === "1" ? { kind: "guest" } : null;
+}
+
+/** For pages that also work for guests: anyone else is sent to the login page. */
+export async function requireViewer(): Promise<Viewer> {
+  const viewer = await getViewer();
+  if (!viewer) redirect("/login");
+  return viewer;
+}
 
 /** The 401 response API routes return when nobody is signed in. */
 export const unauthorized = () => NextResponse.json({ error: "Not signed in" }, { status: 401 });

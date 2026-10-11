@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { RotateCcw } from "lucide-react";
+import { guestFetch } from "@/lib/guest/api";
 import { loadSettings } from "@/lib/settings";
 import { Button } from "@/components/ui/button";
 
@@ -18,10 +19,12 @@ interface ReviewButtonProps {
   label: string;
   variant?: "primary" | "outline";
   className?: string;
+  /** Guest mistakes are read from this browser, not the server. */
+  guest?: boolean;
 }
 
 /** Starts a review session made of the questions answered wrong in the given source. */
-export default function ReviewButton({ source, label, variant = "primary", className }: ReviewButtonProps) {
+export default function ReviewButton({ source, label, variant = "primary", className, guest = false }: ReviewButtonProps) {
   const router = useRouter();
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +34,7 @@ export default function ReviewButton({ source, label, variant = "primary", class
     setError(null);
     try {
       const { weakFocusPercent, recentWindow, questionTimeLimit } = loadSettings();
-      const res = await fetch("/api/sessions", {
+      const res = await (guest ? guestFetch : fetch)("/api/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

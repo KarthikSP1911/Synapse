@@ -4,6 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Infinity as InfinityIcon, ListOrdered, Timer } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { guestFetch } from "@/lib/guest/api";
+import { guestSkillSummaries } from "@/lib/guest/progress";
+import { loadGuestData } from "@/lib/guest/storage";
 import { DEFAULT_SETTINGS, isSessionChoice, loadSettings, type Settings } from "@/lib/settings";
 import { configFromState, initialSetupState, type SetupState } from "@/lib/setup-state";
 import { buildPool } from "@/lib/skills/pools";
@@ -95,11 +98,15 @@ function SkillPicker({
 export default function PracticeSetup({
   initialSkill = "multiplication",
   summaries = null,
+  guest = false,
 }: {
   initialSkill?: Skill;
   summaries?: Record<Skill, SkillSummary> | null;
+  /** Guests have no server-side progress: their skill cards come from this browser, and sessions run locally. */
+  guest?: boolean;
 }) {
   const router = useRouter();
+  const [guestSummaries, setGuestSummaries] = useState<Record<Skill, SkillSummary> | null>(null);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [skill, setSkill] = useState<Skill>(initialSkill);
   const [state, setState] = useState<SetupState>(() => initialSetupState(DEFAULT_SETTINGS));
@@ -118,9 +125,10 @@ export default function PracticeSetup({
       setState(initialSetupState(loaded));
       setSessionMode(loaded.defaultSession);
       setKind(loaded.defaultSession.startsWith("timed:") ? "timed" : "count");
+      if (guest) setGuestSummaries(guestSkillSummaries(loadGuestData()));
     }, 0);
     return () => clearTimeout(timer);
-  }, []);
+  }, [guest]);
 
   const chooseSkill = (next: Skill) => {
     setSkill(next);
@@ -156,7 +164,7 @@ export default function PracticeSetup({
     try {
       const isTimed = sessionMode.startsWith("timed:");
       const mode = isTimed ? "timed" : sessionMode === "endless" ? "endless" : "fixed";
-      const response = await fetch("/api/sessions", {
+      const response = await (guest ? guestFetch : fetch)("/api/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -194,7 +202,7 @@ export default function PracticeSetup({
 
   return (
     <div className="space-y-6">
-      <SkillPicker skill={skill} summaries={summaries} onChange={chooseSkill} />
+      <SkillPicker skill={skill} summaries={guest ? guestSummaries : summaries} onChange={chooseSkill} />
 
       <div className="grid items-start gap-6 lg:grid-cols-[1fr_380px]">
         <div>
@@ -327,6 +335,7 @@ export default function PracticeSetup({
             )}
             <ReviewButton
               key={`${skill}:${reviewType}`}
+              guest={guest}
               source={{ reviewRecentDays: 7, skill, ...(reviewType ? { exerciseType: reviewType } : {}) }}
               label="Review mistakes from the last 7 days"
               variant="outline"

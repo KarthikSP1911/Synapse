@@ -1,10 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { SESSION_COOKIE } from "@/lib/auth-constants";
+import { GUEST_COOKIE, SESSION_COOKIE } from "@/lib/auth-constants";
 
 /**
  * Optimistic gate: a request with no session cookie never reaches a page or API route. This only
  * checks that the cookie exists; every page and route still verifies it against the database
  * (`requireUser` / `getCurrentUser`), so a forged or expired cookie gets nothing.
+ *
+ * Guests (the guest cookie, no session) may load pages, which render their browser-only versions, but
+ * never the API: they have no server-side data to read or write.
  */
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
@@ -14,6 +17,7 @@ export function proxy(request: NextRequest) {
   if (pathname.startsWith("/api/")) {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   }
+  if (request.cookies.get(GUEST_COOKIE)?.value === "1") return NextResponse.next();
   const login = new URL("/login", request.url);
   if (pathname !== "/") login.searchParams.set("next", pathname + search);
   return NextResponse.redirect(login);

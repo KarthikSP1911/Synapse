@@ -8,7 +8,9 @@ import { Progress } from "@/components/ui/progress";
 import { buttonVariants } from "@/components/ui/button";
 import { Page, PageHeader, StatTile } from "@/components/page-header";
 import { cn } from "@/lib/utils";
-import { requireUser } from "@/lib/auth";
+import { GuestProgress } from "@/components/guest-progress";
+import { ItemList, SkillFilterNav, accuracyColor, accuracyTone, seconds } from "@/components/progress-parts";
+import { requireViewer } from "@/lib/auth";
 import {
   getExerciseBreakdown,
   getMasteredItems,
@@ -21,8 +23,6 @@ import {
   overviewOf,
   parseSkillFilter,
   type ConceptRow,
-  type ItemRow,
-  type SkillFilter,
 } from "@/lib/progress-queries";
 import { squareRangeBuckets } from "@/lib/square-range";
 import { SKILL_META, SKILL_ORDER, exerciseLabel, modeLabel, skillTitle } from "@/lib/skills/meta";
@@ -31,74 +31,6 @@ import type { Skill } from "@/lib/skills/types";
 export const dynamic = "force-dynamic";
 
 export const metadata = { title: "Progress" };
-
-const accuracyTone = (accuracy: number) => (accuracy >= 85 ? "success" : accuracy >= 60 ? "warning" : "danger");
-const accuracyColor = (accuracy: number) => (accuracy >= 85 ? "text-success" : accuracy >= 60 ? "text-warning" : "text-destructive");
-const seconds = (ms: number) => (ms / 1000).toFixed(1);
-
-function SkillFilterNav({ active }: { active: SkillFilter }) {
-  const options: { value: SkillFilter; label: string }[] = [
-    { value: "all", label: "All skills" },
-    ...SKILL_ORDER.map((skill) => ({ value: skill, label: SKILL_META[skill].title })),
-  ];
-  return (
-    <nav aria-label="Filter by skill" className="no-scrollbar -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
-      {options.map(({ value, label }) => (
-        <Link
-          key={value}
-          href={value === "all" ? "/progress" : `/progress?skill=${value}`}
-          aria-current={value === active ? "page" : undefined}
-          className={cn(
-            "inline-flex h-9 shrink-0 items-center gap-1.5 pointer-coarse:h-11 rounded-md border px-3 text-sm font-medium transition-colors",
-            value === active
-              ? "border-foreground bg-foreground text-background"
-              : "border-border bg-background text-muted-foreground hover:border-input hover:bg-accent hover:text-foreground"
-          )}
-        >
-          {value !== "all" && <SkillIcon skill={value} className="size-3.5" />}
-          {label}
-        </Link>
-      ))}
-    </nav>
-  );
-}
-
-function ItemList({ items, bad, empty, showSkill }: { items: ItemRow[]; bad: boolean; empty: string; showSkill: boolean }) {
-  if (items.length === 0) return <p className="py-6 text-center text-sm text-muted-foreground">{empty}</p>;
-  return (
-    <ul className="space-y-4">
-      {items.map((item) => {
-        const score = bad ? item.weaknessScore : 100 - item.weaknessScore;
-        return (
-          <li key={item.questionId} className="space-y-2">
-            <div className="flex items-baseline justify-between gap-4">
-              <span className="min-w-0">
-                <span className="block truncate font-mono text-base font-semibold tabular-nums" title={item.prompt}>
-                  {item.prompt}
-                </span>
-                {showSkill && (
-                  <span className="block text-xs text-muted-foreground">
-                    {skillTitle(item.skill)} · {exerciseLabel(item.skill, item.exerciseType)}
-                  </span>
-                )}
-              </span>
-              <span className="flex shrink-0 gap-3 font-mono text-xs tabular-nums text-muted-foreground">
-                <span>{item.accuracy}%</span>
-                <span>{seconds(item.averageResponseTimeMs)}s</span>
-              </span>
-            </div>
-            <Progress
-              value={score}
-              className="h-1.5 bg-secondary"
-              indicatorColor={bad ? "bg-destructive" : "bg-success"}
-              aria-label={`${score} out of 100`}
-            />
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
 
 function ConceptList({ concepts }: { concepts: ConceptRow[] }) {
   if (concepts.length === 0) return <p className="py-6 text-center text-sm text-muted-foreground">Not enough data yet.</p>;
@@ -133,8 +65,10 @@ function conceptLabel(concept: string): string {
 }
 
 export default async function ProgressPage({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
-  const { id: userId } = await requireUser();
+  const viewer = await requireViewer();
   const filter = parseSkillFilter((await searchParams).skill);
+  if (viewer.kind === "guest") return <GuestProgress filter={filter} />;
+  const userId = viewer.user.id;
 
   const [summaries, breakdown, weakItems, masteredItems, weakConcepts, reviews, recent, squareCells] = await Promise.all([
     getSkillSummaries(userId),

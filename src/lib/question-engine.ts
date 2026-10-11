@@ -4,7 +4,7 @@ import { and, desc, eq, gt, inArray, isNull, lte, or, sql } from "drizzle-orm";
 import { questionFromId } from "@/lib/skills/build";
 import { buildPool } from "@/lib/skills/pools";
 import type { Focus, Question } from "@/lib/skills/types";
-import { WEAK_SCORE_THRESHOLD, selectNext, selectReview, type StatLite } from "@/lib/selection";
+import { MIN_CONCEPT_ATTEMPTS, WEAK_SCORE_THRESHOLD, selectNext, selectReview, type StatLite } from "@/lib/selection";
 import { reviewQuestionIds, sessionConfig, type SessionShape } from "@/lib/sessions";
 
 export interface EngineSession extends SessionShape {
@@ -20,8 +20,6 @@ const HISTORY_LIMIT = 500;
 const WEAK_ROWS_LIMIT = 400;
 const DUE_ROWS_LIMIT = 600;
 const CONCEPT_ROWS_LIMIT = 300;
-/** A concept needs this many attempts before it can lift its unseen variations. */
-const MIN_CONCEPT_ATTEMPTS = 3;
 
 /**
  * Picks the next question for a session using its configuration, the session's own history and the
