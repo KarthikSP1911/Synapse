@@ -5,6 +5,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { MobileNav, SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { SplashScreen } from "@/components/splash-screen";
 import { InstallPrompt } from "@/components/install-prompt";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
 import { ViewerProvider } from "@/components/viewer-provider";
@@ -43,6 +44,12 @@ export const viewport: Viewport = {
  */
 const captureInstallPrompt = `window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__mathzInstallEvent=e;window.dispatchEvent(new Event("mathz:installable"))});`;
 
+/**
+ * The launch intro plays once per session. Runs before the page paints so a reload or a return visit within the
+ * same session never flashes the intro; the attribute is read by `.splash` in globals.css.
+ */
+const markSplashSeen = `try{if(sessionStorage.getItem("mathz-splash"))document.documentElement.dataset.splash="skip";else sessionStorage.setItem("mathz-splash","1")}catch(e){}`;
+
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -60,6 +67,10 @@ export default async function RootLayout({
           <Script id="capture-install-prompt" strategy="beforeInteractive">
             {captureInstallPrompt}
           </Script>
+          <Script id="mark-splash-seen" strategy="beforeInteractive">
+            {markSplashSeen}
+          </Script>
+          <SplashScreen />
           <a
             href="#main"
             className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-sm focus:text-primary-foreground"
