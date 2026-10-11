@@ -22,7 +22,7 @@ export function Chip({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "inline-flex h-9 items-center justify-center rounded-md border text-sm pointer-coarse:h-11 font-medium transition-colors select-none",
+        "inline-flex h-9 items-center justify-center rounded-md border text-sm pointer-coarse:h-11 font-medium transition-[color,background-color,border-color,transform] duration-150 active:scale-[0.98] select-none",
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50",
         active
           ? "border-foreground bg-foreground text-background"
@@ -88,7 +88,7 @@ export function ExercisePicker({
             aria-pressed={active}
             onClick={() => toggle(value)}
             className={cn(
-              "flex flex-col items-start gap-0.5 rounded-lg border px-3.5 py-2.5 text-left transition-colors",
+              "flex flex-col items-start gap-0.5 rounded-lg border px-3.5 py-2.5 text-left transition-[color,background-color,border-color,transform] duration-150 active:scale-[0.98]",
               "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
               active ? "border-foreground bg-accent" : "border-border hover:border-input hover:bg-accent/60"
             )}

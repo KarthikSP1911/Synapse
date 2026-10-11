@@ -41,8 +41,8 @@ interface AnswerKeypadProps {
 export function AnswerKeypad({ format, disabled, onKey, onBackspace }: AnswerKeypadProps) {
   const extra = extraKey(format);
   const keyClass = cn(
-    "grid h-12 place-items-center rounded-lg border border-border bg-card font-mono text-2xl font-semibold shadow-card transition-colors",
-    "select-none touch-manipulation active:bg-accent disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+    "grid h-12 place-items-center rounded-lg border border-border bg-card font-mono text-2xl font-semibold shadow-card transition-[background-color,transform] duration-100",
+    "select-none touch-manipulation active:scale-95 active:bg-accentdisabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
   );
   // Keeps focus on the answer field so a tap never blurs it.
   const keepFocus = (e: React.PointerEvent) => e.preventDefault();

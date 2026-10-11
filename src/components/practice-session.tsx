@@ -534,14 +534,14 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
                 "placeholder:text-muted-foreground/40 transition-colors outline-none",
                 "focus:border-foreground focus:ring-4 focus:ring-ring/20",
                 !feedback && "border-input",
-                feedback?.isCorrect && "border-success bg-success-soft text-success",
+                feedback?.isCorrect && "animate-pop border-success bg-success-soft text-success",
                 feedback && !feedback.isCorrect && "border-destructive bg-destructive-soft text-destructive"
               )}
             />
           )}
 
           {hintShown && question.hint && (
-            <p className="w-full rounded-lg border border-border bg-secondary/60 px-3.5 py-2.5 text-center text-sm text-muted-foreground">
+            <p className="animate-in fade-in slide-in-from-top-1 w-full rounded-lg border border-border bg-secondary/60 px-3.5 py-2.5 text-center text-sm text-muted-foreground duration-200">
               <span className="font-medium text-foreground">Hint:</span> {question.hint}
             </p>
           )}
@@ -622,10 +622,11 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
           )}
         >
           <div className="container grid h-14 grid-cols-3 items-center text-center text-sm">
-            <Stat label="Correct" value={`${stats.correct}/${stats.total}`} />
-            <Stat label="Accuracy" value={`${accuracy}%`} />
+            <Stat label="Correct" value={`${stats.correct}/${stats.total}`} bump={stats.total} />
+            <Stat label="Accuracy" value={`${accuracy}%`} bump={accuracy} />
             <Stat
               label="Streak"
+              bump={stats.streak}
               value={
                 <span className="inline-flex items-center gap-1">
                   <Flame className={cn("size-3.5", stats.streak >= 3 ? "text-warning" : "text-muted-foreground")} />
@@ -665,10 +666,11 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
   );
 }
 
-function Stat({ label, value }: { label: string; value: React.ReactNode }) {
+/** `bump` changes whenever the value does, which restarts the small pop that draws the eye to it. */
+function Stat({ label, value, bump }: { label: string; value: React.ReactNode; bump: number }) {
   return (
     <div className="flex flex-col items-center leading-tight">
-      <span className="font-mono text-sm font-semibold tabular-nums">{value}</span>
+      <span key={bump} className="animate-pop font-mono text-sm font-semibold tabular-nums">{value}</span>
       <span className="text-[11px] text-muted-foreground">{label}</span>
     </div>
   );
