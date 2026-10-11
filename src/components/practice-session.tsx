@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Check, Flame, Lightbulb, Pause, Play, SkipForward, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { AnswerKeypad, useTouchKeypad } from "@/components/answer-keypad";
 import { Button } from "@/components/ui/button";
 import type { LocalStore } from "@/lib/guest/api";
 import { localFetchFor, summaryHref as summaryUrl } from "@/lib/local-store";
@@ -81,6 +82,7 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
   const [questionLeft, setQuestionLeft] = useState<number | null>(null);
   const [paused, setPaused] = useState(false);
   const summaryHref = summaryUrl(sessionId);
+  const touchKeypad = useTouchKeypad();
 
   const startTimeRef = useRef(0);
   const pausedAtRef = useRef(0);
@@ -388,6 +390,8 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
 
   const accuracy = stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0;
   const isChoice = question.answerFormat.kind === "choice";
+  // On touch devices the in-app keypad stands in for the OS keyboard, which would resize the page on every open.
+  const showKeypad = touchKeypad && !isChoice;
 
   // Progress: time elapsed for timed sessions, questions answered for fixed-length sessions.
   const progress =
@@ -464,7 +468,7 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
       </header>
 
       {/* Question */}
-      <div className={cn("container flex flex-1 flex-col items-center justify-center", settings.showLiveStats ? "pb-[calc(6rem+env(safe-area-inset-bottom))]" : "pb-10")} aria-hidden={paused || undefined}>
+      <div className={cn("container flex flex-1 flex-col items-center justify-center", showKeypad ? "pb-4" : settings.showLiveStats ? "pb-[calc(6rem+env(safe-area-inset-bottom))]" : "pb-10")} aria-hidden={paused || undefined}>
         <p className="mb-5 font-mono text-xs uppercase tracking-widest text-muted-foreground">
           {SKILL_META[question.skill].title} · {exerciseLabel(question.skill, question.exerciseType)}
         </p>
@@ -514,7 +518,7 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
             <input
               ref={inputRef}
               type="text"
-              inputMode={inputModeFor(question.answerFormat)}
+              inputMode={showKeypad ? "none" : inputModeFor(question.answerFormat)}
               aria-label={`Answer for ${question.prompt}`}
               aria-invalid={problem !== null || undefined}
               value={answer}
@@ -610,7 +614,13 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
 
       {/* Live stats */}
       {settings.showLiveStats && (
-        <footer className="fixed inset-x-0 bottom-0 border-t border-border bg-background/80 pb-[env(safe-area-inset-bottom)] backdrop-blur-md">
+        <footer
+          className={cn(
+            "border-t border-border bg-background/80 backdrop-blur-md",
+            // With the keypad the stats sit just above it in the flow; otherwise they float at the bottom edge.
+            showKeypad ? "" : "fixed inset-x-0 bottom-0 pb-[env(safe-area-inset-bottom)]"
+          )}
+        >
           <div className="container grid h-14 grid-cols-3 items-center text-center text-sm">
             <Stat label="Correct" value={`${stats.correct}/${stats.total}`} />
             <Stat label="Accuracy" value={`${accuracy}%`} />
@@ -625,6 +635,15 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
             />
           </div>
         </footer>
+      )}
+
+      {showKeypad && (
+        <AnswerKeypad
+          format={question.answerFormat}
+          disabled={!canAsk}
+          onKey={(key) => setAnswer((current) => sanitize(question.answerFormat, current + key))}
+          onBackspace={() => setAnswer((current) => current.slice(0, -1))}
+        />
       )}
 
       {/* Paused: the question is hidden so the break cannot be used to work it out. */}
