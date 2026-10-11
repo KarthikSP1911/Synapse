@@ -88,6 +88,7 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
   const pausedAtRef = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const continueRef = useRef<HTMLButtonElement>(null);
+  const feedbackRef = useRef<HTMLDivElement>(null);
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const continueNextRef = useRef<() => void>(() => {});
   /** Set once the current question has been reported as timed out, so a failed report is not re-sent every tick. */
@@ -283,6 +284,11 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
     }
   }, [question, submitting, paused, sessionId, request, syncDeadline, later]);
 
+  // On a short screen the result line can sit below the visible part of the question area.
+  useEffect(() => {
+    if (feedback) feedbackRef.current?.scrollIntoView({ block: "nearest" });
+  }, [feedback]);
+
   // Per-question time limit.
   useEffect(() => {
     if (!question || !questionLimit || feedback || paused || submitting) {
@@ -405,8 +411,27 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
   const missLabel =
     feedback?.outcome === "skipped" ? "Skipped" : feedback?.outcome === "timed_out" ? "Time's up" : "Answer";
 
+  /** Submit, or Continue after a miss. It lives in the keypad when there is one so it stays next to the digits. */
+  const actionButton = awaitingContinue ? (
+    <Button ref={continueRef} type="button" size="lg" className="w-full" onClick={proceed}>
+      Continue
+      <span className="kbd border-primary-foreground/30 bg-transparent text-primary-foreground/80">Enter</span>
+    </Button>
+  ) : !isChoice ? (
+    <Button type="submit" form="answer-form" size="lg" className="w-full" disabled={!canSubmit}>
+      {submitting ? (
+        <span className="size-4 animate-spin rounded-full border-2 border-primary-foreground/30 border-t-primary-foreground" />
+      ) : (
+        <>
+          Submit
+          <ArrowRight />
+        </>
+      )}
+    </Button>
+  ) : null;
+
   return (
-    <div className="relative isolate flex min-h-dvh flex-col overflow-hidden">
+    <div className={cn("relative isolate flex flex-col overflow-hidden", showKeypad ? "h-dvh" : "min-h-dvh")}>
       <div aria-hidden className="bg-grid absolute inset-0 -z-10 opacity-70" />
 
       {/* Progress rail */}
@@ -468,7 +493,16 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
       </header>
 
       {/* Question */}
-      <div className={cn("container flex flex-1 flex-col items-center justify-center", showKeypad ? "pb-4" : settings.showLiveStats ? "pb-[calc(6rem+env(safe-area-inset-bottom))]" : "pb-10")} aria-hidden={paused || undefined}>
+      <div
+        className={cn(
+          "container flex min-h-0 flex-1 flex-col items-center",
+          // With the keypad the middle scrolls if the screen is short; auto margins centre it when it fits.
+          showKeypad
+            ? "overflow-y-auto pb-2 [&>:first-child]:mt-auto [&>:last-child]:mb-auto"
+            : cn("justify-center", settings.showLiveStats ? "pb-[calc(6rem+env(safe-area-inset-bottom))]" : "pb-10")
+        )}
+        aria-hidden={paused || undefined}
+      >
         <p className="mb-5 font-mono text-xs uppercase tracking-widest text-muted-foreground">
           {SKILL_META[question.skill].title} · {exerciseLabel(question.skill, question.exerciseType)}
         </p>
@@ -484,7 +518,7 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
           {question.prompt}
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-10 flex w-full max-w-sm flex-col items-center gap-4 sm:mt-14">
+        <form id="answer-form" onSubmit={handleSubmit} className={cn("flex w-full max-w-sm flex-col items-center gap-3", showKeypad ? "mt-6" : "mt-10 gap-4 sm:mt-14")}>
           {isChoice ? (
             <div className="grid w-full gap-2" role="group" aria-label={`Answer for ${question.prompt}`}>
               {question.choices?.map((choice, index) => {
@@ -519,6 +553,8 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
               ref={inputRef}
               type="text"
               inputMode={showKeypad ? "none" : inputModeFor(question.answerFormat)}
+              // Read-only is what guarantees no OS keyboard; inputMode="none" alone is ignored by some keyboards.
+              readOnly={showKeypad}
               aria-label={`Answer for ${question.prompt}`}
               aria-invalid={problem !== null || undefined}
               value={answer}
@@ -546,7 +582,7 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
             </p>
           )}
 
-          <div aria-live="polite" className="flex min-h-6 w-full flex-col items-center justify-center gap-2">
+          <div ref={feedbackRef} aria-live="polite" className="flex min-h-6 w-full flex-col items-center justify-center gap-2">
             {feedback?.isCorrect && (
               <p className="animate-pop flex items-center gap-1.5 text-sm font-medium text-success">
                 <Check className="size-4" /> Correct
@@ -575,25 +611,7 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
             )}
           </div>
 
-          {awaitingContinue ? (
-            <Button ref={continueRef} type="button" size="lg" className="w-full" onClick={proceed}>
-              Continue
-              <span className="kbd border-primary-foreground/30 bg-transparent text-primary-foreground/80">Enter</span>
-            </Button>
-          ) : (
-            !isChoice && (
-              <Button type="submit" size="lg" className="w-full" disabled={!canSubmit}>
-                {submitting ? (
-                  <span className="size-4 animate-spin rounded-full border-2 border-primary-foreground/30 border-t-primary-foreground" />
-                ) : (
-                  <>
-                    Submit
-                    <ArrowRight />
-                  </>
-                )}
-              </Button>
-            )
-          )}
+          {!showKeypad && actionButton}
 
           {!awaitingContinue && (
             <div className="flex items-center gap-2">
@@ -644,6 +662,7 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
           disabled={!canAsk}
           onKey={(key) => setAnswer((current) => sanitize(question.answerFormat, current + key))}
           onBackspace={() => setAnswer((current) => current.slice(0, -1))}
+          action={actionButton}
         />
       )}
 

@@ -32,17 +32,19 @@ interface AnswerKeypadProps {
   disabled?: boolean;
   onKey: (key: string) => void;
   onBackspace: () => void;
+  /** Full-width row under the keys, used for Submit / Continue. */
+  action?: React.ReactNode;
 }
 
 /**
  * Number pad docked under the answer. It replaces the OS keyboard on touch devices so the page keeps one
  * fixed height for the whole session instead of jumping every time a keyboard opens or closes.
  */
-export function AnswerKeypad({ format, disabled, onKey, onBackspace }: AnswerKeypadProps) {
+export function AnswerKeypad({ format, disabled, onKey, onBackspace, action }: AnswerKeypadProps) {
   const extra = extraKey(format);
   const keyClass = cn(
-    "grid h-12 place-items-center rounded-lg border border-border bg-card font-mono text-2xl font-semibold shadow-card transition-[background-color,transform] duration-100",
-    "select-none touch-manipulation active:scale-95 active:bg-accentdisabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+    "grid h-11 [@media(max-height:700px)]:h-9 place-items-center rounded-lg border border-border bg-card font-mono text-2xl font-semibold shadow-card transition-[background-color,transform] duration-100",
+    "select-none touch-manipulation active:scale-95 active:bg-accent disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
   );
   // Keeps focus on the answer field so a tap never blurs it.
   const keepFocus = (e: React.PointerEvent) => e.preventDefault();
@@ -71,6 +73,7 @@ export function AnswerKeypad({ format, disabled, onKey, onBackspace }: AnswerKey
       <button type="button" className={keyClass} disabled={disabled} onPointerDown={keepFocus} onClick={onBackspace} aria-label="Backspace">
         <Delete className="size-6" />
       </button>
+      {action && <div className="col-span-3 pt-1">{action}</div>}
     </div>
   );
 }
