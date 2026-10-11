@@ -7,7 +7,10 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { InstallPrompt } from "@/components/install-prompt";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
+import { ViewerProvider } from "@/components/viewer-provider";
+import { SyncManager } from "@/components/sync-manager";
 import { getViewer } from "@/lib/auth";
+import type { ViewerInfo } from "@/lib/local-store";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -46,6 +49,7 @@ export default async function RootLayout({
   // The header only needs to know whether anyone is signed in or playing as a guest. If the database is
   // unreachable the page itself reports the problem; the shell should still render.
   const viewer = await getViewer().catch(() => null);
+  const viewerInfo: ViewerInfo = viewer?.kind === "user" ? { kind: "user", userId: viewer.user.id } : viewer?.kind === "guest" ? { kind: "guest" } : { kind: null };
 
   return (
     <html lang="en" suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable}`}>
@@ -60,13 +64,16 @@ export default async function RootLayout({
           >
             Skip to content
           </a>
-          <SiteHeader viewer={viewer?.kind ?? null} />
-          <main id="main" className="flex-1">
-            {children}
-          </main>
-          <SiteFooter />
-          <InstallPrompt />
-          <ServiceWorkerRegister />
+          <ViewerProvider viewer={viewerInfo}>
+            <SiteHeader viewer={viewer?.kind ?? null} />
+            <main id="main" className="flex-1">
+              {children}
+            </main>
+            <SiteFooter />
+            <InstallPrompt />
+            <ServiceWorkerRegister />
+            <SyncManager />
+          </ViewerProvider>
         </ThemeProvider>
       </body>
     </html>

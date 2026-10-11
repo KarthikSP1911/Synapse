@@ -65,7 +65,7 @@ export function SessionSummary({
   byType,
   bestPrevious,
   sessionId,
-  guest = false,
+  local = false,
 }: {
   session: SummarySession;
   missed: MissedQuestion[];
@@ -73,7 +73,8 @@ export function SessionSummary({
   /** Best score among earlier timed sessions of the same skill and length; null for other modes. */
   bestPrevious: number | null;
   sessionId: number;
-  guest?: boolean;
+  /** The figures come from this browser's local store rather than the server. */
+  local?: boolean;
 }) {
   const skill = session.skill;
   const isRecord = bestPrevious !== null && session.totalCorrect > bestPrevious;
@@ -224,7 +225,7 @@ export function SessionSummary({
         <Link href={skill === "multiplication" ? "/" : `/?skill=${skill}`} className={buttonVariants({ size: "lg" })}>
           Practice again <ArrowRight />
         </Link>
-        {missed.length > 0 && <ReviewButton source={{ reviewSessionId: sessionId }} guest={guest} label="Retry missed" variant="outline" className="h-11 px-6 text-[15px]" />}
+        {missed.length > 0 && <ReviewButton source={{ reviewSessionId: sessionId }} remote={!local} label="Retry missed" variant="outline" className="h-11 px-6 text-[15px]" />}
         <Link href={`/progress?skill=${skill}`} className={buttonVariants({ variant: "outline", size: "lg" })}>
           <BarChart3 /> View progress
         </Link>

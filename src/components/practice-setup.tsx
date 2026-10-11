@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Infinity as InfinityIcon, ListOrdered, Timer } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { guestFetch } from "@/lib/guest/api";
+import { localFetchFor, playHref } from "@/lib/local-store";
+import { useLocalStore } from "@/components/viewer-provider";
 import { guestSkillSummaries } from "@/lib/guest/progress";
 import { loadGuestData } from "@/lib/guest/storage";
 import { DEFAULT_SETTINGS, isSessionChoice, loadSettings, type Settings } from "@/lib/settings";
@@ -98,15 +99,15 @@ function SkillPicker({
 export default function PracticeSetup({
   initialSkill = "multiplication",
   summaries = null,
-  guest = false,
 }: {
   initialSkill?: Skill;
+  /** The account's figures as of the last page load; the on-device copy replaces them once it has history. */
   summaries?: Record<Skill, SkillSummary> | null;
-  /** Guests have no server-side progress: their skill cards come from this browser, and sessions run locally. */
-  guest?: boolean;
 }) {
   const router = useRouter();
-  const [guestSummaries, setGuestSummaries] = useState<Record<Skill, SkillSummary> | null>(null);
+  // Sessions run on this device (see `src/lib/guest/api.ts`), so starting one never waits on the network.
+  const store = useLocalStore();
+  const [localSummaries, setLocalSummaries] = useState<Record<Skill, SkillSummary> | null>(null);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [skill, setSkill] = useState<Skill>(initialSkill);
   const [state, setState] = useState<SetupState>(() => initialSetupState(DEFAULT_SETTINGS));
@@ -125,10 +126,14 @@ export default function PracticeSetup({
       setState(initialSetupState(loaded));
       setSessionMode(loaded.defaultSession);
       setKind(loaded.defaultSession.startsWith("timed:") ? "timed" : "count");
-      if (guest) setGuestSummaries(guestSkillSummaries(loadGuestData()));
+      if (store) {
+        const data = loadGuestData(store.key);
+        // A guest's figures are always the device's. An account's are too once the device holds its history.
+        if (!store.syncable || Object.keys(data.stats).length > 0) setLocalSummaries(guestSkillSummaries(data));
+      }
     }, 0);
     return () => clearTimeout(timer);
-  }, [guest]);
+  }, [store]);
 
   const chooseSkill = (next: Skill) => {
     setSkill(next);
@@ -158,13 +163,13 @@ export default function PracticeSetup({
       : null;
 
   const handleStart = async () => {
-    if (!built.ok || poolSize === 0) return;
+    if (!built.ok || poolSize === 0 || !store) return;
     setIsStarting(true);
     setError(null);
     try {
       const isTimed = sessionMode.startsWith("timed:");
       const mode = isTimed ? "timed" : sessionMode === "endless" ? "endless" : "fixed";
-      const response = await (guest ? guestFetch : fetch)("/api/sessions", {
+      const response = await localFetchFor(store)("/api/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -184,7 +189,7 @@ export default function PracticeSetup({
         throw new Error(typeof data.error === "string" ? data.error : "Failed to start session");
       }
       const session = await response.json();
-      router.push(`/practice/${session.id}`);
+      router.push(playHref(session.id));
     } catch (err) {
       console.error(err);
       setError(err instanceof Error && err.message !== "Failed to start session" ? err.message : "Could not start the session. Please try again.");
@@ -202,7 +207,7 @@ export default function PracticeSetup({
 
   return (
     <div className="space-y-6">
-      <SkillPicker skill={skill} summaries={guest ? guestSummaries : summaries} onChange={chooseSkill} />
+      <SkillPicker skill={skill} summaries={localSummaries ?? summaries} onChange={chooseSkill} />
 
       <div className="grid items-start gap-6 lg:grid-cols-[1fr_380px]">
         <div>
@@ -300,7 +305,7 @@ export default function PracticeSetup({
             </p>
           )}
 
-          <Button size="xl" className="mt-5 w-full" onClick={handleStart} disabled={!canStart || isStarting}>
+          <Button size="xl" className="mt-5 w-full" onClick={handleStart} disabled={!canStart || isStarting || !store}>
             {isStarting ? (
               <>
                 <span className="size-4 animate-spin rounded-full border-2 border-primary-foreground/30 border-t-primary-foreground" />
@@ -335,7 +340,6 @@ export default function PracticeSetup({
             )}
             <ReviewButton
               key={`${skill}:${reviewType}`}
-              guest={guest}
               source={{ reviewRecentDays: 7, skill, ...(reviewType ? { exerciseType: reviewType } : {}) }}
               label="Review mistakes from the last 7 days"
               variant="outline"

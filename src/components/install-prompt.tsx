@@ -137,7 +137,7 @@ export function InstallPrompt() {
   }, [deferred, snooze]);
 
   // The live practice screen is a focus view: nothing may cover the question or the answer box.
-  if (!visible || !mode || /^\/practice\/\d+$/.test(pathname)) return null;
+  if (!visible || !mode || /^\/(practice\/\d+|play)$/.test(pathname)) return null;
 
   return (
     <section
@@ -150,7 +150,7 @@ export function InstallPrompt() {
           <p className="text-[15px] font-semibold tracking-tight">Install Mathz</p>
           {mode === "native" ? (
             <>
-              <p className="mt-0.5 text-sm text-muted-foreground">Add it to your home screen for full-screen practice, one tap away.</p>
+              <p className="mt-0.5 text-sm text-muted-foreground">Add it to your home screen for full-screen practice that works even with no signal.</p>
               <div className="mt-3 flex gap-2">
                 <Button size="sm" onClick={install}>
                   Install app

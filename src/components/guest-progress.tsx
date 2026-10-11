@@ -18,6 +18,7 @@ import {
   guestWeakItems,
 } from "@/lib/guest/progress";
 import { clearGuestData, loadGuestData, type GuestData } from "@/lib/guest/storage";
+import { summaryHref } from "@/lib/local-store";
 import { overviewOf } from "@/lib/progress-shared";
 import type { SkillFilter } from "@/lib/progress-queries";
 import { SKILL_META, SKILL_ORDER, exerciseLabel, modeLabel, skillTitle } from "@/lib/skills/meta";
@@ -243,7 +244,7 @@ export function GuestProgress({ filter }: { filter: SkillFilter }) {
                 {recent.slice(0, 10).map((s) => (
                   <li key={s.id}>
                     <Link
-                      href={`/practice/${s.id}/summary`}
+                      href={summaryHref(s.id)}
                       className="group flex items-center justify-between gap-4 rounded-md px-2 py-3 text-sm transition-colors hover:bg-accent"
                     >
                       <span className="flex flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-3">

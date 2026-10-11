@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { RotateCcw } from "lucide-react";
-import { guestFetch } from "@/lib/guest/api";
+import { localFetchFor, playHref } from "@/lib/local-store";
+import { useLocalStore } from "@/components/viewer-provider";
 import { loadSettings } from "@/lib/settings";
 import { Button } from "@/components/ui/button";
 
@@ -19,22 +20,24 @@ interface ReviewButtonProps {
   label: string;
   variant?: "primary" | "outline";
   className?: string;
-  /** Guest mistakes are read from this browser, not the server. */
-  guest?: boolean;
+  /** Mistakes of a session that lives on the server (an older, already uploaded one): the review is started there instead. */
+  remote?: boolean;
 }
 
 /** Starts a review session made of the questions answered wrong in the given source. */
-export default function ReviewButton({ source, label, variant = "primary", className, guest = false }: ReviewButtonProps) {
+export default function ReviewButton({ source, label, variant = "primary", className, remote = false }: ReviewButtonProps) {
   const router = useRouter();
+  const store = useLocalStore();
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const start = async () => {
+    if (!remote && !store) return;
     setStarting(true);
     setError(null);
     try {
       const { weakFocusPercent, recentWindow, questionTimeLimit } = loadSettings();
-      const res = await (guest ? guestFetch : fetch)("/api/sessions", {
+      const res = await (remote ? fetch : localFetchFor(store!))("/api/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -51,7 +54,7 @@ export default function ReviewButton({ source, label, variant = "primary", class
         setStarting(false);
         return;
       }
-      router.push(`/practice/${data.id}`);
+      router.push(remote ? `/practice/${data.id}` : playHref(data.id));
     } catch (err) {
       console.error(err);
       setError("Could not start the review.");
@@ -65,7 +68,7 @@ export default function ReviewButton({ source, label, variant = "primary", class
         type="button"
         variant={variant === "primary" ? "default" : "outline"}
         onClick={start}
-        disabled={starting}
+        disabled={starting || (!remote && !store)}
         className={className}
       >
         <RotateCcw />

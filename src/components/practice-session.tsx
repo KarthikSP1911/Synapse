@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, Check, Flame, Lightbulb, Pause, Play, SkipForward, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { guestFetch } from "@/lib/guest/api";
+import type { LocalStore } from "@/lib/guest/api";
+import { localFetchFor, summaryHref as summaryUrl } from "@/lib/local-store";
 import { DEFAULT_SETTINGS, loadSettings, type Settings } from "@/lib/settings";
 import { inputProblem } from "@/lib/skills/answers";
 import { SKILL_META, exerciseLabel } from "@/lib/skills/meta";
@@ -13,8 +14,8 @@ import type { AnswerFormat, Outcome, PublicQuestion } from "@/lib/skills/types";
 
 interface PracticeSessionProps {
   sessionId: string;
-  /** Guest sessions live in this browser's localStorage, so requests are answered locally instead of by the server. */
-  guest?: boolean;
+  /** Sessions live in this browser's localStorage, so requests are answered locally instead of by the server. */
+  store: LocalStore;
 }
 
 interface Feedback {
@@ -57,9 +58,9 @@ function promptSize(prompt: string) {
   return "text-balance text-2xl font-medium leading-snug tracking-tight sm:text-3xl md:text-4xl";
 }
 
-export default function PracticeSession({ sessionId, guest = false }: PracticeSessionProps) {
+export default function PracticeSession({ sessionId, store }: PracticeSessionProps) {
   const router = useRouter();
-  const request = guest ? guestFetch : fetch;
+  const request = localFetchFor(store);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [question, setQuestion] = useState<PublicQuestion | null>(null);
   const [answer, setAnswer] = useState("");
@@ -79,7 +80,7 @@ export default function PracticeSession({ sessionId, guest = false }: PracticeSe
   const [questionLimit, setQuestionLimit] = useState<number>(0);
   const [questionLeft, setQuestionLeft] = useState<number | null>(null);
   const [paused, setPaused] = useState(false);
-  const summaryHref = `/practice/${sessionId}/summary`;
+  const summaryHref = summaryUrl(sessionId);
 
   const startTimeRef = useRef(0);
   const pausedAtRef = useRef(0);
@@ -116,7 +117,7 @@ export default function PracticeSession({ sessionId, guest = false }: PracticeSe
     } catch (err) {
       console.error(err);
     }
-    router.push(`/practice/${sessionId}/summary`);
+    router.push(summaryUrl(sessionId));
   }, [sessionId, router, request]);
 
   /** Expresses the server's deadline on this device's clock so a skewed clock cannot shift the countdown. */
@@ -134,7 +135,7 @@ export default function PracticeSession({ sessionId, guest = false }: PracticeSe
         if (!res.ok) throw new Error(`Request failed (${res.status})`);
         const data = await res.json();
         if (data.finished) {
-          router.push(`/practice/${sessionId}/summary`);
+          router.push(summaryUrl(sessionId));
           return;
         }
         setIsTimed(data.mode === "timed");
@@ -158,7 +159,7 @@ export default function PracticeSession({ sessionId, guest = false }: PracticeSe
         later(() => inputRef.current?.focus(), 30);
       } catch (err) {
         console.error(err);
-        setError("Could not load the next question. Check your connection and try again.");
+        setError("Could not load the next question. Please try again.");
       } finally {
         setLoading(false);
       }

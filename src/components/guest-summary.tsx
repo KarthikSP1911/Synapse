@@ -5,16 +5,17 @@ import Link from "next/link";
 import { Page } from "@/components/page-header";
 import { SessionSummary, type ExerciseTypeRow } from "@/components/session-summary";
 import { buttonVariants } from "@/components/ui/button";
+import type { LocalStore } from "@/lib/guest/api";
 import { findSession, loadGuestData, type GuestSession } from "@/lib/guest/storage";
 
-/** A guest's session summary: the same page as for accounts, with the figures read from this browser. */
-export default function GuestSummary({ sessionId }: { sessionId: number }) {
-  // Guest data only exists in the browser, so it is read after mount. `undefined` means not read yet.
+/** A locally stored session's summary: the same page as for accounts, with the figures read from this browser. */
+export default function GuestSummary({ sessionId, store }: { sessionId: number; store: LocalStore }) {
+  // Local data only exists in the browser, so it is read after mount. `undefined` means not read yet.
   const [state, setState] = useState<{ session: GuestSession | undefined; bestPrevious: number | null } | undefined>();
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      const data = loadGuestData();
+      const data = loadGuestData(store.key);
       const session = findSession(data, sessionId);
       let bestPrevious: number | null = null;
       if (session && session.mode === "timed" && session.durationSeconds) {
@@ -37,7 +38,7 @@ export default function GuestSummary({ sessionId }: { sessionId: number }) {
       setState({ session, bestPrevious });
     }, 0);
     return () => clearTimeout(timer);
-  }, [sessionId]);
+  }, [sessionId, store.key]);
 
   if (!state) {
     return (
@@ -54,7 +55,7 @@ export default function GuestSummary({ sessionId }: { sessionId: number }) {
         <div className="rounded-xl border border-dashed border-border px-6 py-16 text-center">
           <p className="text-lg font-semibold tracking-tight">Session not found</p>
           <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
-            Guest progress is kept in this browser only, so this session is gone if the site data was cleared or you are on another device.
+            Practice is saved in this browser, so this session is gone if the site data was cleared or it was started on another device.
           </p>
           <Link href="/" className={buttonVariants({ className: "mt-6" })}>
             Start a session
@@ -77,7 +78,7 @@ export default function GuestSummary({ sessionId }: { sessionId: number }) {
 
   return (
     <SessionSummary
-      guest
+      local
       sessionId={session.id}
       session={{ ...session, startedAt: new Date(session.startedAt), endedAt: session.endedAt === null ? null : new Date(session.endedAt) }}
       missed={session.attempts.filter((a) => !a.isCorrect)}

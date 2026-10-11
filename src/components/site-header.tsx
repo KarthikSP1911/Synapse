@@ -6,6 +6,7 @@ import { UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoMark } from "@/components/logo-mark";
+import { ConnectionBadge } from "@/components/connection-badge";
 import { buttonVariants } from "@/components/ui/button";
 
 const links = [
@@ -53,7 +54,7 @@ export function SiteHeader({ viewer }: { viewer: "user" | "guest" | null }) {
   const pathname = usePathname();
 
   // The live practice screen is a focus view: no navigation to distract from the question.
-  if (/^\/practice\/\d+$/.test(pathname)) return null;
+  if (/^\/(practice\/\d+|play)$/.test(pathname)) return null;
 
   // Visitors with neither an account nor guest mode only see the login and sign-up screens, so there is nothing to navigate to.
   // The same goes for a guest who opens those screens to sign up: they keep the compact header the screens are sized for.
@@ -68,6 +69,7 @@ export function SiteHeader({ viewer }: { viewer: "user" | "guest" | null }) {
         <div className="flex items-center gap-1 sm:gap-3">
           {/* From `sm` up the links sit beside the logo; on phones they get their own row below, so nothing is clipped. */}
           {showNav && <NavLinks pathname={pathname} className="hidden h-14 items-stretch sm:flex" linkClassName="px-3" />}
+          <ConnectionBadge />
           <ThemeToggle />
           {viewer === "guest" && !onAuthScreen && (
             <>
