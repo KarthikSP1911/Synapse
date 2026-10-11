@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 
 export function SiteFooter() {
   const pathname = usePathname();
-  if (/^\/practice\/\d+$/.test(pathname)) return null;
+  if (/^\/(practice\/\d+|play)$/.test(pathname)) return null;
 
   return (
     <footer className="border-t border-border">

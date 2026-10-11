@@ -220,6 +220,6 @@ These are ideas only, not approved. Each one notes what it reuses, so it can be 
 
 - User accounts and per-user statistics.
 - Editing past sessions or deleting history.
-- Offline practice (questions are served from the database).
+- Offline practice: now implemented (see README, "Offline and slow networks").
 
 The full implementation plan for the approved features is in `C:\Users\karth\.claude\plans\add-new-features-idempotent-wind.md`.

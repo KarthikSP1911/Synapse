@@ -2,10 +2,10 @@ import { notFound, redirect } from "next/navigation";
 import { and, asc, desc, eq, gt, isNotNull, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { practiceSessions, questionAttempts } from "@/db/schema";
-import GuestSummary from "@/components/guest-summary";
 import { SessionSummary } from "@/components/session-summary";
 import { SKILLS, type Skill } from "@/lib/skills/types";
 import { getViewer } from "@/lib/auth";
+import { summaryHref } from "@/lib/local-store";
 import { parseId } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
@@ -16,8 +16,8 @@ export default async function SummaryPage({ params }: { params: Promise<{ id: st
   if (!viewer) redirect("/login");
   const sessionId = parseId((await params).id);
   if (sessionId === null) notFound();
-  // A guest's sessions are in their browser, not the database.
-  if (viewer.kind === "guest") return <GuestSummary sessionId={sessionId} />;
+  // A guest's sessions are in their browser, not the database; the offline-capable page shows them.
+  if (viewer.kind === "guest") redirect(summaryHref(sessionId));
   const user = viewer.user;
 
   // Another user's session id is indistinguishable from one that does not exist.

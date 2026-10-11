@@ -1,6 +1,7 @@
 import { applyAttempt } from "@/lib/item-stats";
 import { guestNextQuestion } from "@/lib/guest/engine";
 import {
+  GUEST_STORAGE_KEY,
   MAX_ATTEMPTS_PER_SESSION,
   findSession,
   loadGuestData,
@@ -18,13 +19,27 @@ import { EXERCISE_TYPES, type Outcome } from "@/lib/skills/types";
 import { MAX_RESPONSE_TIME_MS, QUESTION_LIMIT_SLACK_MS, TIMED_GRACE_MS, isTimedOut, parseId, sessionDeadline, type TimedSession } from "@/lib/validation";
 
 /**
- * Guest mode has no server session, so this module answers the same requests as the `/api/sessions`
- * routes (same URLs, bodies, status codes and JSON) from localStorage instead. The practice screens call
- * `guestFetch` where a signed-in user's screens call `fetch`, and can tell no difference.
+ * Practice runs in the browser, so this module answers the same requests as the `/api/sessions`
+ * routes (same URLs, bodies, status codes and JSON) from localStorage instead of the network. That is
+ * what lets Mathz work offline and on a bad connection: the practice screens call a local fetch and
+ * never wait on the server.
  *
- * Unlike the server, nothing here is a security boundary: a guest can only cheat themselves. The
- * checks are kept anyway so both modes behave identically (a stray request cannot corrupt the history).
+ * Two stores use it. A guest's data stays in the browser for good. A signed-in user's data is a local
+ * copy of their account, whose sessions are flagged `synced: false` until `src/lib/sync` has uploaded them.
+ *
+ * Unlike the server, nothing here is a security boundary: the data is the user's own practice. The
+ * checks are kept anyway so both modes behave identically (a stray request cannot corrupt the history),
+ * and the server re-checks everything it is sent.
  */
+
+/** Where a store keeps its data, and whether its sessions must later be uploaded. */
+export interface LocalStore {
+  key: string;
+  /** True for a signed-in user's copy: new and changed sessions are marked as waiting for upload. */
+  syncable: boolean;
+}
+
+export const GUEST_STORE: LocalStore = { key: GUEST_STORAGE_KEY, syncable: false };
 
 const json = (body: unknown, status = 200) => Response.json(body, { status });
 const error = (message: string, status: number) => json({ error: message }, status);
@@ -51,14 +66,27 @@ function readBody(init: RequestInit): Record<string, unknown> | null {
   }
 }
 
-export async function guestFetch(url: string, init: RequestInit = {}): Promise<Response> {
+/** A fetch-shaped function that answers the `/api/sessions*` requests from the given local store. */
+export const createLocalFetch =
+  (store: LocalStore) =>
+  (url: string, init: RequestInit = {}): Promise<Response> =>
+    localRequest(store, url, init);
+
+export const guestFetch = createLocalFetch(GUEST_STORE);
+
+/** Marks a session as changed since the last upload (no-op for stores that are never uploaded). */
+const touch = (store: LocalStore, session: GuestSession) => {
+  if (store.syncable) session.synced = false;
+};
+
+async function localRequest(store: LocalStore, url: string, init: RequestInit): Promise<Response> {
   const { pathname, searchParams } = new URL(url, "http://guest.invalid");
   const method = (init.method ?? "GET").toUpperCase();
 
   try {
     if (pathname === "/api/sessions" && method === "POST") {
       const body = readBody(init);
-      return body ? createSession(body) : error("Invalid JSON body", 400);
+      return body ? createSession(store, body) : error("Invalid JSON body", 400);
     }
 
     const match = /^\/api\/sessions\/(\d+)\/(next|attempt|end|pause|resume)$/.exec(pathname);
@@ -66,23 +94,23 @@ export async function guestFetch(url: string, init: RequestInit = {}): Promise<R
     const id = parseId(match[1]);
     if (id === null) return error("Invalid session id", 400);
 
-    const data = loadGuestData();
+    const data = loadGuestData(store.key);
     const session = findSession(data, id);
     if (!session) return error("Session not found", 404);
 
     switch (match[2]) {
       case "next":
-        return nextQuestion(data, session, searchParams.get("exclude") ?? undefined);
+        return nextQuestion(store, data, session, searchParams.get("exclude") ?? undefined);
       case "attempt": {
         const body = readBody(init);
-        return body ? recordAttempt(data, session, body) : error("Invalid JSON body", 400);
+        return body ? recordAttempt(store, data, session, body) : error("Invalid JSON body", 400);
       }
       case "end":
-        return endSession(data, session);
+        return endSession(store, data, session);
       case "pause":
-        return pauseSession(data, session);
+        return pauseSession(store, data, session);
       default:
-        return resumeSession(data, session);
+        return resumeSession(store, data, session);
     }
   } catch (err) {
     console.error("Guest request failed:", err);
@@ -92,13 +120,14 @@ export async function guestFetch(url: string, init: RequestInit = {}): Promise<R
 
 // ---------------------------------------------------------------------------
 
-function createSession(body: Record<string, unknown>): Response {
+function createSession(store: LocalStore, body: Record<string, unknown>): Response {
   const parsed = parseSessionRequest(body);
   if (!parsed.ok) return error(parsed.error, 400);
 
-  const data = loadGuestData();
+  const data = loadGuestData(store.key);
   const base = {
     id: data.nextId,
+    ...(store.syncable ? { clientId: crypto.randomUUID(), synced: false } : {}),
     actualQuestionCount: 0,
     totalCorrect: 0,
     totalIncorrect: 0,
@@ -148,7 +177,7 @@ function createSession(body: Record<string, unknown>): Response {
   data.nextId += 1;
   data.sessions.push(session);
   // The session lives only in this browser, so if it cannot be stored there is nothing to practise on.
-  if (!saveGuestData(data)) return error("This browser is not letting Mathz save guest progress.", 500);
+  if (!saveGuestData(data, store.key)) return error("This browser is not letting Mathz save your progress.", 500);
   return json(publicSession(session), 201);
 }
 
@@ -178,7 +207,7 @@ function mistakeQuestionIds(
     .slice(0, MAX_REVIEW_QUESTIONS);
 }
 
-function nextQuestion(data: GuestData, session: GuestSession, excludeId?: string): Response {
+function nextQuestion(store: LocalStore, data: GuestData, session: GuestSession, excludeId?: string): Response {
   const complete =
     session.endedAt !== null ||
     isTimedOut(timing(session)) ||
@@ -188,7 +217,8 @@ function nextQuestion(data: GuestData, session: GuestSession, excludeId?: string
     if (session.endedAt === null) {
       // A timed session ended when its clock ran out, not when this request happened to arrive.
       session.endedAt = sessionDeadline(timing(session))?.getTime() ?? Date.now();
-      saveGuestData(data);
+      touch(store, session);
+      saveGuestData(data, store.key);
     }
     return json({ finished: true });
   }
@@ -209,7 +239,7 @@ function nextQuestion(data: GuestData, session: GuestSession, excludeId?: string
   });
 }
 
-function recordAttempt(data: GuestData, session: GuestSession, body: Record<string, unknown>): Response {
+function recordAttempt(store: LocalStore, data: GuestData, session: GuestSession, body: Record<string, unknown>): Response {
   const { questionId, responseTimeMs, hinted = false, outcome: reported = "answered" } = body;
   const userAnswer = typeof body.userAnswer === "number" && Number.isSafeInteger(body.userAnswer) ? String(body.userAnswer) : body.userAnswer;
 
@@ -293,7 +323,8 @@ function recordAttempt(data: GuestData, session: GuestSession, body: Record<stri
   };
   data.stats[question.id] = stat;
 
-  saveGuestData(data);
+  touch(store, session);
+  saveGuestData(data, store.key);
   return json({
     isCorrect,
     outcome,
@@ -303,32 +334,35 @@ function recordAttempt(data: GuestData, session: GuestSession, body: Record<stri
   });
 }
 
-function endSession(data: GuestData, session: GuestSession): Response {
+function endSession(store: LocalStore, data: GuestData, session: GuestSession): Response {
   if (session.endedAt === null) {
     const now = Date.now();
     // Ending a paused session closes the open pause, so the elapsed-time figure excludes it.
     if (session.pausedAt !== null) session.pausedMs += Math.max(0, now - session.pausedAt);
     session.pausedAt = null;
     session.endedAt = now;
-    saveGuestData(data);
+    touch(store, session);
+    saveGuestData(data, store.key);
   }
   return json({ ended: true });
 }
 
-function pauseSession(data: GuestData, session: GuestSession): Response {
+function pauseSession(store: LocalStore, data: GuestData, session: GuestSession): Response {
   if (session.endedAt !== null || isTimedOut(timing(session))) return error("Session already completed", 409);
   if (session.pausedAt === null) {
     session.pausedAt = Date.now();
-    saveGuestData(data);
+    touch(store, session);
+    saveGuestData(data, store.key);
   }
   return json({ paused: true });
 }
 
-function resumeSession(data: GuestData, session: GuestSession): Response {
+function resumeSession(store: LocalStore, data: GuestData, session: GuestSession): Response {
   if (session.pausedAt !== null) {
     session.pausedMs += Math.max(0, Date.now() - session.pausedAt);
     session.pausedAt = null;
-    saveGuestData(data);
+    touch(store, session);
+    saveGuestData(data, store.key);
   }
   return json({
     paused: false,

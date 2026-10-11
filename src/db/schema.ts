@@ -65,8 +65,11 @@ export const practiceSessions = pgTable(
     accuracy: integer("accuracy").default(0).notNull(), // percentage 0-100
     averageResponseTimeMs: integer("average_response_time_ms").default(0).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
+    /** Set on sessions practised on the user's device and uploaded later: the browser's random id for it, which makes re-uploads idempotent. */
+    clientId: varchar("client_id", { length: 64 }),
   },
   (table) => [
+    uniqueIndex("practice_sessions_user_client_idx").on(table.userId, table.clientId),
     index("practice_sessions_skill_started_idx").on(table.skill, table.startedAt),
     index("practice_sessions_user_started_idx").on(table.userId, table.startedAt),
   ]

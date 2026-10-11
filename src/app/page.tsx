@@ -24,7 +24,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ [
   return (
     <div className="container py-8 sm:py-10">
       <h1 className="sr-only">Start a practice session</h1>
-      <PracticeSetup initialSkill={initialSkill} summaries={summaries} guest={viewer.kind === "guest"} />
+      <PracticeSetup initialSkill={initialSkill} summaries={summaries} />
     </div>
   );
 }
