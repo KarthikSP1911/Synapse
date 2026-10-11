@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { Plus, Share, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LogoMark } from "@/components/logo-mark";
+import { MOBILE_NAV_HEIGHT, showsMobileNav } from "@/components/site-header";
+import { useViewerInfo } from "@/components/viewer-provider";
 
 /** The event Chromium browsers fire when the app is installable; it is not in the DOM typings yet. */
 interface BeforeInstallPromptEvent extends Event {
@@ -68,6 +70,7 @@ const isTouchDevice = () => window.matchMedia("(pointer: coarse)").matches;
 
 export function InstallPrompt() {
   const pathname = usePathname();
+  const tabBar = showsMobileNav(pathname, useViewerInfo().kind);
   const [mode, setMode] = useState<Mode | null>(null);
   const [visible, setVisible] = useState(false);
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
@@ -143,6 +146,8 @@ export function InstallPrompt() {
     <section
       aria-label="Install Mathz"
       className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] animate-in fade-in slide-in-from-bottom-4 duration-300 sm:hidden"
+      // Sits above the tab bar when there is one.
+      style={tabBar ? { bottom: `calc(${MOBILE_NAV_HEIGHT} + env(safe-area-inset-bottom))`, paddingBottom: "0.75rem" } : undefined}
     >
       <div className="mx-auto flex max-w-md items-start gap-3 rounded-xl border border-border bg-card p-4 shadow-pop">
         <LogoMark className="mt-0.5 size-9 shrink-0" />

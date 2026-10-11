@@ -3,7 +3,7 @@ import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
-import { SiteHeader } from "@/components/site-header";
+import { MobileNav, SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { InstallPrompt } from "@/components/install-prompt";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
@@ -72,6 +72,7 @@ export default async function RootLayout({
               {children}
             </main>
             <SiteFooter />
+            <MobileNav viewer={viewer?.kind ?? null} />
             <InstallPrompt />
             <ServiceWorkerRegister />
             <SyncManager />
