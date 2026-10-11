@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { UserRound } from "lucide-react";
+import { ChartNoAxesColumn, Grid3x3, Settings, Target, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoMark } from "@/components/logo-mark";
@@ -10,11 +10,21 @@ import { ConnectionBadge } from "@/components/connection-badge";
 import { buttonVariants } from "@/components/ui/button";
 
 const links = [
-  { href: "/", label: "Practice" },
-  { href: "/progress", label: "Progress" },
-  { href: "/tables", label: "Tables" },
-  { href: "/settings", label: "Settings" },
+  { href: "/", label: "Practice", icon: Target },
+  { href: "/progress", label: "Progress", icon: ChartNoAxesColumn },
+  { href: "/tables", label: "Tables", icon: Grid3x3 },
+  { href: "/settings", label: "Settings", icon: Settings },
 ] as const;
+
+const isActive = (href: string, pathname: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
+
+/** Where the tab bar is shown: phones only, for signed-in or guest visitors, never on the focus-view practice screen or the auth screens. */
+export function showsMobileNav(pathname: string, viewer: "user" | "guest" | null) {
+  return viewer !== null && !/^\/(practice\/\d+|play|login|signup)$/.test(pathname);
+}
+
+/** Height of the tab bar without the device's bottom inset; other bottom-fixed UI offsets itself by this much. */
+export const MOBILE_NAV_HEIGHT = "3.75rem";
 
 export function Logo() {
   return (
@@ -29,7 +39,7 @@ function NavLinks({ pathname, className, linkClassName }: { pathname: string; cl
   return (
     <nav aria-label="Main" className={className}>
       {links.map(({ href, label }) => {
-        const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
+        const active = isActive(href, pathname);
         return (
           <Link
             key={href}
@@ -67,7 +77,7 @@ export function SiteHeader({ viewer }: { viewer: "user" | "guest" | null }) {
       <div className="container flex h-14 items-center justify-between gap-4">
         <Logo />
         <div className="flex items-center gap-1 sm:gap-3">
-          {/* From `sm` up the links sit beside the logo; on phones they get their own row below, so nothing is clipped. */}
+          {/* From `sm` up the links sit beside the logo; on phones they move to the tab bar at the bottom (MobileNav). */}
           {showNav && <NavLinks pathname={pathname} className="hidden h-14 items-stretch sm:flex" linkClassName="px-3" />}
           <ConnectionBadge />
           <ThemeToggle />
@@ -99,11 +109,51 @@ export function SiteHeader({ viewer }: { viewer: "user" | "guest" | null }) {
           )}
         </div>
       </div>
-      {showNav && (
-        <div className="container border-t border-border sm:hidden">
-          <NavLinks pathname={pathname} className="grid h-11 grid-cols-4" linkClassName="justify-center" />
-        </div>
-      )}
     </header>
+  );
+}
+
+/** Bottom tab bar for phones, in the style of a native app: an icon over a label, with a pill behind the current one. */
+export function MobileNav({ viewer }: { viewer: "user" | "guest" | null }) {
+  const pathname = usePathname();
+  if (!showsMobileNav(pathname, viewer)) return null;
+
+  return (
+    <>
+      {/* Keeps the end of every page clear of the fixed bar. */}
+      <div aria-hidden className="sm:hidden" style={{ height: `calc(${MOBILE_NAV_HEIGHT} + env(safe-area-inset-bottom))` }} />
+      <nav
+        aria-label="Main"
+        className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-md sm:hidden"
+      >
+        <ul className="grid grid-cols-4" style={{ height: MOBILE_NAV_HEIGHT }}>
+          {links.map(({ href, label, icon: Icon }) => {
+            const active = isActive(href, pathname);
+            return (
+              <li key={href}>
+                <Link
+                  href={href}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "group flex h-full flex-col items-center justify-center gap-1 text-[11px] transition-colors",
+                    active ? "font-semibold text-foreground" : "font-medium text-muted-foreground"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "grid h-8 w-14 place-items-center rounded-full transition-[background-color,transform] duration-200 group-active:scale-90",
+                      active && "bg-accent"
+                    )}
+                  >
+                    <Icon className={cn("size-5 transition-transform duration-200", active && "scale-110")} strokeWidth={active ? 2.4 : 2} />
+                  </span>
+                  {label}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+    </>
   );
 }
