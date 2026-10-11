@@ -1,3 +1,5 @@
+import { compressSegments, decompressSegments } from "@/lib/compression";
+import { packData, unpackData } from "@/lib/guest/pack";
 import type { ItemStats } from "@/lib/item-stats";
 import type { PracticeConfig, Outcome, Skill } from "@/lib/skills/types";
 
@@ -13,7 +15,7 @@ import type { PracticeConfig, Outcome, Skill } from "@/lib/skills/types";
 export const GUEST_STORAGE_KEY = "mathz:guest:v1";
 /** A signed-in user's offline copy lives under their own key, so two accounts on one device never mix. */
 export const userStorageKey = (userId: number) => `mathz:user:v1:${userId}`;
-/** Oldest sessions are dropped beyond this, so the data stays far below the ~5 MB storage quota. */
+/** Oldest sessions are dropped beyond this, so the data cannot grow without bound. */
 export const MAX_GUEST_SESSIONS = 40;
 /** Sessions still waiting to reach the server are kept past the usual limit, up to this many. */
 export const MAX_UNSYNCED_SESSIONS = 200;
@@ -89,9 +91,19 @@ export interface GuestData {
 
 export const emptyGuestData = (): GuestData => ({ version: 1, nextId: 1, sessions: [], stats: {} });
 
+/**
+ * What is stored is compressed (see `pack.ts` and `src/lib/compression.ts`), which keeps a long history
+ * far below the storage quota. Data saved before compression existed is plain JSON; it is still read
+ * here and is replaced by the compressed form the next time it is saved.
+ */
+function readStored(stored: string): unknown {
+  const segments = decompressSegments(stored);
+  return segments ? unpackData(segments) : JSON.parse(stored);
+}
+
 export function loadGuestData(key: string = GUEST_STORAGE_KEY): GuestData {
   try {
-    const raw: unknown = JSON.parse(localStorage.getItem(key) ?? "null");
+    const raw: unknown = readStored(localStorage.getItem(key) ?? "null");
     if (raw && typeof raw === "object") {
       const data = raw as Partial<GuestData>;
       if (data.version === 1 && Array.isArray(data.sessions) && data.stats && typeof data.stats === "object" && Number.isInteger(data.nextId)) {
@@ -109,7 +121,7 @@ export function saveGuestData(data: GuestData, key: string = GUEST_STORAGE_KEY):
   trimSessions(data);
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      localStorage.setItem(key, JSON.stringify(data));
+      localStorage.setItem(key, compressSegments(packData(data), key));
       return true;
     } catch {
       // Out of space: shed the older half of the history and try again.

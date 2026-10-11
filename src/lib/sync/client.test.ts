@@ -1,5 +1,6 @@
 import { beforeEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { gunzipSync } from "node:zlib";
 import { createLocalFetch } from "@/lib/guest/api";
 import { loadGuestData, saveGuestData, userStorageKey, MAX_GUEST_SESSIONS } from "@/lib/guest/storage";
 import { IDLE_UPLOAD_MS, batches, pendingCount, syncUser, type SyncDeps } from "./client";
@@ -48,23 +49,36 @@ async function playSession(answers = 3, finish = true): Promise<number> {
 interface Call {
   url: string;
   body: { sessions?: { clientId: string; attempts: unknown[] }[] } | null;
+  /** The request's Content-Encoding header, if any. */
+  encoding?: string;
+}
+
+/** The JSON a request carried, whether it was sent as text or gzipped. */
+function bodyOf(init?: RequestInit): Call["body"] {
+  const { body } = init ?? {};
+  if (typeof body === "string") return JSON.parse(body);
+  if (body instanceof Uint8Array) return JSON.parse(gunzipSync(body).toString("utf8"));
+  return null;
 }
 
 /** A fake server: records calls, accepts every uploaded session, and serves a fixed stats snapshot. */
-function fakeServer(options: { state?: unknown; failUpload?: boolean; onUpload?: () => void } = {}) {
+function fakeServer(options: { state?: unknown; failUpload?: boolean; refuseGzip?: boolean; onUpload?: () => void } = {}) {
   const calls: Call[] = [];
   const deps: SyncDeps = {
     now: () => NOW,
     fetch: (async (url: string, init?: RequestInit) => {
-      const body = typeof init?.body === "string" ? JSON.parse(init.body) : null;
-      calls.push({ url, body });
+      const encoding = (init?.headers as Record<string, string> | undefined)?.["Content-Encoding"];
+      const body = bodyOf(init);
+      calls.push({ url, body, encoding });
       if (url === "/api/sync/state") {
         return Response.json(options.state ?? { userId: USER, stats: [] });
       }
       if (options.failUpload) return Response.json({ error: "boom" }, { status: 500 });
+      // What an older deployment does with a body it cannot read.
+      if (options.refuseGzip && encoding === "gzip") return Response.json({ error: "Expected { sessions: [...] }" }, { status: 400 });
       options.onUpload?.();
       return Response.json({
-        synced: body.sessions.map((s: { clientId: string; attempts: unknown[] }) => ({ clientId: s.clientId, id: 1, stored: s.attempts.length })),
+        synced: (body?.sessions ?? []).map((s) => ({ clientId: s.clientId, id: 1, stored: s.attempts.length })),
         rejected: [],
       });
     }) as typeof fetch,
@@ -100,6 +114,38 @@ describe("syncUser", () => {
     const second = await syncUser(USER, server.deps);
     assert.equal(second.ok && second.uploaded, 0);
     assert.equal(server.calls.slice(before).filter((c) => c.url === "/api/sync").length, 0, "nothing left to upload");
+  });
+
+  it("sends a small upload as plain JSON", async () => {
+    await playSession(2);
+    const server = fakeServer();
+    await syncUser(USER, server.deps);
+    assert.equal(server.calls.find((c) => c.url === "/api/sync")?.encoding, undefined);
+  });
+
+  it("gzips a large upload, and the server still gets every attempt", async () => {
+    await playSession(60);
+    const server = fakeServer();
+    const result = await syncUser(USER, server.deps);
+    assert.deepEqual(result, { ok: true, uploaded: 1, rejected: 0, pulledStats: true });
+    const upload = server.calls.find((c) => c.url === "/api/sync");
+    assert.equal(upload?.encoding, "gzip");
+    assert.equal(upload?.body?.sessions?.[0].attempts.length, 60);
+    assert.equal(loadGuestData(KEY).sessions[0].synced, true);
+  });
+
+  it("sends the batch again as plain JSON when the server cannot read the gzipped one", async () => {
+    await playSession(60);
+    const server = fakeServer({ refuseGzip: true });
+    const result = await syncUser(USER, server.deps);
+    assert.deepEqual(result, { ok: true, uploaded: 1, rejected: 0, pulledStats: true });
+    const uploads = server.calls.filter((c) => c.url === "/api/sync");
+    assert.deepEqual(
+      uploads.map((c) => c.encoding),
+      ["gzip", undefined]
+    );
+    assert.equal(uploads[1].body?.sessions?.[0].attempts.length, 60);
+    assert.equal(loadGuestData(KEY).sessions[0].synced, true);
   });
 
   it("keeps sessions flagged when the network or the server fails, and succeeds later", async () => {

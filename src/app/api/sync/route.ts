@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser, unauthorized } from "@/lib/auth";
+import { readSyncBody } from "@/lib/sync/body";
 import { parseSyncBody, validateSession } from "@/lib/sync/payload";
 import { storeSyncedSession, type SyncedSession } from "@/lib/sync/server";
-import { readJson } from "@/lib/validation";
 
 /**
  * Body: { sessions: [{ clientId, skill, mode, ..., startedAt, endedAt, pausedMs, attempts: [...] }] }
+ * as JSON, optionally gzipped (`Content-Encoding: gzip`); see `src/lib/sync/body.ts`.
  *
  * Receives practice that was done on the user's device (possibly offline) and stores it under their
  * account. Idempotent per session (`clientId`), so the browser can safely retry. Correctness is decided
@@ -18,8 +19,9 @@ export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user) return unauthorized();
 
-  const body = await readJson(request);
-  const parsed = parseSyncBody(body);
+  const read = await readSyncBody(request);
+  if (!read.ok) return NextResponse.json({ error: read.error }, { status: read.status });
+  const parsed = parseSyncBody(read.body);
   if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
   const synced: SyncedSession[] = [];
