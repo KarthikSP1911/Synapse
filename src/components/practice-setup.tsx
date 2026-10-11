@@ -62,7 +62,7 @@ function SkillPicker({
             aria-pressed={active}
             onClick={() => onChange(id)}
             className={cn(
-              "flex flex-col items-start gap-2 rounded-xl border p-4 text-left shadow-card transition-colors",
+              "flex flex-col items-start gap-2 rounded-xl border p-4 text-left shadow-card transition-[color,background-color,border-color,transform] duration-150 active:scale-[0.98]",
               "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
               active ? "border-foreground bg-card ring-1 ring-foreground" : "border-border bg-card hover:border-input hover:bg-accent/60"
             )}
