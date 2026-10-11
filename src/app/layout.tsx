@@ -29,6 +29,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   // Lets the layout extend under notches; the safe-area insets in globals.css keep content clear of them.
   viewportFit: "cover",
+  // Lets the browser paint a dark canvas from the system setting before the stylesheet and theme script load.
+  colorScheme: "light dark",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
     { media: "(prefers-color-scheme: dark)", color: "#000000" },
