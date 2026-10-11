@@ -148,6 +148,21 @@ Done on the server (and mirrored on the client only to disable *Submit* for malf
 
 Per question: starts from the error rate (`100 − accuracy`), adds 10 if the average response is slower than the skill's threshold (5 s for multiplication, 8 s squares, 10 s percentages, 12 s fractions), 10 per consecutive miss after the first, and 10 after a hinted answer; subtracts 20 after four unassisted correct answers in a row; clamped to 0–100. The multiplication formula is unchanged from earlier versions.
 
+### Compression
+
+- **Practice kept on the device** (`mathz:guest:v1`, `mathz:user:v1:<id>`): a prompt, skill, exercise type, difficulty and correct answer repeat on every attempt and statistics row, yet all follow from the question id. `src/lib/guest/pack.ts` leaves them out (keeping a record whole whenever the rebuilt text would differ), then `src/lib/compression.ts` compresses each part with lz-string. Each session and each slice of the statistics is its own part, so saving after an answer only recompresses what changed. Data saved before this existed is still read and is converted on the next save.
+  Measured on simulated play across all four skills (characters stored, including the cost of splitting into parts):
+
+  | History | Plain JSON | Stored now | Reduction | Load + save |
+  | ------- | ---------- | ---------- | --------- | ----------- |
+  | 480 attempts | 320,636 | 12,945 | **24.8x** | about 5 ms |
+  | 6,000 attempts (40 sessions) | 2,094,254 | 62,296 | **33.6x** | about 21 ms |
+
+  localStorage counts two bytes per character, so the larger history went from about 4 MB, close to the usual 5 MB quota, to about 120 KB.
+- **Uploading offline practice** (`POST /api/sync`): the browser gzips bodies over 1 KB (`Content-Encoding: gzip`) and falls back to plain JSON if the server refuses. The server accepts both and caps the decompressed size (`src/lib/sync/body.ts`).
+- **Pages, scripts and API responses** are gzipped by `next start` (Vercel does the same, with brotli), so they are not compressed again in code.
+- **Not compressed on purpose:** the database (Postgres already compresses large values, and these columns are short), React state, and small `localStorage` values such as settings, where the result would be larger than the input.
+
 ### API
 
 | Method | Endpoint                    | Purpose                                                              |

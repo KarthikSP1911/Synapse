@@ -1,3 +1,4 @@
+import { GZIP_MIN_CHARS, gzipText } from "@/lib/compression";
 import { loadGuestData, saveGuestData, userStorageKey, type GuestData, type GuestSession, type GuestStat } from "@/lib/guest/storage";
 import { MAX_SYNC_ATTEMPTS, MAX_SYNC_SESSIONS } from "@/lib/sync/payload";
 
@@ -84,6 +85,23 @@ export function batches(sessions: GuestSession[]): GuestSession[][] {
   return out;
 }
 
+/**
+ * Uploads the batch, gzipped when that makes it smaller. An offline backlog is the largest thing this app
+ * ever sends, and it is typically sent over a weak connection. Should the server refuse the compressed
+ * form (for example an older deployment behind this page), the same batch is sent once more as plain JSON.
+ */
+async function upload(deps: SyncDeps, payload: unknown): Promise<Response> {
+  const text = JSON.stringify(payload);
+  const send = (body: BodyInit, headers: Record<string, string>) =>
+    request(deps, "/api/sync", { method: "POST", headers: { "Content-Type": "application/json", ...headers }, body });
+
+  const packed = text.length >= GZIP_MIN_CHARS ? await gzipText(text) : null;
+  if (!packed || packed.length >= text.length) return send(text, {});
+
+  const res = await send(packed as BodyInit, { "Content-Encoding": "gzip" });
+  return res.status === 400 || res.status === 415 ? send(text, {}) : res;
+}
+
 async function request(deps: SyncDeps, url: string, init?: RequestInit): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -117,11 +135,7 @@ export async function syncUser(userId: number, deps: SyncDeps = defaultDeps()): 
 
     for (const batch of batches(readyToUpload(loadGuestData(key), deps.now()).filter((s) => s.attempts.length > 0))) {
       const sent = new Map(batch.map((s) => [s.clientId as string, fingerprint(s)]));
-      const res = await request(deps, "/api/sync", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessions: batch.map(payloadFor) }),
-      });
+      const res = await upload(deps, { sessions: batch.map(payloadFor) });
       if (res.status === 401) return { ok: false, reason: "signed-out", uploaded };
       const body: { synced?: { clientId: string }[]; rejected?: { clientId: string | null }[] } = await res.json().catch(() => ({}));
       if (!res.ok && !body.synced?.length) return { ok: false, reason: "server", uploaded };
