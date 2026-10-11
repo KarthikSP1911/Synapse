@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import AuthForm from "@/components/auth-form";
-import { Page, PageHeader } from "@/components/page-header";
+import { AuthShell } from "@/components/auth-shell";
 import { getCurrentUser, safeNextPath } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -12,11 +12,8 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   if (await getCurrentUser()) redirect(destination);
 
   return (
-    <Page narrow>
-      <div className="mx-auto w-full max-w-md space-y-8">
-        <PageHeader eyebrow="Welcome back" title="Log in" description="Pick up where you left off: your progress and streak are waiting." />
-        <AuthForm mode="login" next={destination === "/" ? undefined : destination} />
-      </div>
-    </Page>
+    <AuthShell eyebrow="Welcome back" title="Log in" description="Pick up where you left off: your progress and streak are waiting.">
+      <AuthForm mode="login" next={destination === "/" ? undefined : destination} />
+    </AuthShell>
   );
 }
