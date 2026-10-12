@@ -9,8 +9,6 @@ import { LIMITS, OPERATIONS, type Flash, type Operation, type PlayedRound, type 
  * from the sequence and the answer wherever they are needed.
  */
 
-/** The most sessions one upload carries. */
-export const MAX_UPLOAD_SESSIONS = 10;
 export const CLIENT_ID = /^[A-Za-z0-9-]{8,64}$/;
 /** Same ceiling as practice answers: nobody takes longer than ten minutes over one answer. */
 export const MAX_RESPONSE_MS = 10 * 60 * 1000;

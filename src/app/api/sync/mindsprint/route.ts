@@ -3,7 +3,8 @@ import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { mindsprintSessions } from "@/db/schema";
 import { getCurrentUser, unauthorized } from "@/lib/auth";
-import { MAX_UPLOAD_SESSIONS, parseSessionData } from "@/lib/mindsprint/records";
+import { MAX_UPLOAD_SESSIONS } from "@/lib/history/sync";
+import { parseSessionData } from "@/lib/mindsprint/records";
 import { scoreSession } from "@/lib/mindsprint/scoring";
 import { readJson } from "@/lib/validation";
 

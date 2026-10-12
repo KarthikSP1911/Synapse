@@ -368,9 +368,11 @@ export function SquareConfig({
               key={d}
               active={activePreset === d}
               onClick={() => onChange({ ...state, rangeMin: String(SQUARE_PRESETS[d].rangeMin), rangeMax: String(SQUARE_PRESETS[d].rangeMax) })}
+              // On phones the three chips are too narrow for a label and its range side by side, so the range drops below the label.
+              className="h-auto min-h-11 flex-col gap-0.5 px-1 py-1.5 pointer-coarse:h-auto sm:h-9 sm:min-h-0 sm:flex-row sm:gap-0 sm:px-3 sm:py-0 pointer-coarse:sm:h-11"
             >
               {DIFFICULTY_META[d].label}
-              <span className="ml-1.5 font-mono text-xs opacity-70">
+              <span className="font-mono text-xs opacity-70 sm:ml-1.5">
                 {SQUARE_PRESETS[d].rangeMin}–{SQUARE_PRESETS[d].rangeMax}
               </span>
             </Chip>

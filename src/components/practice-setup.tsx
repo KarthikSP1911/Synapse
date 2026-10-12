@@ -3,13 +3,15 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Infinity as InfinityIcon, ListOrdered, Timer, Zap } from "lucide-react";
+import { ArrowRight, Infinity as InfinityIcon, ListOrdered, Timer, Zap, Brain, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { localFetchFor, playHref } from "@/lib/local-store";
 import { useLocalStore } from "@/components/viewer-provider";
 import { guestSkillSummaries } from "@/lib/guest/progress";
 import { scoreSession } from "@/lib/mindsprint/scoring";
 import { loadHistory as loadMindsprintHistory } from "@/lib/mindsprint/storage";
+import { computeAllStats as computeAllRecallStats } from "@/lib/recall/stats";
+import { loadHistory as loadRecallHistory } from "@/lib/recall/storage";
 import { loadGuestData } from "@/lib/guest/storage";
 import { DEFAULT_SETTINGS, isSessionChoice, loadSettings, type Settings } from "@/lib/settings";
 import { configFromState, initialSetupState, type SetupState } from "@/lib/setup-state";
@@ -52,23 +54,11 @@ const focuses: { value: Focus; label: string; help: string }[] = [
   { value: "due", label: "Due reviews", help: "Only questions whose spaced-repetition review is due. Falls back to the mix when none are." },
 ];
 
-/** MindSprint is a game rather than a drill, so its card opens its own page instead of switching the options below. */
-function MindsprintCard() {
-  const store = useLocalStore();
-  const [best, setBest] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (!store) return;
-    const timer = setTimeout(() => {
-      const scores = loadMindsprintHistory(store).map((s) => scoreSession(s.rounds).score);
-      setBest(scores.length > 0 ? Math.max(...scores) : null);
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [store]);
-
+/** The card for a game. Games are not drills, so each opens its own page instead of switching the options below. */
+function GameCard({ href, title, description, icon: Icon, progress }: { href: string; title: string; description: string; icon: LucideIcon; progress: string }) {
   return (
     <Link
-      href="/mindsprint"
+      href={href}
       className={cn(
         "flex flex-col items-start gap-2 rounded-xl border border-border bg-card p-4 text-left shadow-card transition-[color,background-color,border-color,transform] duration-150 hover:border-input hover:bg-accent/60 active:scale-[0.98]",
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
@@ -76,16 +66,53 @@ function MindsprintCard() {
     >
       <span className="flex w-full items-center justify-between gap-2">
         <span className="grid size-9 place-items-center rounded-lg bg-secondary text-foreground">
-          <Zap className="size-[18px]" aria-hidden />
+          <Icon className="size-[18px]" aria-hidden />
         </span>
         <span className="rounded-full border border-border px-2 py-0.5 text-[11px] font-medium text-muted-foreground">Game</span>
       </span>
       <span>
-        <span className="block text-[15px] font-semibold tracking-tight">MindSprint</span>
-        <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">Numbers flash by. Calculate in your head, then give the result.</span>
+        <span className="block text-[15px] font-semibold tracking-tight">{title}</span>
+        <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">{description}</span>
       </span>
-      <span className="mt-auto font-mono text-xs tabular-nums text-muted-foreground">{best === null ? "Not played yet" : `Best score ${best.toLocaleString()}`}</span>
+      <span className="mt-auto font-mono text-xs tabular-nums text-muted-foreground">{progress}</span>
     </Link>
+  );
+}
+
+/** Best results in each game, read from this device after mount (null until then, and when a game has not been played). */
+function useGameProgress(): { mindsprint: string | null; recall: string | null } {
+  const store = useLocalStore();
+  const [progress, setProgress] = useState<{ mindsprint: string | null; recall: string | null }>({ mindsprint: null, recall: null });
+
+  useEffect(() => {
+    if (!store) return;
+    const timer = setTimeout(() => {
+      const scores = loadMindsprintHistory(store).map((s) => scoreSession(s.rounds).score);
+      const recall = computeAllRecallStats(loadRecallHistory(store));
+      const longest = (["single", "pair"] as const).filter((m) => recall[m].longestRecalled > 0).map((m) => `${recall[m].longestRecalled} ${m === "single" ? "digits" : "pairs"}`);
+      setProgress({
+        mindsprint: scores.length > 0 ? `Best score ${Math.max(...scores).toLocaleString()}` : null,
+        recall: recall.single.sessions + recall.pair.sessions > 0 ? (longest.length > 0 ? `Longest recall ${longest.join(" · ")}` : "No perfect recall yet") : null,
+      });
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [store]);
+
+  return progress;
+}
+
+function GamesRow() {
+  const progress = useGameProgress();
+  return (
+    <section aria-labelledby="games-heading" className="space-y-3">
+      <h2 id="games-heading" className="text-sm font-medium text-muted-foreground">
+        Games
+      </h2>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <GameCard href="/mindsprint" title="MindSprint" icon={Zap} description="Numbers flash by. Calculate in your head, then give the result." progress={progress.mindsprint ?? "Not played yet"} />
+        <GameCard href="/recall" title="Number Recall" icon={Brain} description="Memorise digits or number pairs, then type them back in order." progress={progress.recall ?? "Not played yet"} />
+      </div>
+    </section>
   );
 }
 
@@ -140,7 +167,6 @@ function SkillPicker({
           </button>
         );
       })}
-      <MindsprintCard />
     </div>
   );
 }
@@ -259,6 +285,7 @@ export default function PracticeSetup({
   return (
     <div className="space-y-6">
       <SkillPicker skill={skill} summaries={localSummaries ?? summaries} onChange={chooseSkill} />
+      <GamesRow />
 
       <div className="grid items-start gap-6 lg:grid-cols-[1fr_380px]">
         <div>
