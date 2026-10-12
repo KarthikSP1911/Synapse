@@ -8,11 +8,14 @@
 
 import type { Rational } from "./rational";
 
-export const SKILLS = ["multiplication", "percentage", "fraction", "square"] as const;
+export const SKILLS = ["multiplication", "addition", "subtraction", "division", "percentage", "fraction", "square"] as const;
 export type Skill = (typeof SKILLS)[number];
 
 export const EXERCISE_TYPES = {
   multiplication: ["multiply"],
+  addition: ["add"],
+  subtraction: ["subtract"],
+  division: ["divide"],
   percentage: ["of", "what", "change", "convert"],
   fraction: ["simplify", "of", "compare", "convert"],
   square: ["value", "root", "missing"],
@@ -40,8 +43,8 @@ export type Outcome = (typeof OUTCOMES)[number];
 // ---------------------------------------------------------------------------
 
 export type AnswerFormat =
-  /** A whole number. Validated exactly like `number`; the format only picks the on-screen keypad. */
-  | { kind: "integer" }
+  /** A whole number. Validated exactly like `number`; the format only picks the on-screen keypad. `signed` also accepts a leading minus. */
+  | { kind: "integer"; signed?: true }
   /** A decimal or whole number, compared exactly. `percent` makes a trailing % optional. */
   | { kind: "number"; unit?: "percent" }
   /** `a/b`. With `lowestTerms` only the fully reduced fraction is accepted, otherwise any equivalent one. */
@@ -65,6 +68,11 @@ export type FractionConvertDirection = "f2d" | "f2p" | "d2f" | "p2f";
 
 export type QuestionSpec =
   | { skill: "multiplication"; exerciseType: "multiply"; left: number; right: number }
+  | { skill: "addition"; exerciseType: "add"; left: number; right: number }
+  /** `right` may be larger than `left`, giving a negative answer. */
+  | { skill: "subtraction"; exerciseType: "subtract"; left: number; right: number }
+  /** The answer is whole or ends within two decimal places (15 ÷ 4 = 3.75). */
+  | { skill: "division"; exerciseType: "divide"; dividend: number; divisor: number }
   | { skill: "percentage"; exerciseType: "of"; percent: number; base: number }
   | { skill: "percentage"; exerciseType: "what"; part: number; whole: number }
   | { skill: "percentage"; exerciseType: "change"; variant: "increase" | "decrease"; base: number; percent: number }
@@ -125,8 +133,30 @@ export interface PublicQuestion {
 // Practice configuration (what a session may ask)
 // ---------------------------------------------------------------------------
 
+/** Digit counts (1-4) an operand may have; the operand ranges are 1-9, 10-99, 100-999 and 1000-9999. */
+export const MAX_DIGITS = 4;
+/** Divisors stop at three digits: a four-digit divisor leaves almost no dividends that divide cleanly. */
+export const MAX_DIVISOR_DIGITS = 3;
+
 export type PracticeConfig =
   | { skill: "multiplication"; exerciseTypes: ExerciseTypeOf<"multiplication">[]; left: number[]; right: number[] }
+  | { skill: "addition"; exerciseTypes: ExerciseTypeOf<"addition">[]; leftDigits: number[]; rightDigits: number[] }
+  | {
+      skill: "subtraction";
+      exerciseTypes: ExerciseTypeOf<"subtraction">[];
+      leftDigits: number[];
+      rightDigits: number[];
+      /** Also ask questions whose second number is larger (23 − 58). */
+      allowNegative: boolean;
+    }
+  | {
+      skill: "division";
+      exerciseTypes: ExerciseTypeOf<"division">[];
+      dividendDigits: number[];
+      divisorDigits: number[];
+      /** Also ask questions with a decimal answer; off keeps whole-number answers only. */
+      decimals: boolean;
+    }
   | {
       skill: "percentage";
       exerciseTypes: ExerciseTypeOf<"percentage">[];

@@ -24,6 +24,7 @@ export function useTouchKeypad() {
 function extraKey(format: AnswerFormat): string | null {
   if (format.kind === "number") return ".";
   if (format.kind === "fraction") return "/";
+  if (format.kind === "integer" && format.signed) return "-";
   return null;
 }
 
@@ -61,8 +62,15 @@ export function AnswerKeypad({ format, disabled, onKey, onBackspace, action }: A
         </button>
       ))}
       {extra ? (
-        <button type="button" className={keyClass} disabled={disabled} onPointerDown={keepFocus} onClick={() => onKey(extra)}>
-          {extra}
+        <button
+          type="button"
+          className={keyClass}
+          disabled={disabled}
+          onPointerDown={keepFocus}
+          onClick={() => onKey(extra)}
+          aria-label={extra === "-" ? "Minus" : undefined}
+        >
+          {extra === "-" ? "−" : extra}
         </button>
       ) : (
         <span aria-hidden />

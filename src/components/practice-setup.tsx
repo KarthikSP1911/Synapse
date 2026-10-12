@@ -18,7 +18,15 @@ import { Button } from "@/components/ui/button";
 import ReviewButton from "@/components/review-button";
 import { SkillIcon } from "@/components/skill-icon";
 import { Chip } from "@/components/setup/controls";
-import { FractionConfig, MultiplicationConfig, PercentageConfig, SquareConfig } from "@/components/setup/configs";
+import {
+  AdditionConfig,
+  DivisionConfig,
+  FractionConfig,
+  MultiplicationConfig,
+  PercentageConfig,
+  SquareConfig,
+  SubtractionConfig,
+} from "@/components/setup/configs";
 
 const countModes = [
   { value: "10", label: "10" },
@@ -159,7 +167,9 @@ export default function PracticeSetup({
   const problem = !built.ok
     ? built.error
     : poolSize === 0
-      ? "No questions match these options. Try a wider number range or a different difficulty."
+      ? skill === "subtraction"
+        ? "No questions match these options. The first number needs at least as many digits as the second, unless negative answers are on."
+        : "No questions match these options. Try a wider number range or a different difficulty."
       : null;
 
   const handleStart = async () => {
@@ -214,6 +224,11 @@ export default function PracticeSetup({
           {skill === "multiplication" && (
             <MultiplicationConfig state={state.multiplication} onChange={(multiplication) => setState((s) => ({ ...s, multiplication }))} />
           )}
+          {skill === "addition" && <AdditionConfig state={state.addition} onChange={(addition) => setState((s) => ({ ...s, addition }))} />}
+          {skill === "subtraction" && (
+            <SubtractionConfig state={state.subtraction} onChange={(subtraction) => setState((s) => ({ ...s, subtraction }))} />
+          )}
+          {skill === "division" && <DivisionConfig state={state.division} onChange={(division) => setState((s) => ({ ...s, division }))} />}
           {skill === "percentage" && (
             <PercentageConfig state={state.percentage} onChange={(percentage) => setState((s) => ({ ...s, percentage }))} />
           )}
@@ -320,7 +335,7 @@ export default function PracticeSetup({
           </Button>
 
           <div className="mt-3 space-y-2 border-t border-border pt-4">
-            {skill !== "multiplication" && (
+            {EXERCISE_TYPES[skill].length > 1 && (
               <label className="flex items-center justify-between gap-3 text-sm">
                 <span className="text-muted-foreground">Review type</span>
                 <select

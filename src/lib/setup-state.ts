@@ -10,6 +10,9 @@ import type { Settings } from "@/lib/settings";
  */
 export interface SetupState {
   multiplication: { left: number[]; right: number[] };
+  addition: { leftDigits: number[]; rightDigits: number[] };
+  subtraction: { leftDigits: number[]; rightDigits: number[]; allowNegative: boolean };
+  division: { dividendDigits: number[]; divisorDigits: number[]; decimals: boolean };
   percentage: { exerciseTypes: string[]; difficulty: Difficulty; baseMin: string; baseMax: string };
   fraction: { exerciseTypes: string[]; difficulty: Difficulty };
   square: { exerciseTypes: string[]; rangeMin: string; rangeMax: string };
@@ -21,6 +24,10 @@ export function initialSetupState(settings: Settings): SetupState {
   const { difficulty } = settings;
   return {
     multiplication: { left: allNumbers, right: allNumbers },
+    addition: { leftDigits: [1, 2], rightDigits: [1, 2] },
+    // The first number starts as the longer one, so every default combination can give a non-negative answer.
+    subtraction: { leftDigits: [2], rightDigits: [1, 2], allowNegative: false },
+    division: { dividendDigits: [2], divisorDigits: [1], decimals: true },
     percentage: {
       exerciseTypes: settings.enabledExercises.percentage,
       difficulty,
@@ -47,6 +54,17 @@ export function configFromState(skill: Skill, state: SetupState): ConfigFromStat
         return { ok: false, error: "Select at least one number on each side to begin." };
       }
       return parseConfig({ skill, left: state.multiplication.left, right: state.multiplication.right });
+    case "addition":
+    case "subtraction": {
+      const { leftDigits, rightDigits } = state[skill];
+      if (leftDigits.length === 0 || rightDigits.length === 0) return { ok: false, error: "Select at least one digit count for each number to begin." };
+      return parseConfig({ skill, ...state[skill] });
+    }
+    case "division":
+      if (state.division.dividendDigits.length === 0 || state.division.divisorDigits.length === 0) {
+        return { ok: false, error: "Select at least one digit count for the dividend and the divisor to begin." };
+      }
+      return parseConfig({ skill, ...state.division });
     case "percentage": {
       const { baseMin, baseMax } = state.percentage;
       const min = toInt(baseMin);

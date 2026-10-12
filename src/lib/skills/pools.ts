@@ -1,6 +1,8 @@
 import {
   DIFFICULTIES,
   EXERCISE_TYPES,
+  MAX_DIGITS,
+  MAX_DIVISOR_DIGITS,
   SKILLS,
   type Difficulty,
   type ExerciseType,
@@ -243,6 +245,143 @@ function squarePool(type: ExerciseType, rangeMin: number, rangeMax: number): Que
 }
 
 // ---------------------------------------------------------------------------
+// Addition, subtraction and division
+// ---------------------------------------------------------------------------
+
+/** Most questions a single digit combination contributes. */
+const ARITHMETIC_GROUP_CAP = 120;
+
+/** Smallest and largest number with `digits` digits (one digit is 1-9, so nothing is "add zero"). */
+const digitBounds = (digits: number) => ({ min: digits === 1 ? 1 : 10 ** (digits - 1), max: 10 ** digits - 1 });
+
+/** Small deterministic generator (mulberry32), seeded from text so every configuration has one fixed pool. */
+function seededRandom(seed: string): () => number {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i += 1) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
+  let a = h >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/**
+ * Picks up to `cap` distinct indices in [0, total) that pass `accept`, the same ones every time.
+ * Small spaces are shuffled whole so nothing acceptable is missed; large ones are sampled.
+ */
+function pickIndices(total: number, cap: number, random: () => number, accept: (index: number) => boolean): number[] {
+  const out: number[] = [];
+  if (total <= cap * 4) {
+    const all = Array.from({ length: total }, (_, i) => i);
+    for (let i = all.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(random() * (i + 1));
+      [all[i], all[j]] = [all[j], all[i]];
+    }
+    for (const index of all) {
+      if (accept(index)) out.push(index);
+      if (out.length >= cap) break;
+    }
+    return out;
+  }
+  const seen = new Set<number>();
+  for (let attempts = cap * 40; out.length < cap && attempts > 0; attempts -= 1) {
+    const index = Math.floor(random() * total);
+    if (seen.has(index)) continue;
+    seen.add(index);
+    if (accept(index)) out.push(index);
+  }
+  return out;
+}
+
+/** Addition and subtraction: operand pairs for every chosen combination of digit counts. */
+function additivePool(
+  skill: "addition" | "subtraction",
+  leftDigits: number[],
+  rightDigits: number[],
+  allowNegative: boolean
+): QuestionSpec[] {
+  const specs: QuestionSpec[] = [];
+  const seen = new Set<string>();
+  for (const ld of leftDigits) {
+    for (const rd of rightDigits) {
+      const left = digitBounds(ld);
+      const right = digitBounds(rd);
+      // Without negatives the first number must be the larger one, which a shorter number never is.
+      if (skill === "subtraction" && !allowNegative && ld < rd) continue;
+      const rightCount = right.max - right.min + 1;
+      const pairAt = (index: number): [number, number] => [left.min + Math.floor(index / rightCount), right.min + (index % rightCount)];
+      const accept = (index: number) => {
+        const [l, r] = pairAt(index);
+        if (skill === "addition") return true;
+        return allowNegative ? l !== r : l > r;
+      };
+      const random = seededRandom(`${skill}:${ld}:${rd}:${allowNegative}`);
+      for (const index of pickIndices((left.max - left.min + 1) * rightCount, ARITHMETIC_GROUP_CAP, random, accept)) {
+        const [l, r] = pairAt(index);
+        const spec: QuestionSpec =
+          skill === "addition"
+            ? { skill, exerciseType: "add", left: l, right: r }
+            : { skill, exerciseType: "subtract", left: l, right: r };
+        const id = idOfSpec(spec);
+        if (!seen.has(id)) {
+          seen.add(id);
+          specs.push(spec);
+        }
+      }
+    }
+  }
+  return specs;
+}
+
+/**
+ * Division: a divisor `d` divides a dividend cleanly when the dividend is a multiple of `d` (whole answer) or of
+ * d / gcd(d, 100) (answer with at most two decimals). Counting those multiples per divisor lets a sample be drawn
+ * evenly from every valid question instead of hunting for them among random pairs.
+ */
+function divisionPool(dividendDigits: number[], divisorDigits: number[], decimals: boolean): QuestionSpec[] {
+  const specs: QuestionSpec[] = [];
+  const seen = new Set<string>();
+  for (const dd of dividendDigits) {
+    for (const vd of divisorDigits) {
+      const dividends = digitBounds(dd);
+      const divisors = digitBounds(vd);
+      const options: Array<{ divisor: number; step: number; first: number; count: number }> = [];
+      let total = 0;
+      for (let divisor = Math.max(2, divisors.min); divisor <= divisors.max; divisor += 1) {
+        const step = decimals ? divisor / gcd(divisor, 100) : divisor;
+        const lowest = Math.max(dividends.min, divisor + 1);
+        const first = Math.ceil(lowest / step);
+        const count = Math.floor(dividends.max / step) - first + 1;
+        if (count <= 0) continue;
+        options.push({ divisor, step, first, count });
+        total += count;
+      }
+      const random = seededRandom(`division:${dd}:${vd}:${decimals}`);
+      for (const index of pickIndices(total, ARITHMETIC_GROUP_CAP, random, () => true)) {
+        let remaining = index;
+        for (const option of options) {
+          if (remaining < option.count) {
+            const dividend = (option.first + remaining) * option.step;
+            const spec: QuestionSpec = { skill: "division", exerciseType: "divide", dividend, divisor: option.divisor };
+            const id = idOfSpec(spec);
+            if (!seen.has(id)) {
+              seen.add(id);
+              specs.push(spec);
+            }
+            break;
+          }
+          remaining -= option.count;
+        }
+      }
+    }
+  }
+  return specs;
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -257,6 +396,12 @@ function specsFor(config: PracticeConfig): Array<{ type: ExerciseType; specs: Qu
           ),
         },
       ];
+    case "addition":
+      return [{ type: "add", specs: additivePool("addition", config.leftDigits, config.rightDigits, false) }];
+    case "subtraction":
+      return [{ type: "subtract", specs: additivePool("subtraction", config.leftDigits, config.rightDigits, config.allowNegative) }];
+    case "division":
+      return [{ type: "divide", specs: divisionPool(config.dividendDigits, config.divisorDigits, config.decimals) }];
     case "percentage":
       return config.exerciseTypes.map((type) => ({
         type,
@@ -340,6 +485,12 @@ function parseOperandList(value: unknown): number[] | null {
   return [...new Set(value as number[])].sort((a, b) => a - b);
 }
 
+/** A non-empty list of digit counts from 1 to `max`, deduplicated and sorted. */
+function parseDigitList(value: unknown, max: number): number[] | null {
+  if (!Array.isArray(value) || value.length === 0 || !value.every((v) => isInt(v, 1, max))) return null;
+  return [...new Set(value as number[])].sort((a, b) => a - b);
+}
+
 /** Validates and canonicalises an untrusted practice configuration. */
 export function parseConfig(raw: unknown): ConfigResult {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return fail("config must be an object");
@@ -352,6 +503,24 @@ export function parseConfig(raw: unknown): ConfigResult {
     const right = parseOperandList(c.right);
     if (!left || !right) return fail(`Selected numbers must be integers between ${MIN_OPERAND} and ${MAX_OPERAND}`);
     return { ok: true, config: { skill, exerciseTypes: ["multiply"], left, right } };
+  }
+
+  if (skill === "addition" || skill === "subtraction") {
+    const leftDigits = parseDigitList(c.leftDigits, MAX_DIGITS);
+    const rightDigits = parseDigitList(c.rightDigits, MAX_DIGITS);
+    if (!leftDigits || !rightDigits) return fail(`Digit counts must be whole numbers from 1 to ${MAX_DIGITS}`);
+    if (skill === "addition") return { ok: true, config: { skill, exerciseTypes: ["add"], leftDigits, rightDigits } };
+    if (typeof c.allowNegative !== "boolean") return fail("allowNegative must be true or false");
+    return { ok: true, config: { skill, exerciseTypes: ["subtract"], leftDigits, rightDigits, allowNegative: c.allowNegative } };
+  }
+
+  if (skill === "division") {
+    const dividendDigits = parseDigitList(c.dividendDigits, MAX_DIGITS);
+    const divisorDigits = parseDigitList(c.divisorDigits, MAX_DIVISOR_DIGITS);
+    if (!dividendDigits) return fail(`Dividend digit counts must be whole numbers from 1 to ${MAX_DIGITS}`);
+    if (!divisorDigits) return fail(`Divisor digit counts must be whole numbers from 1 to ${MAX_DIVISOR_DIGITS}`);
+    if (typeof c.decimals !== "boolean") return fail("decimals must be true or false");
+    return { ok: true, config: { skill, exerciseTypes: ["divide"], dividendDigits, divisorDigits, decimals: c.decimals } };
   }
 
   const allowed = EXERCISE_TYPES[skill as Skill] as readonly string[];

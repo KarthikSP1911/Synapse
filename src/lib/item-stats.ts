@@ -37,6 +37,9 @@ export interface AttemptInput {
  */
 export const SLOW_RESPONSE_MS: Record<Skill, number> = {
   multiplication: 5000,
+  addition: 5000,
+  subtraction: 6000,
+  division: 8000,
   square: 8000,
   percentage: 10000,
   fraction: 12000,

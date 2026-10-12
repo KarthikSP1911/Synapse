@@ -4,6 +4,9 @@ import { guestFetch } from "./api";
 import { guestSkillSummaries, guestWeakItems } from "./progress";
 import { GUEST_STORAGE_KEY, loadGuestData } from "./storage";
 import { questionFromId } from "@/lib/skills/build";
+import { parseQuestionId } from "@/lib/skills/ids";
+import { buildPool } from "@/lib/skills/pools";
+import type { PracticeConfig } from "@/lib/skills/types";
 
 // A minimal in-memory localStorage; node has none.
 class MemoryStorage {
@@ -193,5 +196,58 @@ describe("guest statistics", () => {
     localStorage.setItem(GUEST_STORAGE_KEY, JSON.stringify({ version: 2, sessions: "x" }));
     assert.deepEqual(loadGuestData().sessions, []);
     assert.equal(await start(), 1);
+  });
+});
+
+describe("guest arithmetic sessions", () => {
+  const sessions = [
+    { skill: "addition", config: { skill: "addition", exerciseTypes: ["add"], leftDigits: [2], rightDigits: [2] } },
+    { skill: "subtraction", config: { skill: "subtraction", exerciseTypes: ["subtract"], leftDigits: [2], rightDigits: [2], allowNegative: true } },
+    { skill: "division", config: { skill: "division", exerciseTypes: ["divide"], dividendDigits: [2], divisorDigits: [1], decimals: true } },
+  ] as const;
+
+  for (const { skill, config } of sessions) {
+    it(`runs a ${skill} session from the first question to the progress figures`, async () => {
+      const id = await start({ skill, mode: "fixed", targetQuestionCount: 10, config });
+      const seen = new Set<string>();
+      for (let i = 0; i < 5; i += 1) {
+        const { question } = await nextQuestion(id);
+        assert.equal(question.skill, skill);
+        assert.equal(question.answer, undefined, "the answer must not reach the screen");
+        seen.add(question.id);
+        const result = await (await post(`/api/sessions/${id}/attempt`, { questionId: question.id, userAnswer: correct(question.id), responseTimeMs: 1500 })).json();
+        assert.equal(result.isCorrect, true, question.id);
+      }
+      assert.ok(seen.size > 1, "questions should vary");
+      assert.equal(guestSkillSummaries(loadGuestData())[skill].attempts, 5);
+    });
+  }
+
+  it("scores a negative subtraction answer typed with a minus sign", async () => {
+    const config: PracticeConfig = { skill: "subtraction", exerciseTypes: ["subtract"], leftDigits: [2], rightDigits: [2], allowNegative: true };
+    const id = await start({ skill: "subtraction", mode: "fixed", targetQuestionCount: 10, config });
+    // The pool is a sample, so take a negative question from it rather than assuming a particular one is in.
+    const questionId = buildPool(config).find((item) => {
+      const spec = parseQuestionId(item.id);
+      return spec?.skill === "subtraction" && spec.left < spec.right;
+    })?.id;
+    assert.ok(questionId, "the pool should hold a negative question");
+    const answer = correct(questionId);
+    assert.match(answer, /^-\d+$/);
+    const send = async (userAnswer: string) =>
+      (await post(`/api/sessions/${id}/attempt`, { questionId, userAnswer, responseTimeMs: 1000 })).json();
+    assert.equal((await send(answer)).isCorrect, true);
+    assert.equal((await send(answer.slice(1))).isCorrect, false);
+  });
+
+  it("refuses a question outside the session's digit counts", async () => {
+    const id = await start({
+      skill: "addition",
+      mode: "fixed",
+      targetQuestionCount: 10,
+      config: { skill: "addition", exerciseTypes: ["add"], leftDigits: [1], rightDigits: [1] },
+    });
+    const res = await post(`/api/sessions/${id}/attempt`, { questionId: "addition:47:38", userAnswer: "85", responseTimeMs: 1000 });
+    assert.equal(res.status, 400);
   });
 });

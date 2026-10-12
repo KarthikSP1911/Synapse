@@ -71,6 +71,94 @@ function multiplication(left: number, right: number): Core {
 }
 
 // ---------------------------------------------------------------------------
+// Addition, subtraction and division
+// ---------------------------------------------------------------------------
+
+const digitCount = (n: number) => String(n).length;
+
+/** 345 -> [300, 40, 5]: the non-zero place-value parts of a number, biggest first. */
+function placeParts(n: number): number[] {
+  const digits = String(n);
+  return [...digits].map((d, i) => Number(d) * 10 ** (digits.length - 1 - i)).filter((part) => part > 0);
+}
+
+/** "47 + 30 = 77, 77 + 8 = 85": applies each part in turn, so the working can be followed step by step. */
+function partsChain(start: number, parts: number[], sign: 1 | -1): string {
+  let running = start;
+  return parts
+    .map((part) => {
+      const before = running;
+      running += sign * part;
+      return `${before} ${sign === 1 ? "+" : "−"} ${part} = ${running}`;
+    })
+    .join(", ");
+}
+
+function addition(left: number, right: number): Core {
+  const sum = left + right;
+  const big = Math.max(left, right);
+  const small = Math.min(left, right);
+  const parts = placeParts(small);
+  return {
+    concept: `addition:${digitCount(big)}d+${digitCount(small)}d`,
+    prompt: `${left} + ${right}`,
+    answerFormat: { kind: "integer" },
+    answerText: String(sum),
+    expected: rat(sum),
+    hint: parts.length > 1 ? `Add ${small} in parts, starting with ${parts[0]}.` : undefined,
+    explanation: parts.length > 1 ? `Add ${small} to ${big} in parts: ${partsChain(big, parts, 1)}.` : `${left} + ${right} = ${sum}.`,
+  };
+}
+
+function subtraction(left: number, right: number): Core {
+  const result = left - right;
+  const big = Math.max(left, right);
+  const small = Math.min(left, right);
+  const diff = big - small;
+  const parts = placeParts(small);
+  let explanation: string;
+  if (result < 0) {
+    explanation = `${right} is larger than ${left}, so work out ${right} − ${left} = ${diff} and make it negative: ${left} − ${right} = −${diff}.`;
+  } else if (parts.length > 1) {
+    explanation = `Subtract ${right} in parts: ${partsChain(left, parts, -1)}.`;
+  } else {
+    explanation = `${left} − ${right} = ${result}.`;
+  }
+  return {
+    concept: `subtraction:${digitCount(big)}d-${digitCount(small)}d`,
+    prompt: `${left} − ${right}`,
+    // Signed for every question, so the answer box never gives away whether the result is negative.
+    answerFormat: { kind: "integer", signed: true },
+    answerText: String(result),
+    expected: rat(result),
+    hint: "Take the smaller number from the larger one, then decide whether the answer is positive or negative.",
+    explanation,
+  };
+}
+
+function division(dividend: number, divisor: number): Core {
+  const quotient = rat(dividend, divisor);
+  const ans = decimal(quotient);
+  const whole = dividend % divisor === 0;
+  const wholePart = Math.floor(dividend / divisor);
+  const remainder = dividend - wholePart * divisor;
+  return {
+    concept: `division:${digitCount(dividend)}d/${digitCount(divisor)}d`,
+    prompt: `${dividend} ÷ ${divisor}`,
+    // A decimal point is always available, so the answer box never gives away whether the answer is whole.
+    answerFormat: { kind: "number" },
+    answerText: ans,
+    expected: quotient,
+    hint: whole
+      ? `What do you multiply ${divisor} by to get ${dividend}?`
+      : `Find how many whole times ${divisor} fits into ${dividend}, then write what is left as a decimal.`,
+    explanation: whole
+      ? `${divisor} × ${wholePart} = ${dividend}, so ${dividend} ÷ ${divisor} = ${ans}.`
+      : `${divisor} × ${wholePart} = ${wholePart * divisor}, leaving ${remainder}. ${remainder} ÷ ${divisor} = ${decimal(rat(remainder, divisor))}, so ${dividend} ÷ ${divisor} = ${ans}.`,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Percentages
 // ---------------------------------------------------------------------------
 
@@ -447,6 +535,12 @@ function buildCore(spec: QuestionSpec): Core {
   switch (spec.skill) {
     case "multiplication":
       return multiplication(spec.left, spec.right);
+    case "addition":
+      return addition(spec.left, spec.right);
+    case "subtraction":
+      return subtraction(spec.left, spec.right);
+    case "division":
+      return division(spec.dividend, spec.divisor);
     case "percentage":
       switch (spec.exerciseType) {
         case "of":
