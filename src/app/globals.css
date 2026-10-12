@@ -218,6 +218,88 @@
   line-height: 1;
 }
 
+/*
+  Skill and game tiles (see AccentTile). `--accent` is set inline per item from `lib/skills/accent.ts`.
+  Three states: inactive (dark tile), hover/focus preview, and active (persistent). Hover and active look the same.
+  The outline is a pseudo-element placed outside the tile with a negative inset, so it takes no layout space
+  and never shifts anything; the gap between tile and outline shows the surface behind.
+*/
+.accent-tile {
+  --tile-radius: 0.625rem;
+  --fill: #242424;
+  --ink: var(--accent);
+  --outline: 0;
+  position: relative;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--tile-radius);
+  background: var(--fill);
+  color: var(--ink);
+  transition:
+    background-color 180ms ease,
+    color 180ms ease;
+}
+.accent-tile::before {
+  content: "";
+  position: absolute;
+  border: 1px solid var(--accent);
+  opacity: var(--outline);
+  pointer-events: none;
+  transition: opacity 180ms ease;
+}
+/* The outline: 2px clear of the tile, with its radius grown by the offset so it stays concentric. */
+.accent-tile::before {
+  inset: -3px;
+  border-radius: calc(var(--tile-radius) + 3px);
+}
+.accent-tile[data-active="true"],
+[data-accent-host]:focus-visible .accent-tile {
+  --fill: var(--accent);
+  --ink: #111111;
+  --outline: 1;
+}
+@media (hover: hover) {
+  [data-accent-host]:hover .accent-tile {
+    --fill: var(--accent);
+    --ink: #111111;
+    --outline: 1;
+  }
+}
+
+/* The card's own border takes the accent while it is previewed (hover or keyboard focus). Fill and text stay put. */
+[data-accent-host]:focus-visible {
+  border-color: var(--accent);
+}
+@media (hover: hover) {
+  [data-accent-host]:hover {
+    border-color: var(--accent);
+  }
+}
+
+/*
+  A title that takes the accent while its tile is previewed or active. Pale accents such as yellow cannot be read
+  on a white card, so in the light theme the accent is darkened toward black; in the dark theme it is used as is.
+*/
+.accent-label {
+  --label: color-mix(in oklab, var(--accent) 50%, #000);
+  transition: color 180ms ease;
+}
+.dark .accent-label {
+  --label: var(--accent);
+}
+.accent-label[data-active="true"],
+[data-accent-host]:focus-visible .accent-label {
+  color: var(--label);
+}
+@media (hover: hover) {
+  [data-accent-host]:hover .accent-label {
+    color: var(--label);
+  }
+}
+
 @keyframes shake {
   10%, 90% { transform: translateX(-1px); }
   20%, 80% { transform: translateX(2px); }

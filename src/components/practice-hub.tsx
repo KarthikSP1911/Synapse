@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Zap, Brain } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocalStore } from "@/components/viewer-provider";
 import { guestSkillSummaries } from "@/lib/guest/progress";
@@ -15,21 +14,22 @@ import { SKILL_META, SKILL_ORDER } from "@/lib/skills/meta";
 import { skillHref } from "@/lib/skills/routes";
 import type { Skill } from "@/lib/skills/types";
 import type { SkillSummary } from "@/lib/progress-queries";
-import { SkillIcon } from "@/components/skill-icon";
+import { AccentTile, accentStyle } from "@/components/accent-tile";
+import type { AccentId } from "@/lib/skills/accent";
 
 /** A card on the hub: a skill or a game. Each one opens its own page. */
 function HubCard({
   href,
   title,
   description,
-  icon,
+  accent,
   progress,
   due = 0,
 }: {
   href: string;
   title: string;
   description: string;
-  icon: ReactNode;
+  accent: Exclude<AccentId, "sudoku">;
   progress: string;
   /** Reviews that are due; shown beside the icon when above zero. */
   due?: number;
@@ -37,17 +37,19 @@ function HubCard({
   return (
     <Link
       href={href}
+      data-accent-host
+      style={accentStyle(accent)}
       className={cn(
-        "flex flex-col items-start gap-2 rounded-xl border border-border bg-card p-4 text-left shadow-card transition-[color,background-color,border-color,transform] duration-150 hover:border-input hover:bg-accent/60 active:scale-[0.98]",
+        "flex flex-col items-start gap-2 rounded-xl border border-border bg-card p-4 text-left shadow-card transition-[color,background-color,border-color,transform] duration-150 active:scale-[0.98]",
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       )}
     >
       <span className="flex w-full items-center justify-between gap-2">
-        <span className="grid size-9 place-items-center rounded-lg bg-secondary text-foreground">{icon}</span>
+        <AccentTile id={accent} />
         {due > 0 && <span className="rounded-full bg-warning-soft px-2 py-0.5 text-[11px] font-medium text-warning">{due} due</span>}
       </span>
       <span>
-        <span className="block text-[15px] font-semibold tracking-tight">{title}</span>
+        <span className="accent-label block text-[15px] font-semibold tracking-tight">{title}</span>
         <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">{description}</span>
       </span>
       <span className="mt-auto font-mono text-xs tabular-nums text-muted-foreground">{progress}</span>
@@ -85,8 +87,8 @@ function GamesRow() {
         Games
       </h2>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <HubCard href="/mindsprint" title="MindSprint" icon={<Zap className="size-[18px]" aria-hidden />} description="Numbers flash by. Calculate in your head, then give the result." progress={progress.mindsprint ?? "Not played yet"} />
-        <HubCard href="/recall" title="Number Recall" icon={<Brain className="size-[18px]" aria-hidden />} description="Memorise digits or number pairs, then type them back in order." progress={progress.recall ?? "Not played yet"} />
+        <HubCard href="/mindsprint" title="MindSprint" accent="mindsprint" description="Numbers flash by. Calculate in your head, then give the result." progress={progress.mindsprint ?? "Not played yet"} />
+        <HubCard href="/recall" title="Number Recall" accent="recall" description="Memorise digits or number pairs, then type them back in order." progress={progress.recall ?? "Not played yet"} />
       </div>
     </section>
   );
@@ -125,7 +127,7 @@ export default function PracticeHub({
               href={skillHref(id)}
               title={SKILL_META[id].title}
               description={SKILL_META[id].description}
-              icon={<SkillIcon skill={id} className="size-[18px]" />}
+              accent={id}
               due={summary?.due ?? 0}
               progress={summary && summary.attempts > 0 ? `${summary.attempts.toLocaleString()} answered · ${summary.accuracy}%` : "Not started yet"}
             />

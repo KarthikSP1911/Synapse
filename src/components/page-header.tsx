@@ -1,4 +1,6 @@
+import { AccentTile, accentStyle } from "@/components/accent-tile";
 import { cn } from "@/lib/utils";
+import type { AccentId } from "@/lib/skills/accent";
 
 interface PageHeaderProps {
   title: string;
@@ -6,14 +8,25 @@ interface PageHeaderProps {
   eyebrow?: string;
   actions?: React.ReactNode;
   className?: string;
+  /** The skill or game this page is for: shows its tile in the active state beside the title, and the title in its accent. */
+  accent?: Exclude<AccentId, "sudoku">;
 }
 
-export function PageHeader({ title, description, eyebrow, actions, className }: PageHeaderProps) {
+export function PageHeader({ title, description, eyebrow, actions, className, accent }: PageHeaderProps) {
   return (
     <div className={cn("flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between", className)}>
       <div className="space-y-1.5">
         {eyebrow && <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">{eyebrow}</p>}
-        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{title}</h1>
+        {accent ? (
+          <div className="flex items-center gap-4">
+            <AccentTile id={accent} active />
+            <h1 className="accent-label text-3xl font-semibold tracking-tight sm:text-4xl" data-active style={accentStyle(accent)}>
+              {title}
+            </h1>
+          </div>
+        ) : (
+          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{title}</h1>
+        )}
         {description && <p className="max-w-2xl text-balance text-muted-foreground">{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
