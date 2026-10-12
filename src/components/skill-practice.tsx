@@ -166,7 +166,7 @@ export default function SkillPractice({ skill }: { skill: Skill }) {
           <ArrowLeft className="size-4" aria-hidden />
           Practice
         </Link>
-        <PageHeader title={SKILL_META[skill].title} description={SKILL_META[skill].description} />
+        <PageHeader accent={skill} title={SKILL_META[skill].title} description={SKILL_META[skill].description} />
       </div>
 
       <div className="grid items-start gap-6 lg:grid-cols-[1fr_380px]">

@@ -163,6 +163,7 @@ export default function RecallApp() {
   return (
     <div className="container space-y-6 py-8 sm:py-10">
       <PageHeader
+        accent="recall"
         title="Number Recall"
         description="Watch a sequence of digits flash by, then type it back in the exact original order."
       />
