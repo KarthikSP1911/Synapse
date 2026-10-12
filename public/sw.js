@@ -38,6 +38,7 @@ const PAGE_PATHS = new Set([
   "/skills/percentage",
   "/skills/fraction",
   "/skills/square",
+  "/skills/exponents",
   "/play",
   "/play/summary",
   "/mindsprint",

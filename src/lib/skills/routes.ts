@@ -6,7 +6,7 @@ export const skillHref = (skill: Skill): string => `/skills/${skill}`;
 /** Every skill page, for the service worker and anything else that needs to list them. */
 export const SKILL_PATHS: readonly string[] = SKILLS.map(skillHref);
 
-/** The skill a `/skills/<skill>` URL names, or null for anything that is not one of the seven. */
+/** The skill a `/skills/<skill>` URL names, or null for anything that is not one of the eight. */
 export const parseSkillParam = (value: unknown): Skill | null => (isSkill(value) ? value : null);
 
 /**

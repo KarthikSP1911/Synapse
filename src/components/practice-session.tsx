@@ -42,8 +42,13 @@ function sanitize(format: AnswerFormat, value: string): string {
       // A minus is only kept at the very start (the typographic minus counts too).
       return format.signed && /^[-−]/.test(value) ? `-${digits}` : digits;
     }
-    case "number":
+    case "number": {
+      if (format.signed || format.fractions) {
+        const body = value.replace(format.fractions ? /[^\d./ ]/g : /[^\d.]/g, "");
+        return format.signed && /^[-−]/.test(value) ? `-${body}` : body;
+      }
       return value.replace(format.unit === "percent" ? /[^\d.%]/g : /[^\d.]/g, "");
+    }
     case "fraction":
       return value.replace(/[^\d/ ]/g, "");
     case "choice":
@@ -53,7 +58,15 @@ function sanitize(format: AnswerFormat, value: string): string {
 
 // The numeric keyboards have no minus key on every platform, so signed answers use the plain text keyboard.
 const inputModeFor = (format: AnswerFormat) =>
-  format.kind === "integer" ? (format.signed ? "text" : "numeric") : format.kind === "number" ? "decimal" : "text";
+  format.kind === "integer"
+    ? format.signed
+      ? "text"
+      : "numeric"
+    : format.kind === "number"
+      ? format.signed || format.fractions
+        ? "text"
+        : "decimal"
+      : "text";
 
 const placeholderFor = (format: AnswerFormat) =>
   format.kind === "fraction" ? "a/b" : format.kind === "number" && format.unit === "percent" ? "? %" : "?";

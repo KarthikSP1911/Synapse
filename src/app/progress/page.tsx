@@ -25,7 +25,7 @@ import {
   type ConceptRow,
 } from "@/lib/progress-queries";
 import { squareRangeBuckets } from "@/lib/square-range";
-import { SKILL_META, SKILL_ORDER, exerciseLabel, modeLabel, skillTitle } from "@/lib/skills/meta";
+import { SKILL_META, SKILL_ORDER, exerciseLabel, exponentConceptLabel, modeLabel, skillTitle } from "@/lib/skills/meta";
 import { skillHref } from "@/lib/skills/routes";
 import type { Skill } from "@/lib/skills/types";
 
@@ -65,6 +65,7 @@ function conceptLabel(concept: string): string {
   }
   if (skill === "percentage") return tail === "multi" ? "Multi-step changes" : `${tail.replace("pct:", "")}%`;
   if (skill === "square") return `${tail}²`;
+  if (skill === "exponents") return exponentConceptLabel(tail);
   if (skill === "fraction") return tail.startsWith("compare:") ? tail.replace("compare:", "").replace("|", " vs ") : tail;
   return concept;
 }

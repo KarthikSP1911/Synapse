@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { localFetchFor, playHref } from "@/lib/local-store";
 import { useLocalStore } from "@/components/viewer-provider";
 import { DEFAULT_SETTINGS, isSessionChoice, loadSettings, type Settings } from "@/lib/settings";
-import { configFromState, initialSetupState, type SetupState } from "@/lib/setup-state";
+import { configFromState, initialSetupState, loadExponentsSetup, saveExponentsSetup, type SetupState } from "@/lib/setup-state";
 import { buildPool } from "@/lib/skills/pools";
 import { SKILL_META, exerciseLabel } from "@/lib/skills/meta";
 import { EXERCISE_TYPES, type Focus, type PracticeConfig, type Skill } from "@/lib/skills/types";
@@ -18,6 +18,7 @@ import ReviewButton from "@/components/review-button";
 import { StartCountdown } from "@/components/start-countdown";
 import { usePracticeSound } from "@/components/use-practice-sound";
 import { Chip } from "@/components/setup/controls";
+import { ExponentsConfig } from "@/components/setup/exponents-config";
 import {
   AdditionConfig,
   DivisionConfig,
@@ -65,6 +66,8 @@ export default function SkillPractice({ skill }: { skill: Skill }) {
   const { player: sound, soundOn, changeSound } = usePracticeSound();
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [state, setState] = useState<SetupState>(() => initialSetupState(DEFAULT_SETTINGS));
+  /** Whether the saved options have been read, so the defaults shown before that never overwrite them. */
+  const [setupLoaded, setSetupLoaded] = useState(false);
   const [kind, setKind] = useState<"count" | "timed">("count");
   const [sessionMode, setSessionMode] = useState<string>(DEFAULT_SETTINGS.defaultSession);
   const [focus, setFocus] = useState<Focus>("adaptive");
@@ -78,12 +81,19 @@ export default function SkillPractice({ skill }: { skill: Skill }) {
     const timer = setTimeout(() => {
       const loaded = loadSettings();
       setSettings(loaded);
-      setState(initialSetupState(loaded));
+      const initial = initialSetupState(loaded);
+      // Exponents has many options, so it remembers the last ones used on this device.
+      setState(skill === "exponents" ? { ...initial, exponents: loadExponentsSetup(initial.exponents) } : initial);
+      setSetupLoaded(true);
       setSessionMode(loaded.defaultSession);
       setKind(loaded.defaultSession.startsWith("timed:") ? "timed" : "count");
     }, 0);
     return () => clearTimeout(timer);
-  }, []);
+  }, [skill]);
+
+  useEffect(() => {
+    if (skill === "exponents" && setupLoaded) saveExponentsSetup(state.exponents);
+  }, [skill, setupLoaded, state.exponents]);
 
   const switchKind = (next: "count" | "timed") => {
     setKind(next);
@@ -104,7 +114,9 @@ export default function SkillPractice({ skill }: { skill: Skill }) {
     : poolSize === 0
       ? skill === "subtraction"
         ? "No questions match these options. The first number needs at least as many digits as the second, unless negative answers are on."
-        : "No questions match these options. Try a wider number range or a different difficulty."
+        : skill === "exponents"
+          ? "No questions match these options. Try a wider base or exponent range, more kinds of exponent, a higher maximum result or other exercise types."
+          : "No questions match these options. Try a wider number range or a different difficulty."
       : null;
 
   /** The tap: unlock audio (browsers only allow sound after a gesture) and show the countdown. Nothing is created yet. */
@@ -184,6 +196,7 @@ export default function SkillPractice({ skill }: { skill: Skill }) {
           )}
           {skill === "fraction" && <FractionConfig state={state.fraction} onChange={(fraction) => setState((s) => ({ ...s, fraction }))} />}
           {skill === "square" && <SquareConfig state={state.square} onChange={(square) => setState((s) => ({ ...s, square }))} />}
+          {skill === "exponents" && <ExponentsConfig state={state.exponents} onChange={(exponents) => setState((s) => ({ ...s, exponents }))} />}
         </div>
 
         <aside

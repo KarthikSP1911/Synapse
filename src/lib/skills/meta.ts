@@ -1,4 +1,4 @@
-import type { Difficulty, ExerciseType, Skill } from "./types";
+import type { Difficulty, ExerciseType, ExponentLevel, ExponentMode, Skill } from "./types";
 
 /** Display text for skills and exercise types. No React here, so server and client share it. */
 
@@ -44,6 +44,11 @@ export const SKILL_META: Record<Skill, SkillMeta> = {
     short: "Squares",
     description: "Recall squares and square roots up to 100.",
   },
+  exponents: {
+    title: "Exponents",
+    short: "Exponents",
+    description: "Powers and the laws of exponents, as an exponent or a final value.",
+  },
 };
 
 export interface ExerciseMeta {
@@ -82,7 +87,62 @@ export const EXERCISE_META: { [S in Skill]: Record<string, ExerciseMeta> } = {
     root: { label: "Find the root", description: "√289 = ?" },
     missing: { label: "Missing value", description: "14 × 14 = ?   ?² = 441" },
   },
+  exponents: {
+    evaluate: { label: "Evaluate powers", description: "2^5 = ?" },
+    base: { label: "Find the base", description: "?^3 = 125" },
+    exponent: { label: "Find the exponent", description: "2^? = 32" },
+    "mul-law": { label: "Multiplication law", description: "2^3 × 2^4 = ?" },
+    "div-law": { label: "Division law", description: "3^5 ÷ 3^2 = ?" },
+    "power-law": { label: "Power of a power", description: "(2^3)^2 = ?" },
+    "zero-negative": { label: "Zero & negative exponents", description: "5^0 = ?   2^-3 = ?" },
+    simplify: { label: "Simplify expressions", description: "2^3 × 2^4 ÷ 2^2 = ?" },
+  },
 };
+
+export const EXPONENT_LEVEL_META: Record<ExponentLevel, { label: string; description: string }> = {
+  easy: { label: "Easy", description: "Small positive bases and exponents: direct evaluation and the basic multiplication and division laws." },
+  medium: { label: "Medium", description: "Larger exponents, missing bases and exponents, power of a power and the zero exponent." },
+  hard: { label: "Hard", description: "Negative exponents and bases, mixed laws, brackets and multi-step simplifying." },
+  custom: { label: "Custom", description: "Your own ranges, exercise types and answer mode. Changing any option below switches to Custom." },
+};
+
+export const EXPONENT_MODE_META: Record<ExponentMode, { label: string; example: string; description: string }> = {
+  power: {
+    label: "Power form",
+    example: "2^5 × 2^7 = 2^?",
+    description: "Apply the laws and give the missing exponent (or base) without working out the big number.",
+  },
+  value: {
+    label: "Final value",
+    example: "2^5 × 2^7 = ?",
+    description: "Work the whole thing out and give the number. Negative exponents give decimals or fractions, like 0.125 or 1/8.",
+  },
+};
+
+/** What a question of each exercise type looks like in each answer mode (empty where the mode cannot ask it). */
+export const EXPONENT_EXAMPLES: Record<string, Record<ExponentMode, string>> = {
+  evaluate: { power: "", value: "2^5 = ?" },
+  base: { power: "?^3 × ?^4 = 5^7", value: "?^3 = 125" },
+  exponent: { power: "2^3 × 2^? = 2^7", value: "2^? = 32" },
+  "mul-law": { power: "2^3 × 2^4 = 2^?", value: "2^3 × 2^4 = ?" },
+  "div-law": { power: "3^5 ÷ 3^2 = 3^?", value: "3^5 ÷ 3^2 = ?" },
+  "power-law": { power: "(2^3)^2 = 2^?", value: "(2^3)^2 = ?" },
+  "zero-negative": { power: "10^-2 × 10^5 = 10^?", value: "5^0 = ?   2^-3 = ?" },
+  simplify: { power: "2^3 × 2^4 ÷ 2^2 = 2^?", value: "2^3 × 2^4 ÷ 2^2 = ?" },
+};
+
+const EXPONENT_CONCEPTS: Record<string, string> = {
+  "law:product": "Product law",
+  "law:quotient": "Quotient law",
+  "law:power": "Power of a power",
+  "zero-negative": "Zero & negative exponents",
+  simplify: "Multi-step simplifying",
+};
+
+/** `powers-of:2` -> "Powers of 2", `law:product` -> "Product law": the idea an Exponents question practises. */
+export function exponentConceptLabel(tail: string): string {
+  return tail.startsWith("powers-of:") ? `Powers of ${tail.slice("powers-of:".length)}` : (EXPONENT_CONCEPTS[tail] ?? tail);
+}
 
 export function exerciseLabel(skill: Skill, type: ExerciseType | string): string {
   return EXERCISE_META[skill][type]?.label ?? type;
@@ -112,7 +172,7 @@ export const DIFFICULTY_META: Record<Difficulty, { label: string; description: R
   },
 };
 
-export const SKILL_ORDER: readonly Skill[] = ["multiplication", "addition", "subtraction", "division", "percentage", "fraction", "square"];
+export const SKILL_ORDER: readonly Skill[] = ["multiplication", "addition", "subtraction", "division", "percentage", "fraction", "square", "exponents"];
 
 export const skillTitle = (skill: string): string => SKILL_META[skill as Skill]?.title ?? skill;
 

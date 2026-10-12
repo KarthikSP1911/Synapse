@@ -1,6 +1,7 @@
 import type { Question, QuestionDetails, PublicQuestion, QuestionSpec, Choice } from "./types";
 import { fmt, idOfSpec, parseFraction, parseQuestionId } from "./ids";
 import { difficultyOfSpec, convertPercent } from "./tiers";
+import { exponentCore } from "./exponents";
 import {
   PERCENT,
   add,
@@ -567,6 +568,19 @@ function buildCore(spec: QuestionSpec): Core {
       break;
     case "square":
       return squareCore(spec);
+    case "exponents": {
+      const core = exponentCore(spec);
+      if (!core) throw new Error("Invalid exponents question spec");
+      return {
+        concept: core.concept,
+        prompt: core.prompt,
+        answerFormat: core.answerFormat,
+        answerText: core.answerText,
+        expected: core.expected,
+        hint: core.hint,
+        explanation: core.explanation,
+      };
+    }
   }
   throw new Error("Unreachable question spec");
 }

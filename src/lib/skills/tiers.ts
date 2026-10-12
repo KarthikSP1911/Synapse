@@ -1,6 +1,7 @@
 import type { Difficulty, QuestionSpec } from "./types";
 import { isInteger, parseDecimal, rat, toPercentNumber, type Rational } from "./rational";
 import { parseFraction } from "./ids";
+import { exponentCore } from "./exponents";
 
 /**
  * Difficulty tiers. A question's difficulty is a pure function of its spec, and the pool builders
@@ -109,6 +110,8 @@ export function difficultyOfSpec(spec: QuestionSpec): Difficulty {
       return fractionSkillTier(spec);
     case "square":
       return squareTier(spec.n);
+    case "exponents":
+      return exponentCore(spec)?.difficulty ?? "advanced";
   }
 }
 

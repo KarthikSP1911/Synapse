@@ -66,7 +66,7 @@ export function ExercisePicker({
   selected,
   onChange,
 }: {
-  options: { value: string; label: string; description: string }[];
+  options: { value: string; label: string; description: string; /** Why this one cannot be switched on right now. */ disabledReason?: string | null }[];
   selected: string[];
   onChange: (next: string[]) => void;
 }) {
@@ -79,18 +79,21 @@ export function ExercisePicker({
   };
   return (
     <div className="grid gap-2 sm:grid-cols-2" role="group" aria-label="Exercise types">
-      {options.map(({ value, label, description }) => {
-        const active = selected.includes(value);
+      {options.map(({ value, label, description, disabledReason }) => {
+        const unavailable = Boolean(disabledReason);
+        const active = !unavailable && selected.includes(value);
         return (
           <button
             key={value}
             type="button"
             aria-pressed={active}
+            disabled={unavailable}
             onClick={() => toggle(value)}
             className={cn(
               "flex flex-col items-start gap-0.5 rounded-lg border px-3.5 py-2.5 text-left transition-[color,background-color,border-color,transform] duration-150 active:scale-[0.98]",
               "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-              active ? "border-foreground bg-accent" : "border-border hover:border-input hover:bg-accent/60"
+              unavailable && "cursor-not-allowed border-dashed opacity-60 active:scale-100",
+              !unavailable && (active ? "border-foreground bg-accent" : "border-border hover:border-input hover:bg-accent/60")
             )}
           >
             <span className="flex items-center gap-2 text-sm font-medium">
@@ -106,6 +109,7 @@ export function ExercisePicker({
               {label}
             </span>
             <span className="pl-6 font-mono text-xs text-muted-foreground">{description}</span>
+            {disabledReason && <span className="pl-6 text-xs text-muted-foreground">{disabledReason}</span>}
           </button>
         );
       })}
@@ -121,6 +125,7 @@ export function NumberField({
   min,
   max,
   invalid,
+  signed,
 }: {
   id: string;
   label: string;
@@ -129,6 +134,8 @@ export function NumberField({
   min: number;
   max: number;
   invalid?: boolean;
+  /** Allows a leading minus (for ranges that can go below zero). */
+  signed?: boolean;
 }) {
   return (
     <label htmlFor={id} className="flex flex-col gap-1.5 text-sm">
@@ -136,11 +143,15 @@ export function NumberField({
       <input
         id={id}
         type="text"
-        inputMode="numeric"
+        // Numeric keypads have no minus key on every platform, so a signed field uses the text keyboard.
+        inputMode={signed ? "text" : "numeric"}
         value={value}
         aria-invalid={invalid || undefined}
         aria-label={`${label} (${min} to ${max})`}
-        onChange={(e) => onChange(e.target.value.replace(/\D/g, "").slice(0, 5))}
+        onChange={(e) => {
+          const digits = e.target.value.replace(/\D/g, "");
+          onChange(signed ? `${/^[-−]/.test(e.target.value) ? "-" : ""}${digits.slice(0, 3)}` : digits.slice(0, 5));
+        }}
         className={cn(
           "h-9 w-full rounded-md border bg-background px-3 text-base font-mono tabular-nums md:text-sm pointer-coarse:h-11 outline-none transition-colors",
           "focus:border-foreground focus:ring-4 focus:ring-ring/20",
