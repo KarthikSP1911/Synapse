@@ -60,7 +60,7 @@ export function SetupScreen({
   };
 
   return (
-    <div className="grid items-start gap-6 lg:grid-cols-[1fr_380px]">
+    <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
       <div className="space-y-6">
         <section className="rounded-xl border border-border bg-card p-5 shadow-card" aria-labelledby="nr-mode">
           <h2 id="nr-mode" className="text-[15px] font-semibold tracking-tight">

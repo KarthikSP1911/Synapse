@@ -113,7 +113,7 @@ export function SetupScreen({
   const applyToAll = (config: RoundConfig) => setDrafts((list) => list.map((d) => ({ ...d, config: copyOf(config) })));
 
   return (
-    <div className="grid items-start gap-6 lg:grid-cols-[1fr_380px]">
+    <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
       <div className="space-y-6">
         <section className="rounded-xl border border-border bg-card p-5 shadow-card" aria-labelledby="ms-presets">
           <h2 id="ms-presets" className="text-[15px] font-semibold tracking-tight">
@@ -172,13 +172,13 @@ export function SetupScreen({
               const panelId = `ms-round-panel-${draft.id}`;
               return (
                 <li key={draft.id} className={cn("rounded-lg border bg-background", failing ? "border-destructive" : "border-border")}>
-                  <div className="flex items-center gap-1 p-1.5 pl-3">
+                  <div className="flex flex-wrap items-center gap-x-1 p-1.5 pl-3">
                     <button
                       type="button"
                       aria-expanded={open}
                       aria-controls={open ? panelId : undefined}
                       onClick={() => setOpenId(open ? null : draft.id)}
-                      className="flex min-w-0 flex-1 items-center gap-3 rounded-md py-1.5 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                      className="flex min-w-[12rem] flex-1 items-center gap-3 rounded-md py-1.5 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                     >
                       <span className="grid size-7 shrink-0 place-items-center rounded-md bg-secondary font-mono text-xs font-semibold tabular-nums">{index + 1}</span>
                       <span className="min-w-0 flex-1">
@@ -189,7 +189,7 @@ export function SetupScreen({
                       </span>
                       <ChevronDown className={cn("mr-1 size-4 shrink-0 text-muted-foreground transition-transform duration-150", open && "rotate-180")} aria-hidden />
                     </button>
-                    <div className="flex shrink-0 items-center">
+                    <div className="ml-auto flex shrink-0 items-center">
                       <Button variant="ghost" size="icon-sm" aria-label={`Move round ${index + 1} up`} disabled={index === 0} onClick={() => move(index, -1)}>
                         <ArrowUp />
                       </Button>
