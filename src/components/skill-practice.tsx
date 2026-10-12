@@ -3,25 +3,20 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Infinity as InfinityIcon, ListOrdered, Timer, Zap, Brain, type LucideIcon } from "lucide-react";
+import { ArrowLeft, ArrowRight, Infinity as InfinityIcon, ListOrdered, Timer, Volume2, VolumeX } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { localFetchFor, playHref } from "@/lib/local-store";
 import { useLocalStore } from "@/components/viewer-provider";
-import { guestSkillSummaries } from "@/lib/guest/progress";
-import { scoreSession } from "@/lib/mindsprint/scoring";
-import { loadHistory as loadMindsprintHistory } from "@/lib/mindsprint/storage";
-import { computeAllStats as computeAllRecallStats } from "@/lib/recall/stats";
-import { loadHistory as loadRecallHistory } from "@/lib/recall/storage";
-import { loadGuestData } from "@/lib/guest/storage";
 import { DEFAULT_SETTINGS, isSessionChoice, loadSettings, type Settings } from "@/lib/settings";
 import { configFromState, initialSetupState, type SetupState } from "@/lib/setup-state";
 import { buildPool } from "@/lib/skills/pools";
-import { SKILL_META, SKILL_ORDER, exerciseLabel } from "@/lib/skills/meta";
-import { EXERCISE_TYPES, type Focus, type Skill } from "@/lib/skills/types";
-import type { SkillSummary } from "@/lib/progress-queries";
+import { SKILL_META, exerciseLabel } from "@/lib/skills/meta";
+import { EXERCISE_TYPES, type Focus, type PracticeConfig, type Skill } from "@/lib/skills/types";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/page-header";
 import ReviewButton from "@/components/review-button";
-import { SkillIcon } from "@/components/skill-icon";
+import { StartCountdown } from "@/components/start-countdown";
+import { usePracticeSound } from "@/components/use-practice-sound";
 import { Chip } from "@/components/setup/controls";
 import {
   AdditionConfig,
@@ -54,140 +49,28 @@ const focuses: { value: Focus; label: string; help: string }[] = [
   { value: "due", label: "Due reviews", help: "Only questions whose spaced-repetition review is due. Falls back to the mix when none are." },
 ];
 
-/** The card for a game. Games are not drills, so each opens its own page instead of switching the options below. */
-function GameCard({ href, title, description, icon: Icon, progress }: { href: string; title: string; description: string; icon: LucideIcon; progress: string }) {
-  return (
-    <Link
-      href={href}
-      className={cn(
-        "flex flex-col items-start gap-2 rounded-xl border border-border bg-card p-4 text-left shadow-card transition-[color,background-color,border-color,transform] duration-150 hover:border-input hover:bg-accent/60 active:scale-[0.98]",
-        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-      )}
-    >
-      <span className="grid size-9 place-items-center rounded-lg bg-secondary text-foreground">
-        <Icon className="size-[18px]" aria-hidden />
-      </span>
-      <span>
-        <span className="block text-[15px] font-semibold tracking-tight">{title}</span>
-        <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">{description}</span>
-      </span>
-      <span className="mt-auto font-mono text-xs tabular-nums text-muted-foreground">{progress}</span>
-    </Link>
-  );
+/** What a new session is created from. Taken when Start is pressed, so changes made behind the countdown cannot alter it. */
+interface SessionPlan {
+  mode: "fixed" | "endless" | "timed";
+  focus: Focus;
+  config: PracticeConfig;
+  sessionMode: string;
 }
 
-/** Best results in each game, read from this device after mount (null until then, and when a game has not been played). */
-function useGameProgress(): { mindsprint: string | null; recall: string | null } {
-  const store = useLocalStore();
-  const [progress, setProgress] = useState<{ mindsprint: string | null; recall: string | null }>({ mindsprint: null, recall: null });
-
-  useEffect(() => {
-    if (!store) return;
-    const timer = setTimeout(() => {
-      const scores = loadMindsprintHistory(store).map((s) => scoreSession(s.rounds).score);
-      const recall = computeAllRecallStats(loadRecallHistory(store));
-      const longest = (["single", "pair"] as const).filter((m) => recall[m].longestRecalled > 0).map((m) => `${recall[m].longestRecalled} ${m === "single" ? "digits" : "pairs"}`);
-      setProgress({
-        mindsprint: scores.length > 0 ? `Best score ${Math.max(...scores).toLocaleString()}` : null,
-        recall: recall.single.sessions + recall.pair.sessions > 0 ? (longest.length > 0 ? `Longest recall ${longest.join(" · ")}` : "No perfect recall yet") : null,
-      });
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [store]);
-
-  return progress;
-}
-
-function GamesRow() {
-  const progress = useGameProgress();
-  return (
-    <section aria-labelledby="games-heading" className="space-y-3">
-      <h2 id="games-heading" className="text-sm font-medium text-muted-foreground">
-        Games
-      </h2>
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <GameCard href="/mindsprint" title="MindSprint" icon={Zap} description="Numbers flash by. Calculate in your head, then give the result." progress={progress.mindsprint ?? "Not played yet"} />
-        <GameCard href="/recall" title="Number Recall" icon={Brain} description="Memorise digits or number pairs, then type them back in order." progress={progress.recall ?? "Not played yet"} />
-      </div>
-    </section>
-  );
-}
-
-function SkillPicker({
-  skill,
-  summaries,
-  onChange,
-}: {
-  skill: Skill;
-  summaries: Record<Skill, SkillSummary> | null;
-  onChange: (next: Skill) => void;
-}) {
-  return (
-    <div role="group" aria-label="Skill" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      {SKILL_ORDER.map((id) => {
-        const active = id === skill;
-        const summary = summaries?.[id];
-        return (
-          <button
-            key={id}
-            type="button"
-            aria-pressed={active}
-            onClick={() => onChange(id)}
-            className={cn(
-              "flex flex-col items-start gap-2 rounded-xl border p-4 text-left shadow-card transition-[color,background-color,border-color,transform] duration-150 active:scale-[0.98]",
-              "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-              active ? "border-foreground bg-card ring-1 ring-foreground" : "border-border bg-card hover:border-input hover:bg-accent/60"
-            )}
-          >
-            <span className="flex w-full items-center justify-between gap-2">
-              <span
-                className={cn(
-                  "grid size-9 place-items-center rounded-lg",
-                  active ? "bg-foreground text-background" : "bg-secondary text-foreground"
-                )}
-              >
-                <SkillIcon skill={id} className="size-[18px]" />
-              </span>
-              {summary && summary.due > 0 && (
-                <span className="rounded-full bg-warning-soft px-2 py-0.5 text-[11px] font-medium text-warning">{summary.due} due</span>
-              )}
-            </span>
-            <span>
-              <span className="block text-[15px] font-semibold tracking-tight">{SKILL_META[id].title}</span>
-              <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">{SKILL_META[id].description}</span>
-            </span>
-            <span className="mt-auto font-mono text-xs tabular-nums text-muted-foreground">
-              {summary && summary.attempts > 0
-                ? `${summary.attempts.toLocaleString()} answered · ${summary.accuracy}%`
-                : "Not started yet"}
-            </span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-export default function PracticeSetup({
-  initialSkill = "multiplication",
-  summaries = null,
-}: {
-  initialSkill?: Skill;
-  /** The account's figures as of the last page load; the on-device copy replaces them once it has history. */
-  summaries?: Record<Skill, SkillSummary> | null;
-}) {
+/** One skill's page: its options, the session panel and the Start button. `/` only lists the skills. */
+export default function SkillPractice({ skill }: { skill: Skill }) {
   const router = useRouter();
   // Sessions run on this device (see `src/lib/guest/api.ts`), so starting one never waits on the network.
   const store = useLocalStore();
-  const [localSummaries, setLocalSummaries] = useState<Record<Skill, SkillSummary> | null>(null);
+  const { player: sound, soundOn, changeSound } = usePracticeSound();
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
-  const [skill, setSkill] = useState<Skill>(initialSkill);
   const [state, setState] = useState<SetupState>(() => initialSetupState(DEFAULT_SETTINGS));
   const [kind, setKind] = useState<"count" | "timed">("count");
   const [sessionMode, setSessionMode] = useState<string>(DEFAULT_SETTINGS.defaultSession);
   const [focus, setFocus] = useState<Focus>("adaptive");
   const [reviewType, setReviewType] = useState<string>("");
-  const [isStarting, setIsStarting] = useState(false);
+  /** Set from the Start tap until the session exists (or the player backs out); the countdown shows meanwhile. */
+  const [plan, setPlan] = useState<SessionPlan | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Preferences live in localStorage, so they are applied after mount to avoid a hydration mismatch.
@@ -198,21 +81,9 @@ export default function PracticeSetup({
       setState(initialSetupState(loaded));
       setSessionMode(loaded.defaultSession);
       setKind(loaded.defaultSession.startsWith("timed:") ? "timed" : "count");
-      if (store) {
-        const data = loadGuestData(store.key);
-        // A guest's figures are always the device's. An account's are too once the device holds its history.
-        if (!store.syncable || Object.keys(data.stats).length > 0) setLocalSummaries(guestSkillSummaries(data));
-      }
     }, 0);
     return () => clearTimeout(timer);
-  }, [store]);
-
-  const chooseSkill = (next: Skill) => {
-    setSkill(next);
-    setReviewType("");
-    setError(null);
-    window.history.replaceState(null, "", next === "multiplication" ? "/" : `/?skill=${next}`);
-  };
+  }, []);
 
   const switchKind = (next: "count" | "timed") => {
     setKind(next);
@@ -236,23 +107,29 @@ export default function PracticeSetup({
         : "No questions match these options. Try a wider number range or a different difficulty."
       : null;
 
-  const handleStart = async () => {
+  /** The tap: unlock audio (browsers only allow sound after a gesture) and show the countdown. Nothing is created yet. */
+  const handleStart = () => {
     if (!built.ok || poolSize === 0 || !store) return;
-    setIsStarting(true);
+    sound.unlock();
     setError(null);
+    const isTimed = sessionMode.startsWith("timed:");
+    setPlan({ mode: isTimed ? "timed" : sessionMode === "endless" ? "endless" : "fixed", focus, config: built.config, sessionMode });
+  };
+
+  /** Runs when the countdown has finished: this is the moment the session is created, so a timed clock starts with the first question. */
+  const createSession = async () => {
+    if (!plan || !store) return;
     try {
-      const isTimed = sessionMode.startsWith("timed:");
-      const mode = isTimed ? "timed" : sessionMode === "endless" ? "endless" : "fixed";
       const response = await localFetchFor(store)("/api/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           skill,
-          mode,
-          focus,
-          config: built.config,
-          targetQuestionCount: mode === "fixed" ? parseInt(sessionMode, 10) : null,
-          durationSeconds: isTimed ? parseInt(sessionMode.slice(6), 10) : null,
+          mode: plan.mode,
+          focus: plan.focus,
+          config: plan.config,
+          targetQuestionCount: plan.mode === "fixed" ? parseInt(plan.sessionMode, 10) : null,
+          durationSeconds: plan.mode === "timed" ? parseInt(plan.sessionMode.slice(6), 10) : null,
           questionTimeLimitSeconds: settings.questionTimeLimit,
           weakFocusPercent: settings.weakFocusPercent,
           recentWindow: settings.recentWindow,
@@ -267,7 +144,7 @@ export default function PracticeSetup({
     } catch (err) {
       console.error(err);
       setError(err instanceof Error && err.message !== "Failed to start session" ? err.message : "Could not start the session. Please try again.");
-      setIsStarting(false);
+      setPlan(null);
     }
   };
 
@@ -280,9 +157,17 @@ export default function PracticeSetup({
         : `${sessionMode} questions`;
 
   return (
-    <div className="space-y-6">
-      <SkillPicker skill={skill} summaries={localSummaries ?? summaries} onChange={chooseSkill} />
-      <GamesRow />
+    <div className="container space-y-6 py-8 sm:py-10">
+      <div className="space-y-4">
+        <Link
+          href="/"
+          className="-ml-1 inline-flex items-center gap-1.5 rounded-md px-1 py-0.5 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
+          <ArrowLeft className="size-4" aria-hidden />
+          Practice
+        </Link>
+        <PageHeader title={SKILL_META[skill].title} description={SKILL_META[skill].description} />
+      </div>
 
       <div className="grid items-start gap-6 lg:grid-cols-[1fr_380px]">
         <div>
@@ -385,19 +270,24 @@ export default function PracticeSetup({
             </p>
           )}
 
-          <Button size="xl" className="mt-5 w-full" onClick={handleStart} disabled={!canStart || isStarting || !store}>
-            {isStarting ? (
-              <>
-                <span className="size-4 animate-spin rounded-full border-2 border-primary-foreground/30 border-t-primary-foreground" />
-                Starting…
-              </>
-            ) : (
-              <>
-                Start practice
-                <ArrowRight />
-              </>
-            )}
-          </Button>
+          <div className="mt-5 flex gap-2">
+            <Button size="xl" className="min-w-0 flex-1 px-4" onClick={handleStart} disabled={!canStart || plan !== null || !store}>
+              Start practice
+              <ArrowRight />
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="xl"
+              className="w-12 px-0"
+              aria-label={soundOn ? "Sound on" : "Sound off"}
+              title={soundOn ? "Sound on. Plays the countdown and answer cues." : "Sound off"}
+              aria-pressed={soundOn}
+              onClick={() => changeSound(!soundOn)}
+            >
+              {soundOn ? <Volume2 /> : <VolumeX />}
+            </Button>
+          </div>
 
           <div className="mt-3 space-y-2 border-t border-border pt-4">
             {EXERCISE_TYPES[skill].length > 1 && (
@@ -428,6 +318,8 @@ export default function PracticeSetup({
           </div>
         </aside>
       </div>
+
+      {plan && <StartCountdown sound={sound} soundOn={soundOn} onSoundChange={changeSound} onComplete={createSession} onCancel={() => setPlan(null)} />}
     </div>
   );
 }

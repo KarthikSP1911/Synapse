@@ -22,6 +22,7 @@ import { summaryHref } from "@/lib/local-store";
 import { overviewOf } from "@/lib/progress-shared";
 import type { SkillFilter } from "@/lib/progress-queries";
 import { SKILL_META, SKILL_ORDER, exerciseLabel, modeLabel, skillTitle } from "@/lib/skills/meta";
+import { skillHref } from "@/lib/skills/routes";
 import { cn } from "@/lib/utils";
 
 /**
@@ -38,7 +39,7 @@ export function GuestProgress({ filter }: { filter: SkillFilter }) {
     return () => clearTimeout(timer);
   }, []);
 
-  const practiceHref = filter === "all" || filter === "multiplication" ? "/" : `/?skill=${filter}`;
+  const practiceHref = filter === "all" ? "/" : skillHref(filter);
   const header = (
     <>
       <PageHeader

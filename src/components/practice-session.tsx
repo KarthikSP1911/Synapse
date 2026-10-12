@@ -2,15 +2,17 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Check, Flame, Lightbulb, Pause, Play, SkipForward, X } from "lucide-react";
+import { ArrowRight, Check, Flame, Lightbulb, Pause, Play, SkipForward, Volume2, VolumeX, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AnswerKeypad, useTouchKeypad } from "@/components/answer-keypad";
 import { Button } from "@/components/ui/button";
+import { usePracticeSound } from "@/components/use-practice-sound";
 import type { LocalStore } from "@/lib/guest/api";
 import { localFetchFor, summaryHref as summaryUrl } from "@/lib/local-store";
 import { DEFAULT_SETTINGS, loadSettings, type Settings } from "@/lib/settings";
 import { inputProblem } from "@/lib/skills/answers";
 import { SKILL_META, exerciseLabel } from "@/lib/skills/meta";
+import { skillHref } from "@/lib/skills/routes";
 import type { AnswerFormat, Outcome, PublicQuestion } from "@/lib/skills/types";
 
 interface PracticeSessionProps {
@@ -87,6 +89,7 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
   const [paused, setPaused] = useState(false);
   const summaryHref = summaryUrl(sessionId);
   const touchKeypad = useTouchKeypad();
+  const { player: sound, soundOn, changeSound } = usePracticeSound();
 
   const startTimeRef = useRef(0);
   const pausedAtRef = useRef(0);
@@ -196,6 +199,8 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
   const submitAttempt = useCallback(
     async (kind: "answered" | "skipped" | "timed_out", userAnswer?: string) => {
       if (!question || submitting || feedback || paused) return;
+      // An answer is a tap or key press, which is also when a browser lets audio start if the Start tap did not already.
+      sound.unlock();
       setSubmitting(true);
       setError(null);
       const responseTimeMs = Date.now() - startTimeRef.current;
@@ -225,6 +230,7 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
           correct: prev.correct + (data.isCorrect ? 1 : 0),
           streak: data.isCorrect ? prev.streak + 1 : 0,
         }));
+        if (kind !== "skipped") sound.play(data.isCorrect ? "correct" : "wrong");
         setFeedback({
           outcome: data.outcome,
           isCorrect: data.isCorrect,
@@ -258,7 +264,7 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
         setSubmitting(false);
       }
     },
-    [question, submitting, feedback, paused, hintShown, sessionId, request, settings.showExplanations, settings.autoAdvance, isTimed, router, summaryHref, loadQuestion, later]
+    [question, submitting, feedback, paused, hintShown, sessionId, request, settings.showExplanations, settings.autoAdvance, isTimed, router, summaryHref, loadQuestion, later, sound]
   );
 
   const proceed = useCallback(() => {
@@ -454,7 +460,7 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => (stats.total > 0 ? finishSession() : router.push("/"))}
+            onClick={() => (stats.total > 0 ? finishSession() : router.push(skillHref(question.skill)))}
             aria-label={stats.total > 0 ? "End session and see results" : "Leave session"}
           >
             <X />
@@ -463,6 +469,9 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
           <Button variant="ghost" size="sm" onClick={togglePause} aria-label="Pause session (Escape)" disabled={submitting}>
             <Pause />
             <span className="hidden sm:inline">Pause</span>
+          </Button>
+          <Button variant="ghost" size="icon-sm" aria-label={soundOn ? "Mute sound" : "Turn sound on"} aria-pressed={soundOn} onClick={() => changeSound(!soundOn)}>
+            {soundOn ? <Volume2 /> : <VolumeX />}
           </Button>
         </div>
 

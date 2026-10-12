@@ -26,6 +26,7 @@ import {
 } from "@/lib/progress-queries";
 import { squareRangeBuckets } from "@/lib/square-range";
 import { SKILL_META, SKILL_ORDER, exerciseLabel, modeLabel, skillTitle } from "@/lib/skills/meta";
+import { skillHref } from "@/lib/skills/routes";
 import type { Skill } from "@/lib/skills/types";
 
 export const dynamic = "force-dynamic";
@@ -103,7 +104,7 @@ export default async function ProgressPage({ searchParams }: { searchParams: Pro
         title="Your progress"
         description="Track accuracy and speed over time, and see exactly which questions need more work."
         actions={
-          <Link href={filter === "all" || filter === "multiplication" ? "/" : `/?skill=${filter}`} className={buttonVariants({})}>
+          <Link href={filter === "all" ? "/" : skillHref(filter)} className={buttonVariants({})}>
             Practice <ArrowRight />
           </Link>
         }
@@ -119,7 +120,7 @@ export default async function ProgressPage({ searchParams }: { searchParams: Pro
               ? "Complete a practice session and your accuracy, speed and weak spots will show up here."
               : `You haven't answered any ${filterTitle} questions yet.`}
           </p>
-          <Link href={filter === "all" || filter === "multiplication" ? "/" : `/?skill=${filter}`} className={buttonVariants({ className: "mt-6" })}>
+          <Link href={filter === "all" ? "/" : skillHref(filter)} className={buttonVariants({ className: "mt-6" })}>
             Start your first session
           </Link>
         </div>

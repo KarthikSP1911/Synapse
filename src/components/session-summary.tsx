@@ -7,6 +7,7 @@ import ReviewButton from "@/components/review-button";
 import { SkillIcon } from "@/components/skill-icon";
 import { exerciseLabel, modeLabel, skillTitle } from "@/lib/skills/meta";
 import { questionFromId } from "@/lib/skills/build";
+import { skillHref } from "@/lib/skills/routes";
 import type { Skill } from "@/lib/skills/types";
 
 export interface SummarySession {
@@ -222,7 +223,7 @@ export function SessionSummary({
       </Card>
 
       <div className="flex flex-wrap items-start gap-3">
-        <Link href={skill === "multiplication" ? "/" : `/?skill=${skill}`} className={buttonVariants({ size: "lg" })}>
+        <Link href={skillHref(skill)} className={buttonVariants({ size: "lg" })}>
           Practice again <ArrowRight />
         </Link>
         {missed.length > 0 && <ReviewButton source={{ reviewSessionId: sessionId }} remote={!local} label="Retry missed" variant="outline" className="h-11 px-6 text-[15px]" />}
