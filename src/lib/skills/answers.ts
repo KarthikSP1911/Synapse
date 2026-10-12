@@ -39,10 +39,22 @@ export function parseAnswer(format: AnswerFormat, raw: unknown, choices?: Choice
         return { ok: false, reason: "Enter a number without a % sign." };
       }
       // Only signed formats take a minus, either the keyboard hyphen or the typographic minus sign.
-      const signed = format.kind === "integer" && format.signed === true;
+      const signed = format.signed === true;
       const negative = signed && /^[-−]/.test(body);
-      const parsed = parseDecimal(negative ? body.slice(1) : body);
-      if (!parsed) return { ok: false, reason: signed ? "Use digits, with an optional minus sign at the start." : "Use digits and a decimal point only." };
+      const unsigned = negative ? body.slice(1) : body;
+      // A number that allows fractions also takes a/b, which is exact where a decimal like 1/9 cannot be.
+      if (format.kind === "number" && format.fractions && unsigned.includes("/")) {
+        const match = /^(\d{1,6})\s*\/\s*(\d{1,6})$/.exec(unsigned);
+        if (!match) return { ok: false, reason: "Enter a fraction like 1/8." };
+        if (BigInt(match[2]) === BigInt(0)) return { ok: false, reason: "The denominator cannot be zero." };
+        const value = rat(BigInt(match[1]), BigInt(match[2]));
+        return { ok: true, answer: { kind: "number", value: negative ? rat(-value.n, value.d) : value } };
+      }
+      const parsed = parseDecimal(unsigned);
+      if (!parsed) {
+        if (format.kind === "number" && format.fractions) return { ok: false, reason: "Use digits with a decimal point or a slash, and an optional minus sign at the start." };
+        return { ok: false, reason: signed ? "Use digits, with an optional minus sign at the start." : "Use digits and a decimal point only." };
+      }
       return { ok: true, answer: { kind: "number", value: negative ? rat(-parsed.n, parsed.d) : parsed } };
     }
     case "fraction": {

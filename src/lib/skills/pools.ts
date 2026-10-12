@@ -15,6 +15,8 @@ import { MAX_BASE, fmt, idOfSpec, parseQuestionId } from "./ids";
 import { buildQuestion } from "./build";
 import { PERCENTS_BY_DIFFICULTY, difficultyOfSpec } from "./tiers";
 import { MAX_OPERAND, MIN_OPERAND } from "@/lib/validation";
+import { seededRandom } from "./sampling";
+import { exponentSpecs, parseExponentsConfig } from "./exponents-pool";
 import { gcd, rat, toDecimalString, toFractionString, div, fromNumber, PERCENT } from "./rational";
 
 /**
@@ -254,20 +256,6 @@ const ARITHMETIC_GROUP_CAP = 120;
 /** Smallest and largest number with `digits` digits (one digit is 1-9, so nothing is "add zero"). */
 const digitBounds = (digits: number) => ({ min: digits === 1 ? 1 : 10 ** (digits - 1), max: 10 ** digits - 1 });
 
-/** Small deterministic generator (mulberry32), seeded from text so every configuration has one fixed pool. */
-function seededRandom(seed: string): () => number {
-  let h = 2166136261;
-  for (let i = 0; i < seed.length; i += 1) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
-  let a = h >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
 /**
  * Picks up to `cap` distinct indices in [0, total) that pass `accept`, the same ones every time.
  * Small spaces are shuffled whole so nothing acceptable is missed; large ones are sampled.
@@ -411,6 +399,8 @@ function specsFor(config: PracticeConfig): Array<{ type: ExerciseType; specs: Qu
       return config.exerciseTypes.map((type) => ({ type, specs: fractionPool(type, config.difficulty) }));
     case "square":
       return config.exerciseTypes.map((type) => ({ type, specs: squarePool(type, config.rangeMin, config.rangeMax) }));
+    case "exponents":
+      return exponentSpecs(config);
   }
 }
 
@@ -522,6 +512,8 @@ export function parseConfig(raw: unknown): ConfigResult {
     if (typeof c.decimals !== "boolean") return fail("decimals must be true or false");
     return { ok: true, config: { skill, exerciseTypes: ["divide"], dividendDigits, divisorDigits, decimals: c.decimals } };
   }
+
+  if (skill === "exponents") return parseExponentsConfig(c);
 
   const allowed = EXERCISE_TYPES[skill as Skill] as readonly string[];
   if (!Array.isArray(c.exerciseTypes) || c.exerciseTypes.length === 0 || !c.exerciseTypes.every((t) => allowed.includes(t))) {

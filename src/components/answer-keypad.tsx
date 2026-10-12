@@ -20,12 +20,12 @@ export function useTouchKeypad() {
   );
 }
 
-/** The one extra key (beside 0) that a format needs; whole-number answers have none. */
-function extraKey(format: AnswerFormat): string | null {
-  if (format.kind === "number") return ".";
-  if (format.kind === "fraction") return "/";
-  if (format.kind === "integer" && format.signed) return "-";
-  return null;
+/** The keys beside 0 that a format needs; whole-number answers have none. */
+function extraKeys(format: AnswerFormat): string[] {
+  if (format.kind === "number") return [...(format.signed ? ["-"] : []), ".", ...(format.fractions ? ["/"] : [])];
+  if (format.kind === "fraction") return ["/"];
+  if (format.kind === "integer" && format.signed) return ["-"];
+  return [];
 }
 
 interface AnswerKeypadProps {
@@ -42,7 +42,9 @@ interface AnswerKeypadProps {
  * fixed height for the whole session instead of jumping every time a keyboard opens or closes.
  */
 export function AnswerKeypad({ format, disabled, onKey, onBackspace, action }: AnswerKeypadProps) {
-  const extra = extraKey(format);
+  const extras = extraKeys(format);
+  // One extra key shares the bottom row with 0 and backspace; more get a row of their own so none is squeezed.
+  const extra = extras.length === 1 ? extras[0] : null;
   const keyClass = cn(
     "grid h-11 [@media(max-height:700px)]:h-9 place-items-center rounded-lg border border-border bg-card font-mono text-2xl font-semibold shadow-card transition-[background-color,transform] duration-100",
     "select-none touch-manipulation active:scale-95 active:bg-accent disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
@@ -61,6 +63,23 @@ export function AnswerKeypad({ format, disabled, onKey, onBackspace, action }: A
           {digit}
         </button>
       ))}
+      {extras.length > 1 && (
+        <div className="col-span-3 grid gap-2" style={{ gridTemplateColumns: `repeat(${extras.length}, minmax(0, 1fr))` }}>
+          {extras.map((key) => (
+            <button
+              key={key}
+              type="button"
+              className={keyClass}
+              disabled={disabled}
+              onPointerDown={keepFocus}
+              onClick={() => onKey(key)}
+              aria-label={key === "-" ? "Minus" : undefined}
+            >
+              {key === "-" ? "−" : key}
+            </button>
+          ))}
+        </div>
+      )}
       {extra ? (
         <button
           type="button"

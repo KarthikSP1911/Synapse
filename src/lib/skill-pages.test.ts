@@ -10,9 +10,9 @@ import { SKILL_PATHS, legacySkillRedirect, parseSkillParam, skillHref } from "./
 import { SKILLS } from "./skills/types";
 
 describe("skill routes", () => {
-  it("accepts exactly the seven skills", () => {
+  it("accepts exactly the eight skills", () => {
     for (const skill of SKILLS) assert.equal(parseSkillParam(skill), skill);
-    assert.equal(SKILLS.length, 7);
+    assert.equal(SKILLS.length, 8);
     for (const bad of ["", "Multiplication", "algebra", "square ", "../play", undefined, null, 7, ["square"]]) {
       assert.equal(parseSkillParam(bad), null, String(bad));
     }

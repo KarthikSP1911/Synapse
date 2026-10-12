@@ -1,4 +1,5 @@
 import type { QuestionSpec } from "./types";
+import { idOfExponentSpec, parseExponentSpec } from "./exponents";
 import { decimalPlaces, gcd, isTerminating, mul, parseDecimal, PERCENT, rat, type Rational } from "./rational";
 
 /**
@@ -14,6 +15,7 @@ import { decimalPlaces, gcd, isTerminating, mul, parseDecimal, PERCENT, rat, typ
  *   fraction:of:3/4:80                   fraction:compare:larger:3/4:2/3
  *   fraction:convert:f2d:1/4             square:value:17   square:root:289
  *   square:missing:product:14            square:missing:base:441
+ *   exponents:p:mul-law:std:2:5:7        exponents:v:evaluate:std:2:5
  */
 
 export const MAX_BASE = 10000;
@@ -118,6 +120,8 @@ export function idOfSpec(spec: QuestionSpec): string {
             ? `square:missing:product:${spec.n}`
             : `square:missing:base:${spec.n * spec.n}`;
       }
+    case "exponents":
+      return idOfExponentSpec(spec);
   }
 }
 
@@ -271,6 +275,8 @@ function parseSpec(parts: string[]): QuestionSpec | null {
       }
       return null;
     }
+    case "exponents":
+      return parseExponentSpec(parts);
     case "square": {
       switch (type) {
         case "value": {

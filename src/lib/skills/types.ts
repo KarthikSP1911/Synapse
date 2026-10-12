@@ -8,7 +8,7 @@
 
 import type { Rational } from "./rational";
 
-export const SKILLS = ["multiplication", "addition", "subtraction", "division", "percentage", "fraction", "square"] as const;
+export const SKILLS = ["multiplication", "addition", "subtraction", "division", "percentage", "fraction", "square", "exponents"] as const;
 export type Skill = (typeof SKILLS)[number];
 
 export const isSkill = (value: unknown): value is Skill => SKILLS.includes(value as Skill);
@@ -21,6 +21,7 @@ export const EXERCISE_TYPES = {
   percentage: ["of", "what", "change", "convert"],
   fraction: ["simplify", "of", "compare", "convert"],
   square: ["value", "root", "missing"],
+  exponents: ["evaluate", "base", "exponent", "mul-law", "div-law", "power-law", "zero-negative", "simplify"],
 } as const satisfies Record<Skill, readonly string[]>;
 
 export type ExerciseTypeOf<S extends Skill> = (typeof EXERCISE_TYPES)[S][number];
@@ -28,6 +29,14 @@ export type ExerciseType = ExerciseTypeOf<Skill>;
 
 export const DIFFICULTIES = ["beginner", "intermediate", "advanced"] as const;
 export type Difficulty = (typeof DIFFICULTIES)[number];
+
+/** What an Exponents answer is: the exponent that completes a power (`2^3 × 2^4 = 2^?`), or the full number (`= 128`). */
+export const EXPONENT_MODES = ["power", "value"] as const;
+export type ExponentMode = (typeof EXPONENT_MODES)[number];
+
+/** Easy, Medium and Hard apply a preset of the other options; Custom leaves them as they are. */
+export const EXPONENT_LEVELS = ["easy", "medium", "hard", "custom"] as const;
+export type ExponentLevel = (typeof EXPONENT_LEVELS)[number];
 
 export const SESSION_MODES = ["fixed", "endless", "timed", "review"] as const;
 export type SessionMode = (typeof SESSION_MODES)[number];
@@ -47,8 +56,8 @@ export type Outcome = (typeof OUTCOMES)[number];
 export type AnswerFormat =
   /** A whole number. Validated exactly like `number`; the format only picks the on-screen keypad. `signed` also accepts a leading minus. */
   | { kind: "integer"; signed?: true }
-  /** A decimal or whole number, compared exactly. `percent` makes a trailing % optional. */
-  | { kind: "number"; unit?: "percent" }
+  /** A decimal or whole number, compared exactly. `percent` makes a trailing % optional, `signed` allows a leading minus and `fractions` also accepts `a/b`. */
+  | { kind: "number"; unit?: "percent"; signed?: true; fractions?: true }
   /** `a/b`. With `lowestTerms` only the fully reduced fraction is accepted, otherwise any equivalent one. */
   | { kind: "fraction"; lowestTerms: boolean }
   /** One of `choices`, answered by button. */
@@ -91,7 +100,9 @@ export type QuestionSpec =
   /** Asks for the root of n². */
   | { skill: "square"; exerciseType: "root"; n: number }
   /** `product`: n × n = ?   `base`: ?² = n² */
-  | { skill: "square"; exerciseType: "missing"; variant: "product" | "base"; n: number };
+  | { skill: "square"; exerciseType: "missing"; variant: "product" | "base"; n: number }
+  /** `variant` picks the shape of the expression and `args` are its integers (the base first, then the exponents); see `exponents.ts`. */
+  | { skill: "exponents"; exerciseType: ExerciseTypeOf<"exponents">; mode: ExponentMode; variant: string; args: number[] };
 
 // ---------------------------------------------------------------------------
 // Questions
@@ -167,7 +178,26 @@ export type PracticeConfig =
       baseMax: number;
     }
   | { skill: "fraction"; exerciseTypes: ExerciseTypeOf<"fraction">[]; difficulty: Difficulty }
-  | { skill: "square"; exerciseTypes: ExerciseTypeOf<"square">[]; rangeMin: number; rangeMax: number };
+  | { skill: "square"; exerciseTypes: ExerciseTypeOf<"square">[]; rangeMin: number; rangeMax: number }
+  | {
+      skill: "exponents";
+      exerciseTypes: ExerciseTypeOf<"exponents">[];
+      level: ExponentLevel;
+      answerMode: ExponentMode;
+      /** Sizes of the base, ignoring sign: 2 to 20. */
+      baseMin: number;
+      baseMax: number;
+      /** Range of the exponents written in a question. */
+      expMin: number;
+      expMax: number;
+      allowPositive: boolean;
+      allowZero: boolean;
+      allowNegative: boolean;
+      /** Also ask with bases like -2 and -5. */
+      negativeBases: boolean;
+      /** Largest whole number, or numerator / denominator, a final-value answer may have. */
+      maxResult: number;
+    };
 
 /** Lightweight pool entry: enough to pick and score without building the full question. */
 export interface PoolItem {

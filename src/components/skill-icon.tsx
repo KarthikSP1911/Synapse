@@ -1,4 +1,4 @@
-import { Divide, Minus, Percent, Plus, Slash, SquareRadical, X, type LucideIcon } from "lucide-react";
+import { Divide, Minus, Percent, Plus, Slash, SquareRadical, Superscript, X, type LucideIcon } from "lucide-react";
 import type { Skill } from "@/lib/skills/types";
 
 export const SKILL_ICONS: Record<Skill, LucideIcon> = {
@@ -10,6 +10,7 @@ export const SKILL_ICONS: Record<Skill, LucideIcon> = {
   percentage: Percent,
   fraction: Divide,
   square: SquareRadical,
+  exponents: Superscript,
 };
 
 export function SkillIcon({ skill, className }: { skill: Skill; className?: string }) {

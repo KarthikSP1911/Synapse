@@ -43,6 +43,7 @@ export const SLOW_RESPONSE_MS: Record<Skill, number> = {
   square: 8000,
   percentage: 10000,
   fraction: 12000,
+  exponents: 10000,
 };
 
 const clampScore = (score: number) => Math.max(0, Math.min(100, score));
