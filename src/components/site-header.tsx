@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChartNoAxesColumn, Grid3x3, Settings, Target, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { isNavActive } from "@/lib/nav";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoMark } from "@/components/logo-mark";
 import { ConnectionBadge } from "@/components/connection-badge";
@@ -15,8 +16,6 @@ const links = [
   { href: "/tables", label: "Tables", icon: Grid3x3 },
   { href: "/settings", label: "Settings", icon: Settings },
 ] as const;
-
-const isActive = (href: string, pathname: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
 /** Where the tab bar is shown: phones only, for signed-in or guest visitors, never on the focus-view practice screen or the auth screens. */
 export function showsMobileNav(pathname: string, viewer: "user" | "guest" | null) {
@@ -39,7 +38,7 @@ function NavLinks({ pathname, className, linkClassName }: { pathname: string; cl
   return (
     <nav aria-label="Main" className={className}>
       {links.map(({ href, label }) => {
-        const active = isActive(href, pathname);
+        const active = isNavActive(href, pathname);
         return (
           <Link
             key={href}
@@ -128,7 +127,7 @@ export function MobileNav({ viewer }: { viewer: "user" | "guest" | null }) {
       >
         <ul className="grid grid-cols-4" style={{ height: MOBILE_NAV_HEIGHT }}>
           {links.map(({ href, label, icon: Icon }) => {
-            const active = isActive(href, pathname);
+            const active = isNavActive(href, pathname);
             return (
               <li key={href}>
                 <Link

@@ -1,5 +1,5 @@
 import type { Focus, PracticeConfig, SessionMode, Skill } from "@/lib/skills/types";
-import { FOCUSES, SKILLS } from "@/lib/skills/types";
+import { FOCUSES, SKILLS, isSkill } from "@/lib/skills/types";
 import { buildPool, parseConfig, poolHas } from "@/lib/skills/pools";
 import {
   ALLOWED_DURATIONS,
@@ -54,7 +54,7 @@ export function isQuestionInSession(session: SessionShape, questionId: string): 
   return config !== null && poolHas(config, questionId);
 }
 
-export const isSkill = (value: unknown): value is Skill => SKILLS.includes(value as Skill);
+export { isSkill };
 
 // ---------------------------------------------------------------------------
 // Session creation requests

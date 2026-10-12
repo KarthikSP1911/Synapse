@@ -1,18 +1,21 @@
-import PracticeSetup from "@/components/practice-setup";
+import { redirect } from "next/navigation";
+import PracticeHub from "@/components/practice-hub";
 import { getSkillSummaries } from "@/lib/progress-queries";
-import { SKILLS, type Skill } from "@/lib/skills/types";
+import { legacySkillRedirect } from "@/lib/skills/routes";
 import { requireViewer } from "@/lib/auth";
 
 // The skill cards show live progress, so the page is rendered per request.
 export const dynamic = "force-dynamic";
 
 export default async function Home({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
-  const viewer = await requireViewer();
-  const { skill } = await searchParams;
-  const initialSkill: Skill = SKILLS.includes(skill as Skill) ? (skill as Skill) : "multiplication";
+  // `/?skill=<skill>` used to pick a skill on this page. Skills have their own pages now; old links still land on the right one.
+  const target = legacySkillRedirect((await searchParams).skill);
+  if (target) redirect(target);
 
-  // Progress is a nicety: if the database is unreachable the setup screen still works. A guest's
-  // progress is in their browser, so the setup screen reads it there.
+  const viewer = await requireViewer();
+
+  // Progress is a nicety: if the database is unreachable the hub still works. A guest's
+  // progress is in their browser, so the hub reads it there.
   const summaries =
     viewer.kind === "guest"
       ? null
@@ -23,8 +26,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ [
 
   return (
     <div className="container py-8 sm:py-10">
-      <h1 className="sr-only">Start a practice session</h1>
-      <PracticeSetup initialSkill={initialSkill} summaries={summaries} />
+      <h1 className="sr-only">Practice</h1>
+      <PracticeHub summaries={summaries} />
     </div>
   );
 }
