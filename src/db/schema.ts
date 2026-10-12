@@ -253,3 +253,65 @@ export const recallSessions = pgTable(
     index("recall_sessions_user_mode_ended_idx").on(table.userId, table.mode, table.endedAt),
   ]
 );
+
+/**
+ * Sudoku games of a signed-in user that ended (solved, revealed or given up), uploaded from the device. `puzzle` is
+ * the 81-character start grid, whose solution is unique, so nothing else about the board needs storing; points are
+ * worked out from the other fields again (see `src/lib/sudoku/scoring.ts`), so `score` is only a copy kept for
+ * listing and aggregating.
+ */
+export const sudokuSessions = pgTable(
+  "sudoku_sessions",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    /** The browser's random id for the game; unique per user, which makes uploads idempotent. */
+    clientId: varchar("client_id", { length: 64 }).notNull(),
+    difficulty: varchar("difficulty", { length: 10 }).notNull(), // easy | medium | hard | expert
+    puzzle: varchar("puzzle", { length: 81 }).notNull(),
+    completed: boolean("completed").notNull(),
+    elapsedMs: integer("elapsed_ms").notNull(),
+    mistakes: integer("mistakes").notNull(),
+    hintsUsed: integer("hints_used").notNull(),
+    score: integer("score").notNull(),
+    startedAt: timestamp("started_at").notNull(),
+    endedAt: timestamp("ended_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("sudoku_sessions_user_client_idx").on(table.userId, table.clientId),
+    index("sudoku_sessions_user_difficulty_ended_idx").on(table.userId, table.difficulty, table.endedAt),
+  ]
+);
+
+/**
+ * 2048 games of a signed-in user that ended (no move left) or were given up, uploaded from the device. The moves are
+ * not stored, so the figures are checked for plausibility rather than replayed (see `src/lib/game2048/records.ts`).
+ */
+export const game2048Sessions = pgTable(
+  "game2048_sessions",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    /** The browser's random id for the game; unique per user, which makes uploads idempotent. */
+    clientId: varchar("client_id", { length: 64 }).notNull(),
+    score: integer("score").notNull(),
+    highestTile: integer("highest_tile").notNull(),
+    moves: integer("moves").notNull(),
+    durationMs: integer("duration_ms").notNull(),
+    reached2048: boolean("reached_2048").notNull(),
+    gameOver: boolean("game_over").notNull(),
+    undosUsed: integer("undos_used").notNull(),
+    startedAt: timestamp("started_at").notNull(),
+    endedAt: timestamp("ended_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("game2048_sessions_user_client_idx").on(table.userId, table.clientId),
+    index("game2048_sessions_user_ended_idx").on(table.userId, table.endedAt),
+  ]
+);

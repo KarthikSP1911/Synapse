@@ -43,6 +43,8 @@ const PAGE_PATHS = new Set([
   "/play/summary",
   "/mindsprint",
   "/recall",
+  "/games/sudoku",
+  "/games/2048",
   "/progress",
   "/tables",
   "/settings",

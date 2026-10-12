@@ -9,6 +9,10 @@ import { scoreSession } from "@/lib/mindsprint/scoring";
 import { loadHistory as loadMindsprintHistory } from "@/lib/mindsprint/storage";
 import { computeAllStats as computeAllRecallStats } from "@/lib/recall/stats";
 import { loadHistory as loadRecallHistory } from "@/lib/recall/storage";
+import { computeStats as computeStats2048 } from "@/lib/game2048/stats";
+import { loadBest as load2048Best, loadGame as load2048Game, loadHistory as load2048History } from "@/lib/game2048/storage";
+import { DIFFICULTY_LABEL } from "@/lib/sudoku/types";
+import { loadGame as loadSudokuGame, loadHistory as loadSudokuHistory } from "@/lib/sudoku/storage";
 import { loadGuestData } from "@/lib/guest/storage";
 import { SKILL_META, SKILL_ORDER } from "@/lib/skills/meta";
 import { skillHref } from "@/lib/skills/routes";
@@ -29,7 +33,7 @@ function HubCard({
   href: string;
   title: string;
   description: string;
-  accent: Exclude<AccentId, "sudoku">;
+  accent: AccentId;
   progress: string;
   /** Reviews that are due; shown beside the icon when above zero. */
   due?: number;
@@ -58,9 +62,16 @@ function HubCard({
 }
 
 /** Best results in each game, read from this device after mount (null until then, and when a game has not been played). */
-function useGameProgress(): { mindsprint: string | null; recall: string | null } {
+interface GameProgress {
+  mindsprint: string | null;
+  recall: string | null;
+  sudoku: string | null;
+  game2048: string | null;
+}
+
+function useGameProgress(): GameProgress {
   const store = useLocalStore();
-  const [progress, setProgress] = useState<{ mindsprint: string | null; recall: string | null }>({ mindsprint: null, recall: null });
+  const [progress, setProgress] = useState<GameProgress>({ mindsprint: null, recall: null, sudoku: null, game2048: null });
 
   useEffect(() => {
     if (!store) return;
@@ -68,7 +79,14 @@ function useGameProgress(): { mindsprint: string | null; recall: string | null }
       const scores = loadMindsprintHistory(store).map((s) => scoreSession(s.rounds).score);
       const recall = computeAllRecallStats(loadRecallHistory(store));
       const longest = (["single", "pair"] as const).filter((m) => recall[m].longestRecalled > 0).map((m) => `${recall[m].longestRecalled} ${m === "single" ? "digits" : "pairs"}`);
+      const sudokuGames = loadSudokuHistory(store);
+      const unfinished = loadSudokuGame(store);
+      const solved = sudokuGames.filter((g) => g.completed).length;
+      const games2048 = computeStats2048(load2048History(store));
+      const best2048 = Math.max(load2048Best(store) ?? 0, games2048.highScore);
       setProgress({
+        game2048: best2048 > 0 ? `Best ${best2048.toLocaleString()} · tile ${games2048.bestTile || "—"}` : load2048Game(store) ? "Game in progress" : games2048.gamesPlayed > 0 ? "No score yet" : null,
+        sudoku: unfinished ? `${DIFFICULTY_LABEL[unfinished.difficulty]} game in progress` : solved > 0 ? `${solved.toLocaleString()} solved · ${Math.floor((solved * 100) / sudokuGames.length)}% completed` : sudokuGames.length > 0 ? "No puzzle solved yet" : null,
         mindsprint: scores.length > 0 ? `Best score ${Math.max(...scores).toLocaleString()}` : null,
         recall: recall.single.sessions + recall.pair.sessions > 0 ? (longest.length > 0 ? `Longest recall ${longest.join(" · ")}` : "No perfect recall yet") : null,
       });
@@ -82,13 +100,15 @@ function useGameProgress(): { mindsprint: string | null; recall: string | null }
 function GamesRow() {
   const progress = useGameProgress();
   return (
-    <section aria-labelledby="games-heading" className="space-y-3">
+    <section id="games" aria-labelledby="games-heading" className="scroll-mt-20 space-y-3">
       <h2 id="games-heading" className="text-sm font-medium text-muted-foreground">
         Games
       </h2>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <HubCard href="/mindsprint" title="MindSprint" accent="mindsprint" description="Numbers flash by. Calculate in your head, then give the result." progress={progress.mindsprint ?? "Not played yet"} />
         <HubCard href="/recall" title="Number Recall" accent="recall" description="Memorise digits or number pairs, then type them back in order." progress={progress.recall ?? "Not played yet"} />
+        <HubCard href="/games/sudoku" title="Sudoku" accent="sudoku" description="Fill the grid so every row, column and box holds 1 to 9." progress={progress.sudoku ?? "Not played yet"} />
+        <HubCard href="/games/2048" title="2048" accent="game2048" description="Slide and merge matching tiles to reach 2048." progress={progress.game2048 ?? "Not played yet"} />
       </div>
     </section>
   );

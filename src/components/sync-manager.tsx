@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { useViewerInfo } from "@/components/viewer-provider";
 import { pendingCountFor as mindsprintPendingFor, syncMindsprint } from "@/lib/mindsprint/sync";
 import { pendingCountFor as recallPendingFor, syncRecall } from "@/lib/recall/sync";
+import { pendingCountFor as game2048PendingFor, syncGame2048 } from "@/lib/game2048/sync";
+import { pendingCountFor as sudokuPendingFor, syncSudoku } from "@/lib/sudoku/sync";
 import { pendingCountFor, syncUser } from "@/lib/sync/client";
 import { setSyncStatus } from "@/lib/sync/status";
 import { postToServiceWorker, warmOfflineCache } from "@/lib/sw-client";
@@ -120,7 +122,7 @@ export function SyncManager() {
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
 
     // MindSprint sessions wait for upload just like practice sessions do.
-    const countPending = () => pendingCountFor(userId) + mindsprintPendingFor(userId);
+    const countPending = () => pendingCountFor(userId) + mindsprintPendingFor(userId) + recallPendingFor(userId) + sudokuPendingFor(userId) + game2048PendingFor(userId);
     const refreshPending = () => setSyncStatus({ pending: countPending() });
 
     const run = async () => {
@@ -135,9 +137,11 @@ export function SyncManager() {
         // Only reaches for the server when a game session is waiting (a game's history is pulled when its page opens).
         const mindsprint = mindsprintPendingFor(userId) > 0 ? await syncMindsprint(userId) : null;
         const recall = recallPendingFor(userId) > 0 ? await syncRecall(userId) : null;
+        const sudoku = sudokuPendingFor(userId) > 0 ? await syncSudoku(userId) : null;
+        const game2048 = game2048PendingFor(userId) > 0 ? await syncGame2048(userId) : null;
         running = false;
         if (cancelled) return;
-        const result = !practice.ok ? practice : mindsprint && !mindsprint.ok ? mindsprint : recall && !recall.ok ? recall : practice;
+        const result = !practice.ok ? practice : mindsprint && !mindsprint.ok ? mindsprint : recall && !recall.ok ? recall : sudoku && !sudoku.ok ? sudoku : game2048 && !game2048.ok ? game2048 : practice;
         failures = result.ok ? 0 : failures + 1;
         setSyncStatus({ syncing: false, failed: !result.ok && result.reason !== "signed-out", pending: countPending() });
         clearTimeout(retryTimer);
