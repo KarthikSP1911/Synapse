@@ -176,7 +176,6 @@ export default function MindsprintApp() {
   return (
     <div className="container space-y-6 py-8 sm:py-10">
       <PageHeader
-        eyebrow="Game"
         title="MindSprint"
         description="Numbers flash by one at a time. Do the sums in your head, then give the result once they are gone."
       />
