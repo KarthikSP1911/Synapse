@@ -11,6 +11,8 @@ import type { Rational } from "./rational";
 export const SKILLS = ["multiplication", "addition", "subtraction", "division", "percentage", "fraction", "square"] as const;
 export type Skill = (typeof SKILLS)[number];
 
+export const isSkill = (value: unknown): value is Skill => SKILLS.includes(value as Skill);
+
 export const EXERCISE_TYPES = {
   multiplication: ["multiply"],
   addition: ["add"],
