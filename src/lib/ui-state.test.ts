@@ -34,6 +34,13 @@ describe("settings", () => {
     assert.deepEqual(parsed.enabledExercises.square, DEFAULT_SETTINGS.enabledExercises.square);
   });
 
+  it("auto-advances by default and keeps an explicit choice", () => {
+    assert.equal(DEFAULT_SETTINGS.autoAdvance, true);
+    assert.equal(parseSettings({}).autoAdvance, true);
+    assert.equal(parseSettings({ autoAdvance: false }).autoAdvance, false);
+    assert.equal(parseSettings({ autoAdvance: "no" }).autoAdvance, true);
+  });
+
   it("copes with junk", () => {
     for (const junk of [null, undefined, 5, "text", [], { enabledExercises: null }]) {
       assert.deepEqual(parseSettings(junk), DEFAULT_SETTINGS);

@@ -239,6 +239,13 @@ export default function SettingsForm() {
               onChange={(showExplanations) => update({ showExplanations })}
             />
             <ToggleField
+              id="auto-advance"
+              label="Auto-advance after correct answers"
+              help="Move on to the next question right after a correct answer. Turn off to wait for Continue or Enter. Timed sessions always move on."
+              checked={settings.autoAdvance}
+              onChange={(autoAdvance) => update({ autoAdvance })}
+            />
+            <ToggleField
               id="allow-hints"
               label="Offer hints"
               help="Adds a Hint button (press ?). A correct answer after a hint counts as right, but does not move the question up a box."
