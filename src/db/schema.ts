@@ -190,3 +190,33 @@ export const tableStatistics = pgTable("table_statistics", {
   lastAttemptedAt: timestamp("last_attempted_at"),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+/**
+ * Finished MindSprint sessions of a signed-in user. `rounds` holds each round's settings, the numbers that were
+ * flashed and the answer given (see `src/lib/mindsprint/records.ts`); correctness and points are worked out from
+ * it again, so the figures below are only copies kept for listing and aggregating.
+ */
+export const mindsprintSessions = pgTable(
+  "mindsprint_sessions",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    /** The browser's random id for the session; unique per user, which makes uploads idempotent. */
+    clientId: varchar("client_id", { length: 64 }).notNull(),
+    rounds: jsonb("rounds").$type<unknown[]>().notNull(),
+    roundCount: integer("round_count").notNull(),
+    correctCount: integer("correct_count").notNull(),
+    score: integer("score").notNull(),
+    accuracy: integer("accuracy").notNull(), // percentage 0-100
+    averageResponseTimeMs: integer("average_response_time_ms").default(0).notNull(),
+    startedAt: timestamp("started_at").notNull(),
+    endedAt: timestamp("ended_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("mindsprint_sessions_user_client_idx").on(table.userId, table.clientId),
+    index("mindsprint_sessions_user_ended_idx").on(table.userId, table.endedAt),
+  ]
+);

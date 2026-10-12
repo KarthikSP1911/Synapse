@@ -1,7 +1,7 @@
 /** Page-side helpers for talking to the service worker (`public/sw.js`). */
 
 /** Every screen that should open with no connection. `/play*` are the shells all local sessions share. */
-const OFFLINE_ROUTES = ["/", "/play", "/play/summary", "/progress", "/tables", "/settings"];
+const OFFLINE_ROUTES = ["/", "/play", "/play/summary", "/mindsprint", "/progress", "/tables", "/settings"];
 
 export type ServiceWorkerMessage = { type: "warm"; urls: string[] } | { type: "clear-pages" } | { type: "skip-waiting" };
 

@@ -105,6 +105,18 @@ Open <http://localhost:3000>.
 
 `pair_statistics` is **no longer written** after the migration; it is kept so no data is lost and can be dropped later. `table_statistics` is still maintained for multiplication. Run the migration **before** starting the new code: the old code cannot insert attempts once the new NOT NULL columns exist, so any other deployment sharing the database needs to be redeployed at the same time.
 
+### MindSprint (flash arithmetic)
+
+`/mindsprint` is a game rather than a drill: numbers flash one at a time, and the player gives the result after the last one disappears. Logic is in `src/lib/mindsprint/`, UI in `src/components/mindsprint/`.
+
+- **Sequential evaluation**: operators apply left to right to the running total (`20 × 3 − 5 = 55`, `10 + 5 × 2 = 30`).
+- **Exact**: all arithmetic uses the rationals in `skills/rational.ts`. Every number, running total and answer is a finite decimal with at most the round's decimal places; divisions are always exact and never by zero. Answers are compared exactly (`3.50` equals `3.5`).
+- **Digits** means digits in the whole part (`1` = 1-9, `2` = 10-99 ...). With negatives off, no number, total or answer is below zero.
+- **Scoring**: a correct round earns `100 × difficulty multiplier` points (digits, length, operations, decimals, negatives and speed raise it); anything else earns 0.
+- **Persistence**: finished sessions are saved on the device under the viewer's storage key (`...:mindsprint`) and, for accounts, uploaded to `POST /api/sync/mindsprint` (table `mindsprint_sessions`, migration `0004_mindsprint.sql`). The server re-checks every sequence and recomputes the score.
+
+Run `npm run db:migrate` to create the table before signed-in users play MindSprint.
+
 ## How it works
 
 1. **Setup**: the home page shows the four skills with your progress. Choosing a skill shows only that skill's options. Starting creates a session (`POST /api/sessions`) storing the validated configuration.

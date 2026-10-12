@@ -29,7 +29,7 @@ const MAX_ASSETS = 600;
 const MAX_PAGES = 60;
 
 /** Screens worth keeping a copy of. Login, sign-up and error pages are never stored. */
-const PAGE_PATHS = new Set(["/", "/play", "/play/summary", "/progress", "/tables", "/settings", "/profile"]);
+const PAGE_PATHS = new Set(["/", "/play", "/play/summary", "/mindsprint", "/progress", "/tables", "/settings", "/profile"]);
 /** Same page for every session (the id is in the query string), so one stored copy serves them all. */
 const SHARED_SHELLS = new Set(["/play", "/play/summary"]);
 
