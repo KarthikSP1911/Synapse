@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Infinity as InfinityIcon, ListOrdered, Timer } from "lucide-react";
+import { ArrowRight, Infinity as InfinityIcon, ListOrdered, Timer, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { localFetchFor, playHref } from "@/lib/local-store";
 import { useLocalStore } from "@/components/viewer-provider";
 import { guestSkillSummaries } from "@/lib/guest/progress";
+import { scoreSession } from "@/lib/mindsprint/scoring";
+import { loadHistory as loadMindsprintHistory } from "@/lib/mindsprint/storage";
 import { loadGuestData } from "@/lib/guest/storage";
 import { DEFAULT_SETTINGS, isSessionChoice, loadSettings, type Settings } from "@/lib/settings";
 import { configFromState, initialSetupState, type SetupState } from "@/lib/setup-state";
@@ -48,6 +51,43 @@ const focuses: { value: Focus; label: string; help: string }[] = [
   { value: "weak", label: "Weak spots", help: "Only questions you find hard. Falls back to the mix when there are none yet." },
   { value: "due", label: "Due reviews", help: "Only questions whose spaced-repetition review is due. Falls back to the mix when none are." },
 ];
+
+/** MindSprint is a game rather than a drill, so its card opens its own page instead of switching the options below. */
+function MindsprintCard() {
+  const store = useLocalStore();
+  const [best, setBest] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!store) return;
+    const timer = setTimeout(() => {
+      const scores = loadMindsprintHistory(store).map((s) => scoreSession(s.rounds).score);
+      setBest(scores.length > 0 ? Math.max(...scores) : null);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [store]);
+
+  return (
+    <Link
+      href="/mindsprint"
+      className={cn(
+        "flex flex-col items-start gap-2 rounded-xl border border-border bg-card p-4 text-left shadow-card transition-[color,background-color,border-color,transform] duration-150 hover:border-input hover:bg-accent/60 active:scale-[0.98]",
+        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      )}
+    >
+      <span className="flex w-full items-center justify-between gap-2">
+        <span className="grid size-9 place-items-center rounded-lg bg-secondary text-foreground">
+          <Zap className="size-[18px]" aria-hidden />
+        </span>
+        <span className="rounded-full border border-border px-2 py-0.5 text-[11px] font-medium text-muted-foreground">Game</span>
+      </span>
+      <span>
+        <span className="block text-[15px] font-semibold tracking-tight">MindSprint</span>
+        <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">Numbers flash by. Calculate in your head, then give the result.</span>
+      </span>
+      <span className="mt-auto font-mono text-xs tabular-nums text-muted-foreground">{best === null ? "Not played yet" : `Best score ${best.toLocaleString()}`}</span>
+    </Link>
+  );
+}
 
 function SkillPicker({
   skill,
@@ -100,6 +140,7 @@ function SkillPicker({
           </button>
         );
       })}
+      <MindsprintCard />
     </div>
   );
 }

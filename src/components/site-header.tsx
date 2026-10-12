@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChartNoAxesColumn, Grid3x3, Settings, Target, UserRound } from "lucide-react";
+import { ChartNoAxesColumn, Grid3x3, Settings, Target, UserRound, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoMark } from "@/components/logo-mark";
@@ -11,6 +11,7 @@ import { buttonVariants } from "@/components/ui/button";
 
 const links = [
   { href: "/", label: "Practice", icon: Target },
+  { href: "/mindsprint", label: "MindSprint", icon: Zap },
   { href: "/progress", label: "Progress", icon: ChartNoAxesColumn },
   { href: "/tables", label: "Tables", icon: Grid3x3 },
   { href: "/settings", label: "Settings", icon: Settings },
@@ -126,7 +127,7 @@ export function MobileNav({ viewer }: { viewer: "user" | "guest" | null }) {
         aria-label="Main"
         className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-md sm:hidden"
       >
-        <ul className="grid grid-cols-4" style={{ height: MOBILE_NAV_HEIGHT }}>
+        <ul className="grid grid-cols-5" style={{ height: MOBILE_NAV_HEIGHT }}>
           {links.map(({ href, label, icon: Icon }) => {
             const active = isActive(href, pathname);
             return (

@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { useViewerInfo } from "@/components/viewer-provider";
+import { pendingCountFor as mindsprintPendingFor, syncMindsprint } from "@/lib/mindsprint/sync";
 import { pendingCountFor, syncUser } from "@/lib/sync/client";
 import { setSyncStatus } from "@/lib/sync/status";
 import { postToServiceWorker, warmOfflineCache } from "@/lib/sw-client";
@@ -117,7 +118,9 @@ export function SyncManager() {
     let failures = 0;
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
 
-    const refreshPending = () => setSyncStatus({ pending: pendingCountFor(userId) });
+    // MindSprint sessions wait for upload just like practice sessions do.
+    const countPending = () => pendingCountFor(userId) + mindsprintPendingFor(userId);
+    const refreshPending = () => setSyncStatus({ pending: countPending() });
 
     const run = async () => {
       refreshPending();
@@ -127,11 +130,14 @@ export function SyncManager() {
       const work = async () => {
         running = true;
         setSyncStatus({ syncing: true });
-        const result = await syncUser(userId);
+        const practice = await syncUser(userId);
+        // Only reaches for the server when a MindSprint session is waiting (its history is pulled when that page opens).
+        const mindsprint = mindsprintPendingFor(userId) > 0 ? await syncMindsprint(userId) : null;
         running = false;
         if (cancelled) return;
+        const result = !practice.ok ? practice : mindsprint && !mindsprint.ok ? mindsprint : practice;
         failures = result.ok ? 0 : failures + 1;
-        setSyncStatus({ syncing: false, failed: !result.ok && result.reason !== "signed-out", pending: pendingCountFor(userId) });
+        setSyncStatus({ syncing: false, failed: !result.ok && result.reason !== "signed-out", pending: countPending() });
         clearTimeout(retryTimer);
         if (!result.ok && result.reason !== "signed-out") {
           retryTimer = setTimeout(run, RETRY_MS[Math.min(failures - 1, RETRY_MS.length - 1)]);
