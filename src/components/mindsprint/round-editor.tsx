@@ -2,7 +2,7 @@
 
 import { useId } from "react";
 import { cn } from "@/lib/utils";
-import { Stepper, Slider, Switch } from "@/components/mindsprint/controls";
+import { Stepper, Slider, Switch } from "@/components/game/controls";
 import { difficultyLevel, difficultyMultiplier } from "@/lib/mindsprint/config";
 import { pointsFor } from "@/lib/mindsprint/scoring";
 import { LIMITS, OPERATIONS, OPERATION_LABEL, OPERATION_SYMBOL, type Operation, type RoundConfig } from "@/lib/mindsprint/types";

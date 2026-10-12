@@ -220,3 +220,36 @@ export const mindsprintSessions = pgTable(
     index("mindsprint_sessions_user_ended_idx").on(table.userId, table.endedAt),
   ]
 );
+
+/**
+ * Finished Number Recall sessions of a signed-in user. `config` and `rounds` hold the settings, each round's
+ * sequence (as text, so leading zeros survive) and the answer given (see `src/lib/recall/records.ts`); points are
+ * worked out from them again, so the figures below are only copies kept for listing and aggregating. Single-digit
+ * and two-digit sessions are told apart by `mode`.
+ */
+export const recallSessions = pgTable(
+  "recall_sessions",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    /** The browser's random id for the session; unique per user, which makes uploads idempotent. */
+    clientId: varchar("client_id", { length: 64 }).notNull(),
+    mode: varchar("mode", { length: 10 }).notNull(), // single | pair
+    config: jsonb("config").$type<unknown>().notNull(),
+    rounds: jsonb("rounds").$type<unknown[]>().notNull(),
+    roundCount: integer("round_count").notNull(),
+    perfectCount: integer("perfect_count").notNull(),
+    score: integer("score").notNull(),
+    accuracy: integer("accuracy").notNull(), // percentage of rounds recalled perfectly, 0-100
+    longestRecalled: integer("longest_recalled").notNull(),
+    startedAt: timestamp("started_at").notNull(),
+    endedAt: timestamp("ended_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("recall_sessions_user_client_idx").on(table.userId, table.clientId),
+    index("recall_sessions_user_mode_ended_idx").on(table.userId, table.mode, table.endedAt),
+  ]
+);

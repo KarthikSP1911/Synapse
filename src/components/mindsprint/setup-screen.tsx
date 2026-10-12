@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowDown, ArrowRight, ArrowUp, ChevronDown, Copy, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Stepper, Switch } from "@/components/mindsprint/controls";
+import { Stepper, Switch } from "@/components/game/controls";
 import { LevelBadge, RoundEditor } from "@/components/mindsprint/round-editor";
 import { PRESETS, describeRound, difficultyMultiplier, type Preset } from "@/lib/mindsprint/config";
 import { pointsFor } from "@/lib/mindsprint/scoring";

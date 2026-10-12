@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { useViewerInfo } from "@/components/viewer-provider";
 import { pendingCountFor as mindsprintPendingFor, syncMindsprint } from "@/lib/mindsprint/sync";
+import { pendingCountFor as recallPendingFor, syncRecall } from "@/lib/recall/sync";
 import { pendingCountFor, syncUser } from "@/lib/sync/client";
 import { setSyncStatus } from "@/lib/sync/status";
 import { postToServiceWorker, warmOfflineCache } from "@/lib/sw-client";
@@ -131,11 +132,12 @@ export function SyncManager() {
         running = true;
         setSyncStatus({ syncing: true });
         const practice = await syncUser(userId);
-        // Only reaches for the server when a MindSprint session is waiting (its history is pulled when that page opens).
+        // Only reaches for the server when a game session is waiting (a game's history is pulled when its page opens).
         const mindsprint = mindsprintPendingFor(userId) > 0 ? await syncMindsprint(userId) : null;
+        const recall = recallPendingFor(userId) > 0 ? await syncRecall(userId) : null;
         running = false;
         if (cancelled) return;
-        const result = !practice.ok ? practice : mindsprint && !mindsprint.ok ? mindsprint : practice;
+        const result = !practice.ok ? practice : mindsprint && !mindsprint.ok ? mindsprint : recall && !recall.ok ? recall : practice;
         failures = result.ok ? 0 : failures + 1;
         setSyncStatus({ syncing: false, failed: !result.ok && result.reason !== "signed-out", pending: countPending() });
         clearTimeout(retryTimer);

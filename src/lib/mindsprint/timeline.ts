@@ -17,11 +17,14 @@ export type TimelineEvent =
   | { at: number; kind: "hide"; index: number }
   | { at: number; kind: "answer" };
 
-/** Times are milliseconds from the moment the round starts. */
-export function buildTimeline(config: Pick<RoundConfig, "flashes" | "displayMs" | "gapMs">): TimelineEvent[] {
+/**
+ * Times are milliseconds from the moment the round starts. `flashes` is how many items are shown; Number Recall
+ * reuses this schedule with its own countdown length.
+ */
+export function buildTimeline(config: Pick<RoundConfig, "flashes" | "displayMs" | "gapMs">, countdownFrom: number = COUNTDOWN_FROM): TimelineEvent[] {
   const events: TimelineEvent[] = [];
-  for (let i = 0; i < COUNTDOWN_FROM; i++) events.push({ at: i * COUNT_STEP_MS, kind: "count", value: COUNTDOWN_FROM - i });
-  const goAt = COUNTDOWN_FROM * COUNT_STEP_MS;
+  for (let i = 0; i < countdownFrom; i++) events.push({ at: i * COUNT_STEP_MS, kind: "count", value: countdownFrom - i });
+  const goAt = countdownFrom * COUNT_STEP_MS;
   events.push({ at: goAt, kind: "go" });
 
   const firstShow = goAt + GO_MS;
