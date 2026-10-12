@@ -376,3 +376,300 @@ html[data-splash="skip"] .splash {
 @media (prefers-reduced-motion: reduce) {
   .splash { display: none; }
 }
+
+/*
+  Sudoku board. `--sdk` (the game's teal) is set inline from lib/skills/accent.ts. Sizes are in cqw, i.e. a share of
+  the board's own width, so digits and pencil marks scale with the board from a 360px phone to a desktop.
+  Nine boxes of 3x3 cells: 1px lines between cells, 2px between boxes.
+*/
+.sdk-board {
+  --sdk-ink: color-mix(in oklab, var(--sdk) 55%, #000);
+  --sdk-line: color-mix(in oklab, var(--foreground) 55%, transparent);
+  container-type: inline-size;
+}
+.dark .sdk-board {
+  --sdk-ink: var(--sdk);
+}
+.sdk-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 2px;
+  aspect-ratio: 1 / 1;
+  padding: 2px;
+  background: var(--sdk-line);
+  border-radius: 0.625rem;
+  overflow: hidden;
+}
+.sdk-box {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--input);
+  min-width: 0;
+  min-height: 0;
+}
+.sdk-cell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: var(--card);
+  color: var(--foreground);
+  font-size: 5.6cqw;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 120ms ease;
+}
+.sdk-cell[data-given="false"] {
+  color: var(--sdk-ink);
+  font-weight: 500;
+}
+.sdk-cell[data-hinted="true"] {
+  color: var(--warning);
+}
+.sdk-cell[data-related="true"] {
+  background: color-mix(in oklab, var(--sdk) 10%, var(--card));
+}
+.sdk-cell[data-match="true"] {
+  background: color-mix(in oklab, var(--sdk) 24%, var(--card));
+}
+.sdk-cell[data-error="true"] {
+  background: var(--destructive-soft);
+  color: var(--destructive);
+}
+.sdk-cell[data-selected="true"] {
+  background: color-mix(in oklab, var(--sdk) 40%, var(--card));
+  box-shadow: inset 0 0 0 2px var(--sdk);
+  z-index: 1;
+}
+.sdk-cell:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: -3px;
+  z-index: 2;
+}
+.sdk-notes {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  place-items: center;
+  padding: 5%;
+  font-size: 2.6cqw;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  pointer-events: none;
+}
+.sdk-notes > span[data-hit="true"] {
+  color: var(--sdk-ink);
+  font-weight: 700;
+}
+
+/*
+  2048 board. `--g48` (the game's orange) is set inline from lib/skills/accent.ts. Like the Sudoku board, everything is
+  sized in cqw (a share of the board's width), so tiles and numbers scale from a 360px phone to a desktop.
+  Tiles are absolutely placed by row and column (--r, --c) and slide by transitioning that transform; a merge leaves
+  two "ghost" tiles that slide into place and fade while the new tile pops in after them.
+*/
+.g48-board {
+  --gap: 2.6cqw;
+  --slide: 110ms;
+  container-type: inline-size;
+}
+.g48-frame {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: 0.875rem;
+  background: color-mix(in oklab, var(--foreground) 12%, var(--card));
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  overscroll-behavior: contain;
+  cursor: grab;
+}
+.g48-frame:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: 3px;
+}
+.g48-cells,
+.g48-tiles {
+  position: absolute;
+  inset: var(--gap);
+}
+.g48-cells {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(4, 1fr);
+  gap: var(--gap);
+}
+.g48-cells > span {
+  border-radius: 0.5rem;
+  background: color-mix(in oklab, var(--foreground) 9%, var(--card));
+}
+.g48-tile {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc((100% - 3 * var(--gap)) / 4);
+  height: calc((100% - 3 * var(--gap)) / 4);
+  transform: translate(calc(var(--c) * (100% + var(--gap))), calc(var(--r) * (100% + var(--gap))));
+  transition: transform var(--slide) ease-in-out;
+  z-index: 2;
+}
+.g48-tile[data-ghost="true"] {
+  z-index: 1;
+}
+.g48-tile[data-merged="true"] {
+  z-index: 3;
+}
+.g48-tile > span {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 0.5rem;
+  background: var(--tile-bg);
+  color: var(--tile-ink, #431407);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  font-size: 9.5cqw;
+}
+.g48-tile[data-digits="3"] > span {
+  font-size: 8cqw;
+}
+.g48-tile[data-digits="4"] > span {
+  font-size: 6.4cqw;
+}
+.g48-tile[data-digits="5"] > span {
+  font-size: 5.2cqw;
+}
+.g48-tile[data-digits="6"] > span {
+  font-size: 4.4cqw;
+}
+/*
+  One fixed ramp for both themes, from pale cream to deep burnt orange, so the tiles read as vivid colour on the dark
+  board and stay distinct on the light one. Ink is chosen per tile for contrast: dark on the pale and mid tiles
+  (at least 5:1), white on the deepest ones (at least 3.5:1, and the numbers are large and bold).
+*/
+.g48-tile[data-value="2"] {
+  --tile-bg: #fff3e6;
+  --tile-ink: #431407;
+}
+.g48-tile[data-value="4"] {
+  --tile-bg: #ffe2c2;
+  --tile-ink: #431407;
+}
+.g48-tile[data-value="8"] {
+  --tile-bg: #ffc993;
+  --tile-ink: #431407;
+}
+.g48-tile[data-value="16"] {
+  --tile-bg: #fdb36a;
+  --tile-ink: #431407;
+}
+.g48-tile[data-value="32"] {
+  --tile-bg: #fb923c;
+  --tile-ink: #431407;
+}
+.g48-tile[data-value="64"] {
+  --tile-bg: #f97316;
+  --tile-ink: #1c0a02;
+}
+.g48-tile[data-value="128"] {
+  --tile-bg: #ea580c;
+  --tile-ink: #ffffff;
+}
+.g48-tile[data-value="256"] {
+  --tile-bg: #d9480f;
+  --tile-ink: #ffffff;
+}
+.g48-tile[data-value="512"] {
+  --tile-bg: #c2410c;
+  --tile-ink: #ffffff;
+}
+.g48-tile[data-value="1024"] {
+  --tile-bg: #9a3412;
+  --tile-ink: #ffffff;
+}
+.g48-tile[data-value="2048"] > span {
+  --tile-bg: #facc15;
+  box-shadow: 0 0 0 0.6cqw #111111 inset, 0 0 4cqw rgb(250 204 21 / 0.55);
+}
+/* 4096 and beyond: a dark tile with an orange edge, which stays readable whatever the theme. */
+.g48-tile[data-super="true"] > span {
+  --tile-bg: #111111;
+  color: var(--g48);
+  box-shadow: 0 0 0 0.6cqw var(--g48) inset;
+}
+.g48-tile > span[data-fresh="true"] {
+  animation: g48-appear 160ms ease-out 100ms both;
+}
+.g48-tile > span[data-merged="true"] {
+  animation: g48-pop 200ms ease-out 100ms both;
+}
+.g48-tile[data-ghost="true"] > span {
+  animation: g48-ghost var(--slide) linear forwards;
+}
+@keyframes g48-appear {
+  from { opacity: 0; transform: scale(0.3); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes g48-pop {
+  0% { opacity: 0; transform: scale(1); }
+  1% { opacity: 1; transform: scale(1); }
+  55% { opacity: 1; transform: scale(1.14); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes g48-ghost {
+  0%, 94% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.g48-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  border-radius: 0.875rem;
+  background: color-mix(in oklab, var(--background) 82%, transparent);
+  backdrop-filter: blur(3px);
+  animation: g48-fade 260ms ease-out both;
+}
+@keyframes g48-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.g48-gain {
+  position: absolute;
+  right: 0.75rem;
+  top: 0.25rem;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--g48);
+  pointer-events: none;
+  animation: g48-gain 700ms ease-out both;
+}
+@keyframes g48-gain {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-1.25rem); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .g48-tile { transition: none; }
+  .g48-tile > span,
+  .g48-overlay,
+  .g48-gain { animation: none !important; }
+  .g48-tile[data-ghost="true"] { display: none; }
+}

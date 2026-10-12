@@ -9,7 +9,7 @@ interface PageHeaderProps {
   actions?: React.ReactNode;
   className?: string;
   /** The skill or game this page is for: shows its tile in the active state beside the title, and the title in its accent. */
-  accent?: Exclude<AccentId, "sudoku">;
+  accent?: AccentId;
 }
 
 export function PageHeader({ title, description, eyebrow, actions, className, accent }: PageHeaderProps) {
