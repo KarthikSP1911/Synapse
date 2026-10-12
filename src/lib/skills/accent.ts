@@ -12,6 +12,7 @@ export const ACCENT: Record<AccentId, string> = {
   percentage: "#A855F7",
   fraction: "#06B6D4",
   square: "#F97316",
+  exponents: "#EC4899",
   mindsprint: "#F59E0B",
   recall: "#818CF8",
   sudoku: "#2DD4BF",
