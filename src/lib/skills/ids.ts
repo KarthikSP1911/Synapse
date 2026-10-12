@@ -7,6 +7,7 @@ import { decimalPlaces, gcd, isTerminating, mul, parseDecimal, PERCENT, rat, typ
  * instead of trusting operands or answers from the client.
  *
  *   multiplication:12:8            percentage:of:25:80          percentage:what:15:60
+ *   addition:47:38                 subtraction:23:58            division:15:4
  *   percentage:change:increase:200:15    percentage:change:decrease:400:25
  *   percentage:change:find:80:100        percentage:change:multi:200:10:-10
  *   percentage:convert:d2p:0.75          fraction:simplify:12:16
@@ -16,6 +17,8 @@ import { decimalPlaces, gcd, isTerminating, mul, parseDecimal, PERCENT, rat, typ
  */
 
 export const MAX_BASE = 10000;
+/** Largest operand of an addition, subtraction or division question (four digits). */
+export const MAX_OPERAND_VALUE = 9999;
 const MAX_PERCENT = 500;
 
 /** Formats a number that only ever has a couple of decimals, exactly as it appears in ids. */
@@ -68,6 +71,12 @@ export function idOfSpec(spec: QuestionSpec): string {
   switch (spec.skill) {
     case "multiplication":
       return `multiplication:${spec.left}:${spec.right}`;
+    case "addition":
+      return `addition:${spec.left}:${spec.right}`;
+    case "subtraction":
+      return `subtraction:${spec.left}:${spec.right}`;
+    case "division":
+      return `division:${spec.dividend}:${spec.divisor}`;
     case "percentage":
       switch (spec.exerciseType) {
         case "of":
@@ -128,6 +137,22 @@ function parseSpec(parts: string[]): QuestionSpec | null {
       return left !== null && right !== null && rest.length === 1
         ? { skill, exerciseType: "multiply", left, right }
         : null;
+    }
+    case "addition":
+    case "subtraction": {
+      // <skill>:<left>:<right>; `type` holds the left operand.
+      const left = parseInt1(type, 1, MAX_OPERAND_VALUE);
+      const right = parseInt1(rest[0], 1, MAX_OPERAND_VALUE);
+      if (left === null || right === null || rest.length !== 1) return null;
+      if (skill === "addition") return { skill, exerciseType: "add", left, right };
+      return left !== right ? { skill, exerciseType: "subtract", left, right } : null;
+    }
+    case "division": {
+      // division:<dividend>:<divisor>; `type` holds the dividend.
+      const dividend = parseInt1(type, 3, MAX_OPERAND_VALUE);
+      const divisor = parseInt1(rest[0], 2, 999);
+      if (dividend === null || divisor === null || rest.length !== 1 || dividend <= divisor) return null;
+      return endsCleanly(rat(dividend, divisor), 2) ? { skill, exerciseType: "divide", dividend, divisor } : null;
     }
     case "percentage": {
       switch (type) {

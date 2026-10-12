@@ -38,8 +38,12 @@ export function parseAnswer(format: AnswerFormat, raw: unknown, choices?: Choice
       } else if (body.includes("%")) {
         return { ok: false, reason: "Enter a number without a % sign." };
       }
-      const value = parseDecimal(body);
-      return value ? { ok: true, answer: { kind: "number", value } } : { ok: false, reason: "Use digits and a decimal point only." };
+      // Only signed formats take a minus, either the keyboard hyphen or the typographic minus sign.
+      const signed = format.kind === "integer" && format.signed === true;
+      const negative = signed && /^[-−]/.test(body);
+      const parsed = parseDecimal(negative ? body.slice(1) : body);
+      if (!parsed) return { ok: false, reason: signed ? "Use digits, with an optional minus sign at the start." : "Use digits and a decimal point only." };
+      return { ok: true, answer: { kind: "number", value: negative ? rat(-parsed.n, parsed.d) : parsed } };
     }
     case "fraction": {
       const match = /^(\d{1,6})(?:\s*\/\s*(\d{1,6}))?$/.exec(text);

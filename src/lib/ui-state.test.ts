@@ -4,6 +4,7 @@ import { DEFAULT_SETTINGS, isSessionChoice, parseSettings } from "./settings";
 import { configFromState, initialSetupState } from "./setup-state";
 import { squareRangeBuckets } from "./square-range";
 import { buildPool } from "./skills/pools";
+import { SKILLS } from "./skills/types";
 
 describe("settings", () => {
   it("keeps values saved by the original two-field version and fills in the rest", () => {
@@ -57,11 +58,29 @@ describe("setup state", () => {
   const state = initialSetupState(DEFAULT_SETTINGS);
 
   it("starts with every skill configurable and its pool non-empty", () => {
-    for (const skill of ["multiplication", "percentage", "fraction", "square"] as const) {
+    for (const skill of SKILLS) {
       const built = configFromState(skill, state);
       assert.ok(built.ok, skill);
       assert.ok(buildPool(built.config).length > 0, skill);
     }
+  });
+
+  it("asks for a digit count on each side of addition, subtraction and division", () => {
+    const missing = (skill: "addition" | "subtraction", side: "leftDigits" | "rightDigits") =>
+      configFromState(skill, { ...state, [skill]: { ...state[skill], [side]: [] } });
+    for (const skill of ["addition", "subtraction"] as const) {
+      assert.ok(!missing(skill, "leftDigits").ok, skill);
+      assert.ok(!missing(skill, "rightDigits").ok, skill);
+    }
+    assert.ok(!configFromState("division", { ...state, division: { ...state.division, dividendDigits: [] } }).ok);
+    assert.ok(!configFromState("division", { ...state, division: { ...state.division, divisorDigits: [] } }).ok);
+  });
+
+  it("passes the subtraction and division options through to the configuration", () => {
+    const subtraction = configFromState("subtraction", { ...state, subtraction: { ...state.subtraction, allowNegative: true } });
+    assert.ok(subtraction.ok && subtraction.config.skill === "subtraction" && subtraction.config.allowNegative);
+    const division = configFromState("division", { ...state, division: { ...state.division, decimals: false } });
+    assert.ok(division.ok && division.config.skill === "division" && !division.config.decimals);
   });
 
   it("starts squares and percentages from the default difficulty", () => {

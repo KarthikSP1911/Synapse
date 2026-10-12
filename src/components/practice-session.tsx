@@ -35,8 +35,11 @@ const INCORRECT_DELAY_MS = 900;
 /** Characters that can ever be part of an answer in this format; anything else is dropped as it is typed. */
 function sanitize(format: AnswerFormat, value: string): string {
   switch (format.kind) {
-    case "integer":
-      return value.replace(/[^\d]/g, "");
+    case "integer": {
+      const digits = value.replace(/[^\d]/g, "");
+      // A minus is only kept at the very start (the typographic minus counts too).
+      return format.signed && /^[-−]/.test(value) ? `-${digits}` : digits;
+    }
     case "number":
       return value.replace(format.unit === "percent" ? /[^\d.%]/g : /[^\d.]/g, "");
     case "fraction":
@@ -46,8 +49,9 @@ function sanitize(format: AnswerFormat, value: string): string {
   }
 }
 
+// The numeric keyboards have no minus key on every platform, so signed answers use the plain text keyboard.
 const inputModeFor = (format: AnswerFormat) =>
-  format.kind === "integer" ? "numeric" : format.kind === "number" ? "decimal" : "text";
+  format.kind === "integer" ? (format.signed ? "text" : "numeric") : format.kind === "number" ? "decimal" : "text";
 
 const placeholderFor = (format: AnswerFormat) =>
   format.kind === "fraction" ? "a/b" : format.kind === "number" && format.unit === "percent" ? "? %" : "?";

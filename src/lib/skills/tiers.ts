@@ -36,6 +36,11 @@ export function squareTier(n: number): Difficulty {
   return n <= 20 ? "beginner" : n <= 50 ? "intermediate" : "advanced";
 }
 
+/** Tier of an addition, subtraction or division by the size of its biggest number: two digits or fewer is beginner. */
+export function digitTier(biggest: number): Difficulty {
+  return biggest < 100 ? "beginner" : biggest < 1000 ? "intermediate" : "advanced";
+}
+
 type Spec<S extends QuestionSpec["skill"]> = Extract<QuestionSpec, { skill: S }>;
 
 /** A rational as a plain percentage number (1/8 -> 12.5). Only used on values that end cleanly. */
@@ -88,6 +93,15 @@ export function difficultyOfSpec(spec: QuestionSpec): Difficulty {
     case "multiplication": {
       const biggest = Math.max(spec.left, spec.right);
       return biggest <= 10 ? "beginner" : biggest <= 15 ? "intermediate" : "advanced";
+    }
+    case "addition":
+    case "subtraction":
+      return digitTier(Math.max(spec.left, spec.right));
+    case "division": {
+      const base = digitTier(spec.dividend);
+      // A decimal answer is a step harder than the same-sized whole-number one.
+      if (spec.dividend % spec.divisor === 0 || base === "advanced") return base;
+      return base === "beginner" ? "intermediate" : "advanced";
     }
     case "percentage":
       return percentageTier(spec);

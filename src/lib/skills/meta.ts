@@ -14,6 +14,21 @@ export const SKILL_META: Record<Skill, SkillMeta> = {
     short: "Times tables",
     description: "Drill the times tables, 1 to 20, on the numbers you choose.",
   },
+  addition: {
+    title: "Addition",
+    short: "Addition",
+    description: "Add numbers of one to four digits, in the sizes you choose.",
+  },
+  subtraction: {
+    title: "Subtraction",
+    short: "Subtraction",
+    description: "Subtract numbers of one to four digits, with negative answers if you like.",
+  },
+  division: {
+    title: "Division",
+    short: "Division",
+    description: "Divide whole numbers, with whole or decimal answers.",
+  },
   percentage: {
     title: "Percentages",
     short: "Percentages",
@@ -40,6 +55,15 @@ export interface ExerciseMeta {
 export const EXERCISE_META: { [S in Skill]: Record<string, ExerciseMeta> } = {
   multiplication: {
     multiply: { label: "Multiplication", description: "a × b" },
+  },
+  addition: {
+    add: { label: "Addition", description: "a + b" },
+  },
+  subtraction: {
+    subtract: { label: "Subtraction", description: "a − b" },
+  },
+  division: {
+    divide: { label: "Division", description: "a ÷ b" },
   },
   percentage: {
     of: { label: "Percent of a number", description: "What is 25% of 80?" },
@@ -88,7 +112,7 @@ export const DIFFICULTY_META: Record<Difficulty, { label: string; description: R
   },
 };
 
-export const SKILL_ORDER: readonly Skill[] = ["multiplication", "percentage", "fraction", "square"];
+export const SKILL_ORDER: readonly Skill[] = ["multiplication", "addition", "subtraction", "division", "percentage", "fraction", "square"];
 
 export const skillTitle = (skill: string): string => SKILL_META[skill as Skill]?.title ?? skill;
 

@@ -3,7 +3,7 @@
 import { cn } from "@/lib/utils";
 import { DEFAULT_BASE_RANGE, SQUARE_PRESETS } from "@/lib/skills/pools";
 import { DIFFICULTY_META, EXERCISE_META } from "@/lib/skills/meta";
-import { EXERCISE_TYPES, DIFFICULTIES, type Difficulty } from "@/lib/skills/types";
+import { EXERCISE_TYPES, DIFFICULTIES, MAX_DIGITS, MAX_DIVISOR_DIGITS, type Difficulty } from "@/lib/skills/types";
 import { MAX_BASE } from "@/lib/skills/ids";
 import type { SetupState } from "@/lib/setup-state";
 import { Chip, ExercisePicker, NumberField, Section } from "@/components/setup/controls";
@@ -100,6 +100,150 @@ export function MultiplicationConfig({
         description="Numbers that can appear on the right of ×."
         selected={state.right}
         onChange={(right) => onChange({ ...state, right })}
+      />
+    </div>
+  );
+}
+
+/** Multi-select of digit counts: 1-digit numbers run 1-9, 2-digit 10-99, and so on. */
+function DigitPicker({
+  title,
+  description,
+  max,
+  selected,
+  onChange,
+}: {
+  title: string;
+  description: string;
+  max: number;
+  selected: number[];
+  onChange: (next: number[]) => void;
+}) {
+  const counts = Array.from({ length: max }, (_, i) => i + 1);
+  const toggle = (digits: number) =>
+    onChange(selected.includes(digits) ? selected.filter((d) => d !== digits) : [...selected, digits].sort((a, b) => a - b));
+  return (
+    <Section title={title} description={description}>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" role="group" aria-label={title}>
+        {counts.map((digits) => (
+          <Chip key={digits} active={selected.includes(digits)} onClick={() => toggle(digits)} className="flex-col gap-0 py-1.5">
+            <span>{digits} {digits === 1 ? "digit" : "digits"}</span>
+            <span className="font-mono text-[11px] tabular-nums opacity-70">
+              {digits === 1 ? 1 : 10 ** (digits - 1)}–{10 ** digits - 1}
+            </span>
+          </Chip>
+        ))}
+      </div>
+    </Section>
+  );
+}
+
+/** Two mutually exclusive choices shown as a pair of chips. */
+function ChoicePair({
+  title,
+  description,
+  value,
+  options,
+  onChange,
+}: {
+  title: string;
+  description: string;
+  value: boolean;
+  options: { off: string; on: string };
+  onChange: (next: boolean) => void;
+}) {
+  return (
+    <Section title={title} description={description}>
+      <div className="grid max-w-md grid-cols-2 gap-2" role="group" aria-label={title}>
+        <Chip active={!value} onClick={() => onChange(false)}>
+          {options.off}
+        </Chip>
+        <Chip active={value} onClick={() => onChange(true)}>
+          {options.on}
+        </Chip>
+      </div>
+    </Section>
+  );
+}
+
+export function AdditionConfig({ state, onChange }: { state: SetupState["addition"]; onChange: (next: SetupState["addition"]) => void }) {
+  return (
+    <div className="grid gap-6">
+      <DigitPicker
+        title="First number"
+        description="How many digits the number on the left can have."
+        max={MAX_DIGITS}
+        selected={state.leftDigits}
+        onChange={(leftDigits) => onChange({ ...state, leftDigits })}
+      />
+      <DigitPicker
+        title="Second number"
+        description="How many digits the number on the right can have."
+        max={MAX_DIGITS}
+        selected={state.rightDigits}
+        onChange={(rightDigits) => onChange({ ...state, rightDigits })}
+      />
+    </div>
+  );
+}
+
+export function SubtractionConfig({
+  state,
+  onChange,
+}: {
+  state: SetupState["subtraction"];
+  onChange: (next: SetupState["subtraction"]) => void;
+}) {
+  return (
+    <div className="grid gap-6">
+      <DigitPicker
+        title="First number"
+        description="The number you subtract from."
+        max={MAX_DIGITS}
+        selected={state.leftDigits}
+        onChange={(leftDigits) => onChange({ ...state, leftDigits })}
+      />
+      <DigitPicker
+        title="Second number"
+        description="The number you take away."
+        max={MAX_DIGITS}
+        selected={state.rightDigits}
+        onChange={(rightDigits) => onChange({ ...state, rightDigits })}
+      />
+      <ChoicePair
+        title="Answers"
+        description="Negative answers come from questions like 23 − 58, so they need the second number to be able to be larger."
+        value={state.allowNegative}
+        options={{ off: "Positive only", on: "Include negatives" }}
+        onChange={(allowNegative) => onChange({ ...state, allowNegative })}
+      />
+    </div>
+  );
+}
+
+export function DivisionConfig({ state, onChange }: { state: SetupState["division"]; onChange: (next: SetupState["division"]) => void }) {
+  return (
+    <div className="grid gap-6">
+      <DigitPicker
+        title="Dividend"
+        description="The number being divided."
+        max={MAX_DIGITS}
+        selected={state.dividendDigits}
+        onChange={(dividendDigits) => onChange({ ...state, dividendDigits })}
+      />
+      <DigitPicker
+        title="Divisor"
+        description="The number you divide by."
+        max={MAX_DIVISOR_DIGITS}
+        selected={state.divisorDigits}
+        onChange={(divisorDigits) => onChange({ ...state, divisorDigits })}
+      />
+      <ChoicePair
+        title="Answers"
+        description="Decimal answers stop at two places, like 15 ÷ 4 = 3.75."
+        value={state.decimals}
+        options={{ off: "Whole numbers only", on: "Include decimals" }}
+        onChange={(decimals) => onChange({ ...state, decimals })}
       />
     </div>
   );

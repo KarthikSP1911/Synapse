@@ -54,10 +54,14 @@ function ConceptList({ concepts }: { concepts: ConceptRow[] }) {
   );
 }
 
-/** `percentage:pct:25` -> "25%", `fraction:3/4` -> "3/4", `square:17` -> "17²". */
+/** `percentage:pct:25` -> "25%", `fraction:3/4` -> "3/4", `square:17` -> "17²", `addition:2d+1d` -> "2-digit + 1-digit". */
 function conceptLabel(concept: string): string {
   const [skill, ...rest] = concept.split(":");
   const tail = rest.join(":");
+  if (skill === "addition" || skill === "subtraction" || skill === "division") {
+    const sizes = /^(\d)d([+\-/])(\d)d$/.exec(tail);
+    if (sizes) return `${sizes[1]}-digit ${sizes[2] === "-" ? "−" : sizes[2] === "/" ? "÷" : "+"} ${sizes[3]}-digit`;
+  }
   if (skill === "percentage") return tail === "multi" ? "Multi-step changes" : `${tail.replace("pct:", "")}%`;
   if (skill === "square") return `${tail}²`;
   if (skill === "fraction") return tail.startsWith("compare:") ? tail.replace("compare:", "").replace("|", " vs ") : tail;
