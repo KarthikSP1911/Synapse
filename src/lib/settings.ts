@@ -33,6 +33,8 @@ export interface Settings {
   showLiveStats: boolean;
   /** Offer a hint button on the practice screen. */
   allowHints: boolean;
+  /** Move on to the next question automatically after a correct answer; off waits for Continue or Enter. */
+  autoAdvance: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -49,6 +51,7 @@ export const DEFAULT_SETTINGS: Settings = {
   showExplanations: true,
   showLiveStats: true,
   allowHints: true,
+  autoAdvance: true,
 };
 
 const STORAGE_KEY = "math-trainer:settings";
@@ -90,6 +93,7 @@ export function parseSettings(raw: unknown): Settings {
     showExplanations: bool("showExplanations", DEFAULT_SETTINGS.showExplanations),
     showLiveStats: bool("showLiveStats", DEFAULT_SETTINGS.showLiveStats),
     allowHints: bool("allowHints", DEFAULT_SETTINGS.allowHints),
+    autoAdvance: bool("autoAdvance", DEFAULT_SETTINGS.autoAdvance),
   };
 }
 

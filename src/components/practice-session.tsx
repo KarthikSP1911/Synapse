@@ -237,8 +237,10 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
           setQuestionNumber((n) => n + 1);
           loadQuestion(question.id);
         };
-        // A miss waits for the user to read the explanation, except in timed sessions where the clock keeps running.
-        if (!data.isCorrect && data.explanation && settings.showExplanations && !isTimed && !data.finished) {
+        // A miss waits for the user to read the explanation, and a correct answer waits when auto-advance is off.
+        // Timed sessions never wait because the clock keeps running.
+        const waitsForUser = data.isCorrect ? !settings.autoAdvance : !!data.explanation && settings.showExplanations;
+        if (waitsForUser && !isTimed && !data.finished) {
           setAwaitingContinue(true);
           continueNextRef.current = next;
           later(() => continueRef.current?.focus(), 30);
@@ -252,7 +254,7 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
         setSubmitting(false);
       }
     },
-    [question, submitting, feedback, paused, hintShown, sessionId, request, settings.showExplanations, isTimed, router, summaryHref, loadQuestion, later]
+    [question, submitting, feedback, paused, hintShown, sessionId, request, settings.showExplanations, settings.autoAdvance, isTimed, router, summaryHref, loadQuestion, later]
   );
 
   const proceed = useCallback(() => {
