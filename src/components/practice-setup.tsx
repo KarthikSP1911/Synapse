@@ -64,11 +64,8 @@ function GameCard({ href, title, description, icon: Icon, progress }: { href: st
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       )}
     >
-      <span className="flex w-full items-center justify-between gap-2">
-        <span className="grid size-9 place-items-center rounded-lg bg-secondary text-foreground">
-          <Icon className="size-[18px]" aria-hidden />
-        </span>
-        <span className="rounded-full border border-border px-2 py-0.5 text-[11px] font-medium text-muted-foreground">Game</span>
+      <span className="grid size-9 place-items-center rounded-lg bg-secondary text-foreground">
+        <Icon className="size-[18px]" aria-hidden />
       </span>
       <span>
         <span className="block text-[15px] font-semibold tracking-tight">{title}</span>
