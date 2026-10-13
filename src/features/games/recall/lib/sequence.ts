@@ -1,7 +1,5 @@
-import { seededRng, type Rng } from "@/features/games/mindsprint/lib/generate";
+import type { Rng } from "@/lib/random";
 import { DIGITS_PER_ITEM, LIMITS, type RecallConfig, type RecallMode } from "./types";
-
-export { seededRng, type Rng };
 
 /** Matches one item of the mode: exactly one digit in single mode, exactly two (leading zero included) in pair mode. */
 export const isItem = (mode: RecallMode, value: unknown): value is string => typeof value === "string" && new RegExp(`^\\d{${DIGITS_PER_ITEM[mode]}}$`).test(value);

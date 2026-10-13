@@ -1,4 +1,4 @@
-import type { Skill } from "./types";
+import type { Skill } from "@/features/skills/lib/types";
 
 /** Games and skills each own one accent colour. No React here, so server and client share it. */
 export type AccentId = Skill | "mindsprint" | "recall" | "sudoku" | "game2048";

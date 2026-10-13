@@ -22,7 +22,7 @@ import { availableTypes, exponentBases, typeBlockReason } from "./exponents-pool
 import { idOfSpec, parseQuestionId } from "./ids";
 import { exponentConceptLabel, EXPONENT_EXAMPLES } from "./meta";
 import { buildPool, parseConfig, poolHas } from "./pools";
-import { isInteger, rat, toFractionString } from "./rational";
+import { isInteger, rat, toFractionString } from "@/lib/rational";
 import { EXERCISE_TYPES, SKILLS, type PracticeConfig, type Question } from "./types";
 
 type ExponentsConfig = Extract<PracticeConfig, { skill: "exponents" }>;

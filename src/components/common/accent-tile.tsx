@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 import { Brain, Grid3x3, LayoutGrid, Zap, type LucideIcon } from "lucide-react";
 import { SKILL_ICONS } from "@/components/common/skill-icon";
 import { cn } from "@/lib/utils";
-import { ACCENT, type AccentId } from "@/features/skills/lib/accent";
+import { ACCENT, type AccentId } from "@/lib/accent";
 
 /** Symbols for everything that gets a tile. */
 const ICONS: Record<AccentId, LucideIcon> = {

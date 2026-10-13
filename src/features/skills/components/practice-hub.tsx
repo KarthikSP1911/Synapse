@@ -19,7 +19,7 @@ import { skillHref } from "@/features/skills/lib/routes";
 import type { Skill } from "@/features/skills/lib/types";
 import type { SkillSummary } from "@/features/progress/server/progress-queries";
 import { AccentTile, accentStyle } from "@/components/common/accent-tile";
-import type { AccentId } from "@/features/skills/lib/accent";
+import type { AccentId } from "@/lib/accent";
 
 /** A card on the hub: a skill or a game. Each one opens its own page. */
 function HubCard({

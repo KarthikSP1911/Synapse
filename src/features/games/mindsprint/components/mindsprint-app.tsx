@@ -11,7 +11,7 @@ import type { SaveState } from "@/features/games/shared/components/result-parts"
 import { useLocalStore, useViewerInfo } from "@/features/auth/components/viewer-provider";
 import { GenerationError, generateSession } from "@/features/games/mindsprint/lib/generate";
 import { scoreSession } from "@/features/games/mindsprint/lib/scoring";
-import { createSoundPlayer } from "@/features/games/mindsprint/lib/sound";
+import { createSoundPlayer } from "@/lib/sound";
 import { loadHistory, loadSound, saveSession, saveSound, type StoredSession } from "@/features/games/mindsprint/lib/storage";
 import { syncMindsprint } from "@/features/games/mindsprint/lib/sync";
 import type { GeneratedRound, PlayedRound, RoundConfig, SessionData } from "@/features/games/mindsprint/lib/types";

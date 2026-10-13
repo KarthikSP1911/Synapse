@@ -6,7 +6,7 @@
  * `Question` adds everything computed from a spec: prompt, exact answer, explanation, etc.
  */
 
-import type { Rational } from "./rational";
+import type { Rational } from "@/lib/rational";
 
 export const SKILLS = ["multiplication", "addition", "subtraction", "division", "percentage", "fraction", "square", "exponents"] as const;
 export type Skill = (typeof SKILLS)[number];

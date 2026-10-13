@@ -1,5 +1,5 @@
 import type { AnswerFormat, Choice, Question } from "./types";
-import { eq, isLowestTerms, parseDecimal, rat, type Rational } from "./rational";
+import { eq, isLowestTerms, parseDecimal, rat, type Rational } from "@/lib/rational";
 
 /**
  * Answer parsing and checking, shared by the browser (to flag unusable input before submitting)

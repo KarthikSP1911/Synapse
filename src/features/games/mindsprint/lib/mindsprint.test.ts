@@ -2,12 +2,13 @@ import { beforeEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { checkAnswer, checkSequence, displayCalculation, evaluateSequence, parseAnswerText, sanitizeAnswer } from "./arithmetic";
 import { DEFAULT_ROUND, PRESETS, difficultyLevel, difficultyMultiplier, parseRoundConfig, parseSetup } from "./config";
-import { GenerationError, generateRound, generateSession, seededRng } from "./generate";
+import { seededRng } from "@/lib/random";
+import { GenerationError, generateRound, generateSession } from "./generate";
 import { parseSessionData } from "./records";
 import { scoreRound, scoreSession } from "./scoring";
 import { computeStats } from "./stats";
 import { loadHistory, loadSetup, markSynced, mergeRemote, pendingSessions, saveSession, saveSetup } from "./storage";
-import { buildTimeline, runTimeline, timelineLength, type Timers } from "./timeline";
+import { buildTimeline, runTimeline, timelineLength, type Timers } from "@/lib/timeline";
 import { LIMITS, OPERATIONS, type Flash, type PlayedRound, type RoundConfig, type SessionData } from "./types";
 
 const config = (overrides: Partial<RoundConfig> = {}): RoundConfig => ({ ...DEFAULT_ROUND, ...overrides });

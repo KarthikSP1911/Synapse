@@ -1,6 +1,7 @@
 import { beforeEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { emptyCells, emptyGrid, hasMoves, highestTileOf, moveGrid, spawnTile, startingGrid, type Rng } from "./engine";
+import type { Rng } from "@/lib/random";
+import { emptyCells, emptyGrid, hasMoves, highestTileOf, moveGrid, spawnTile, startingGrid } from "./engine";
 import { applyMove, continuePlaying, elapsedAt, freezeForStorage, hasProgress, liftBest, newGame, resetBest, startClock, stopClock, toSessionData, undo } from "./game";
 import { MAX_SCORE, minScoreFor, parseSessionData } from "./records";
 import { computeStats } from "./stats";

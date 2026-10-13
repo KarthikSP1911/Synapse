@@ -1,6 +1,6 @@
 import type { QuestionSpec } from "./types";
 import { idOfExponentSpec, parseExponentSpec } from "./exponents";
-import { decimalPlaces, gcd, isTerminating, mul, parseDecimal, PERCENT, rat, type Rational } from "./rational";
+import { decimalPlaces, gcd, isTerminating, mul, parseDecimal, PERCENT, rat, type Rational } from "@/lib/rational";
 
 /**
  * Stable question ids. Every id is derived from the spec and parses back to exactly that spec,

@@ -1,7 +1,5 @@
+import type { Rng } from "@/lib/random";
 import { CELLS, SIZE, SPAWN_TWO_CHANCE, type Direction, type Grid, type MoveResult, type TileMove } from "./types";
-
-/** Source of randomness in [0, 1); injectable so tests can choose where tiles appear. */
-export type Rng = () => number;
 
 export const emptyGrid = (): Grid => new Array<number>(CELLS).fill(0);
 

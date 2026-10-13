@@ -10,7 +10,7 @@ import { PRESETS, describeRound, difficultyMultiplier, type Preset } from "@/fea
 import { formatApproxDuration } from "@/features/games/shared/lib/format";
 import { pointsFor } from "@/features/games/mindsprint/lib/scoring";
 import { defaultSetup, loadSetup, saveSetup } from "@/features/games/mindsprint/lib/storage";
-import { COUNTDOWN_FROM, COUNT_STEP_MS, GO_MS } from "@/features/games/mindsprint/lib/timeline";
+import { COUNTDOWN_FROM, COUNT_STEP_MS, GO_MS } from "@/lib/timeline";
 import { LIMITS, type RoundConfig } from "@/features/games/mindsprint/lib/types";
 
 interface Draft {

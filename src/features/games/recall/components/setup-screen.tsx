@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Slider, Stepper, Switch } from "@/components/form/game-controls";
 import { Chip } from "@/components/form/setup-controls";
 import { configFor, difficultyOf } from "@/features/games/recall/lib/config";
-import { COUNT_STEP_MS, GO_MS } from "@/features/games/mindsprint/lib/timeline";
+import { COUNT_STEP_MS, GO_MS } from "@/lib/timeline";
 import { formatApproxDuration } from "@/features/games/shared/lib/format";
 import { DIGITS_PER_ITEM, ITEM_NAME, LIMITS, MODE_EXAMPLE, MODE_LABEL, RECALL_MODES, type Difficulty, type RecallConfig, type RecallMode } from "@/features/games/recall/lib/types";
 

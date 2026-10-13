@@ -4,11 +4,12 @@ import { compareSequences, entriesFromText, sanitizeEntry, validateEntries } fro
 import { configFor, defaultConfig, difficultyOf, parseConfig } from "./config";
 import { parseSessionData } from "./records";
 import { PERFECT_BONUS, POSITION_POINTS, scoreRound, scoreSession, speedMultiplier } from "./scoring";
-import { generateSequence, isItem, nextLength, randomItem, seededRng } from "./sequence";
+import { seededRng } from "@/lib/random";
+import { generateSequence, isItem, nextLength, randomItem } from "./sequence";
 import { computeStats } from "./stats";
 import { loadHistory, loadMode, loadSetups, saveMode, saveSession, saveSetups } from "./storage";
 import { LIMITS, type PlayedRound, type RecallConfig, type RecallMode, type SessionData } from "./types";
-import { buildTimeline } from "@/features/games/mindsprint/lib/timeline";
+import { buildTimeline } from "@/lib/timeline";
 
 const cfg = (overrides: Partial<RecallConfig> = {}): RecallConfig => ({ ...defaultConfig("single"), ...overrides });
 const round = (sequence: string[], answer: string[] | null, responseMs = 2000): PlayedRound => ({ sequence, answer, responseMs });

@@ -1,5 +1,5 @@
 import type { AnswerFormat, Difficulty, ExerciseTypeOf, ExponentMode, QuestionSpec } from "./types";
-import { decimalPlaces, isInteger, rat, toDecimalString, toFractionString, type Rational } from "./rational";
+import { decimalPlaces, isInteger, rat, toDecimalString, toFractionString, type Rational } from "@/lib/rational";
 
 /**
  * The Exponents skill: questions about powers and the laws of exponents, answered either as the exponent that

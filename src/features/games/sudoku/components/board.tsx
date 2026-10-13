@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useEffect, useRef, type CSSProperties } from "react";
-import { ACCENT } from "@/features/skills/lib/accent";
+import { ACCENT } from "@/lib/accent";
 import { PEERS, bit, colOf, rowOf } from "@/features/games/sudoku/lib/grid";
 import { SIZE, type CellState } from "@/features/games/sudoku/lib/types";
 

@@ -2,7 +2,7 @@ import { beforeEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { COUNT_STEP_MS, GO_MS, type Timers } from "@/features/games/mindsprint/lib/timeline";
+import { COUNT_STEP_MS, GO_MS, type Timers } from "@/lib/timeline";
 import { isNavActive } from "@/lib/nav";
 import { countdownLength, runCountdown, startAfterCountdown, type CountdownStep } from "./practice-countdown";
 import { PRACTICE_SOUND_KEY, loadPracticeSound, savePracticeSound } from "./practice-sound";

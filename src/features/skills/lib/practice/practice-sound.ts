@@ -1,4 +1,4 @@
-import { createSoundPlayer, type SoundPlayer } from "@/features/games/mindsprint/lib/sound";
+import { createSoundPlayer, type SoundPlayer } from "@/lib/sound";
 
 /**
  * Sound for skill practice: the countdown cues and, in a session, a short cue after each answer. The choice is

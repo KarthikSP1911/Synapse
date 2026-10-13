@@ -1,6 +1,7 @@
 import { formatGrid } from "./grid";
 import { ratePuzzle } from "./rating";
-import { countSolutions, randomSolution, shuffle, type Rng } from "./solver";
+import type { Rng } from "@/lib/random";
+import { countSolutions, randomSolution, shuffle } from "./solver";
 import { CELLS, type Difficulty, type Puzzle } from "./types";
 
 /**

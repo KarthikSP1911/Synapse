@@ -17,7 +17,7 @@ import { computeStats } from "@/features/games/game2048/lib/stats";
 import { clearGame, loadBest, loadGame, loadHistory, saveBest, saveGame, saveSession, type StoredSession } from "@/features/games/game2048/lib/storage";
 import { syncGame2048 } from "@/features/games/game2048/lib/sync";
 import { advanceTiles, tilesFromGrid, type UiTile } from "@/features/games/game2048/lib/tiles";
-import { ACCENT } from "@/features/skills/lib/accent";
+import { ACCENT } from "@/lib/accent";
 import { SIZE, type Direction, type GameState } from "@/features/games/game2048/lib/types";
 
 type Tab = "play" | "stats";

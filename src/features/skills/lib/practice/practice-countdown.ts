@@ -1,4 +1,4 @@
-import { buildTimeline, runTimeline, type Timers, type TimelineEvent } from "@/features/games/mindsprint/lib/timeline";
+import { buildTimeline, runTimeline, type Timers, type TimelineEvent } from "@/lib/timeline";
 
 /**
  * The countdown before a practice session: 3, 2, 1, then "GO". It is the MindSprint schedule (`COUNT_STEP_MS`,

@@ -9,8 +9,8 @@ import { RoundResult } from "@/features/games/mindsprint/components/round-result
 import { displayNumber, displayOperand, parseAnswerText, sanitizeAnswer } from "@/features/games/mindsprint/lib/arithmetic";
 import { MAX_RESPONSE_MS } from "@/lib/records";
 import { scoreRound, type RoundOutcome } from "@/features/games/mindsprint/lib/scoring";
-import type { SoundPlayer } from "@/features/games/mindsprint/lib/sound";
-import { COUNTDOWN_FROM, buildTimeline, runTimeline } from "@/features/games/mindsprint/lib/timeline";
+import type { SoundPlayer } from "@/lib/sound";
+import { COUNTDOWN_FROM, buildTimeline, runTimeline } from "@/lib/timeline";
 import { OPERATION_SYMBOL, type Flash, type GeneratedRound, type PlayedRound, type RoundConfig } from "@/features/games/mindsprint/lib/types";
 import type { AnswerFormat } from "@/features/skills/lib/types";
 

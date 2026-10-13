@@ -6,7 +6,8 @@ import { PEERS, UNITS, bit, boxOf, colOf, findConflicts, formatGrid, isSolved, p
 import { ratePuzzle } from "./rating";
 import { parseSessionData } from "./records";
 import { BASE_POINTS, PAR_MS, formatTime, scoreGame } from "./scoring";
-import { countSolutions, randomSolution, seededRng, solve } from "./solver";
+import { seededRng } from "@/lib/random";
+import { countSolutions, randomSolution, solve } from "./solver";
 import { computeStats } from "./stats";
 import { clearGame, loadDifficulty, loadGame, loadHistory, loadSettings, parseGame, saveDifficulty, saveGame, saveSession, saveSettings } from "./storage";
 import { DIFFICULTIES, DEFAULT_SETTINGS, type GameState, type Puzzle, type SessionData } from "./types";

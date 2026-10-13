@@ -4,7 +4,7 @@ import { questionFromId } from "./build";
 import { checkAnswer, inputProblem } from "./answers";
 import { idOfSpec, parseQuestionId } from "./ids";
 import { DEFAULT_BASE_RANGE, buildPool, parseConfig, poolSizeByType } from "./pools";
-import { add, decimalPlaces, eq, mul, parseDecimal, rat, toDecimalString, toFractionString, toPercentNumber } from "./rational";
+import { add, decimalPlaces, eq, mul, parseDecimal, rat, toDecimalString, toFractionString, toPercentNumber } from "@/lib/rational";
 import { DIFFICULTIES, EXERCISE_TYPES, type PracticeConfig, type Question } from "./types";
 
 function q(id: string): Question {

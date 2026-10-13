@@ -1,5 +1,5 @@
 import type { Difficulty, QuestionSpec } from "./types";
-import { isInteger, parseDecimal, rat, toPercentNumber, type Rational } from "./rational";
+import { isInteger, parseDecimal, rat, toPercentNumber, type Rational } from "@/lib/rational";
 import { parseFraction } from "./ids";
 import { exponentCore } from "./exponents";
 

@@ -4,8 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Eye, Volume2, VolumeX, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { startAfterCountdown, type CountdownStep } from "@/features/skills/lib/practice/practice-countdown";
-import { COUNTDOWN_FROM } from "@/features/games/mindsprint/lib/timeline";
-import type { SoundPlayer } from "@/features/games/mindsprint/lib/sound";
+import { COUNTDOWN_FROM } from "@/lib/timeline";
+import type { SoundPlayer } from "@/lib/sound";
 
 interface StartCountdownProps {
   sound: SoundPlayer;

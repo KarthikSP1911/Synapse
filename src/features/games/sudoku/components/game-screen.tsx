@@ -9,7 +9,7 @@ import { accentStyle } from "@/components/common/accent-tile";
 import { Board } from "@/features/games/sudoku/components/board";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { NumberPad } from "@/features/games/sudoku/components/number-pad";
-import { ACCENT } from "@/features/skills/lib/accent";
+import { ACCENT } from "@/lib/accent";
 import {
   checkBoard,
   clearCell,

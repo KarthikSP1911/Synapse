@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, type CSSProperties, type PointerEvent, type ReactNode } from "react";
-import { ACCENT } from "@/features/skills/lib/accent";
+import { ACCENT } from "@/lib/accent";
 import type { UiTile } from "@/features/games/game2048/lib/tiles";
 import { SIZE, WIN_TILE, type Direction } from "@/features/games/game2048/lib/types";
 

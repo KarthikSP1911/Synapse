@@ -16,7 +16,7 @@ import {
   toFractionString,
   toPercentNumber,
   type Rational,
-} from "./rational";
+} from "@/lib/rational";
 
 /** Everything a spec contributes beyond the id and difficulty. */
 type Core = Omit<QuestionDetails, "id" | "difficulty">;

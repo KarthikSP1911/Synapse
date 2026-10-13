@@ -9,7 +9,7 @@ import { StatsPanel } from "@/features/games/recall/components/stats-panel";
 import { SummaryScreen } from "@/features/games/recall/components/summary-screen";
 import type { SaveState } from "@/features/games/shared/components/result-parts";
 import { useLocalStore, useViewerInfo } from "@/features/auth/components/viewer-provider";
-import { createSoundPlayer } from "@/features/games/mindsprint/lib/sound";
+import { createSoundPlayer } from "@/lib/sound";
 import { computeStats } from "@/features/games/recall/lib/stats";
 import { defaultSetups, loadHistory, loadMode, loadSetups, loadSound, saveMode, saveSession, saveSetups, saveSound, type StoredSession } from "@/features/games/recall/lib/storage";
 import { syncRecall } from "@/features/games/recall/lib/sync";

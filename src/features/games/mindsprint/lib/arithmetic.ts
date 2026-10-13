@@ -1,4 +1,4 @@
-import { add, cmp, decimalPlaces, div, eq, isTerminating, mul, parseDecimal, rat, sub, toDecimalString, type Rational } from "@/features/skills/lib/rational";
+import { add, cmp, decimalPlaces, div, eq, isTerminating, mul, parseDecimal, rat, sub, toDecimalString, type Rational } from "@/lib/rational";
 import { magnitudeCap, placesOf } from "./config";
 import { OPERATIONS, OPERATION_SYMBOL, type Flash, type Operation, type RoundConfig } from "./types";
 

@@ -1,4 +1,5 @@
-import { hasMoves, highestTileOf, moveGrid, spawnTile, startingGrid, type Rng } from "./engine";
+import type { Rng } from "@/lib/random";
+import { hasMoves, highestTileOf, moveGrid, spawnTile, startingGrid } from "./engine";
 import { WIN_TILE, type Direction, type GameState, type MoveResult, type SessionData, type Snapshot } from "./types";
 
 /**

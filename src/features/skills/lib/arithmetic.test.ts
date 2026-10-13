@@ -4,7 +4,7 @@ import { questionFromId } from "./build";
 import { checkAnswer, inputProblem } from "./answers";
 import { parseQuestionId } from "./ids";
 import { buildPool, parseConfig, poolHas } from "./pools";
-import { decimalPlaces, isInteger } from "./rational";
+import { decimalPlaces, isInteger } from "@/lib/rational";
 import type { PracticeConfig, Question } from "./types";
 
 function q(id: string): Question {

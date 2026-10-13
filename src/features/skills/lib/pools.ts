@@ -17,7 +17,7 @@ import { PERCENTS_BY_DIFFICULTY, difficultyOfSpec } from "./tiers";
 import { MAX_OPERAND, MIN_OPERAND } from "@/lib/validation";
 import { seededRandom } from "./sampling";
 import { exponentSpecs, parseExponentsConfig } from "./exponents-pool";
-import { gcd, rat, toDecimalString, toFractionString, div, fromNumber, PERCENT } from "./rational";
+import { gcd, rat, toDecimalString, toFractionString, div, fromNumber, PERCENT } from "@/lib/rational";
 
 /**
  * Practice pools: the finite, deterministic set of questions a configuration can ask.

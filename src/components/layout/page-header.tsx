@@ -1,6 +1,6 @@
 import { AccentTile, accentStyle } from "@/components/common/accent-tile";
 import { cn } from "@/lib/utils";
-import type { AccentId } from "@/features/skills/lib/accent";
+import type { AccentId } from "@/lib/accent";
 
 interface PageHeaderProps {
   title: string;

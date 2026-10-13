@@ -1,5 +1,3 @@
-import type { RoundConfig } from "./types";
-
 /**
  * The schedule of one round, as data. Countdown ticks, the start signal, every flash and the answer box all
  * come from the same list of times, so the numbers on screen and the sounds cannot drift apart.
@@ -17,11 +15,18 @@ export type TimelineEvent =
   | { at: number; kind: "hide"; index: number }
   | { at: number; kind: "answer" };
 
+/** How long a round shows its items: how many, for how long each, and the gap between them. */
+export interface TimelineShape {
+  flashes: number;
+  displayMs: number;
+  gapMs: number;
+}
+
 /**
  * Times are milliseconds from the moment the round starts. `flashes` is how many items are shown; Number Recall
- * reuses this schedule with its own countdown length.
+ * and the practice countdown reuse this schedule with their own countdown length.
  */
-export function buildTimeline(config: Pick<RoundConfig, "flashes" | "displayMs" | "gapMs">, countdownFrom: number = COUNTDOWN_FROM): TimelineEvent[] {
+export function buildTimeline(config: TimelineShape, countdownFrom: number = COUNTDOWN_FROM): TimelineEvent[] {
   const events: TimelineEvent[] = [];
   for (let i = 0; i < countdownFrom; i++) events.push({ at: i * COUNT_STEP_MS, kind: "count", value: countdownFrom - i });
   const goAt = countdownFrom * COUNT_STEP_MS;
