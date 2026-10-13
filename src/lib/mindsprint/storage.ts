@@ -1,4 +1,5 @@
 import { createLocalHistory, type Stored } from "@/lib/history/local";
+import { dataOrNull } from "@/lib/records";
 import { DEFAULT_ROUND, DEFAULT_ROUND_COUNT, parseSetup } from "./config";
 import { parseSessionData } from "./records";
 import type { RoundConfig, SessionData } from "./types";
@@ -14,10 +15,7 @@ export type StoredSession = Stored<SessionData>;
 
 export const mindsprintHistory = createLocalHistory<SessionData>({
   suffix: "mindsprint",
-  parse: (raw) => {
-    const parsed = parseSessionData(raw);
-    return parsed.ok ? parsed.data : null;
-  },
+  parse: dataOrNull(parseSessionData),
 });
 
 export const loadHistory = mindsprintHistory.load;

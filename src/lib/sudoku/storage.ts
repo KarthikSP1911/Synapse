@@ -1,6 +1,7 @@
 import type { LocalStore } from "@/lib/guest/api";
 import { createLocalHistory, type Stored } from "@/lib/history/local";
-import { CLIENT_ID } from "@/lib/mindsprint/records";
+import { dataOrNull, isClientId, isObject } from "@/lib/records";
+import { isIntInRange } from "@/lib/validation";
 import { MAX_HISTORY, isComplete } from "./game";
 import { isSolved, parseGrid } from "./grid";
 import { parseSessionData } from "./records";
@@ -16,10 +17,7 @@ export type StoredSession = Stored<SessionData>;
 
 export const sudokuHistory = createLocalHistory<SessionData>({
   suffix: "sudoku",
-  parse: (raw) => {
-    const parsed = parseSessionData(raw);
-    return parsed.ok ? parsed.data : null;
-  },
+  parse: dataOrNull(parseSessionData),
 });
 
 export const loadHistory = sudokuHistory.load;
@@ -32,8 +30,7 @@ export const saveSession = sudokuHistory.save;
 
 const gameKey = (store: LocalStore): string => `${store.key}:sudoku:game`;
 
-const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
-const isCount = (v: unknown): v is number => typeof v === "number" && Number.isInteger(v) && v >= 0 && v <= 10_000;
+const isCount = (v: unknown): v is number => isIntInRange(v, 0, 10_000);
 
 function parseCell(raw: unknown): CellState | null {
   if (!isObject(raw)) return null;
@@ -66,7 +63,7 @@ function parseMoves(raw: unknown): Move[] | null {
 export function parseGame(raw: unknown): GameState | null {
   if (!isObject(raw)) return null;
   const { clientId, difficulty, puzzle, solution, cells, undoStack, redoStack, mistakes, hintsUsed, status, startedAt, elapsedMs } = raw;
-  if (typeof clientId !== "string" || !CLIENT_ID.test(clientId) || !isDifficulty(difficulty)) return null;
+  if (!isClientId(clientId) || !isDifficulty(difficulty)) return null;
   const clues = parseGrid(puzzle);
   const answer = parseGrid(solution);
   if (!clues || !answer || !isSolved(answer)) return null;

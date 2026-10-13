@@ -1,6 +1,7 @@
 import type { LocalStore } from "@/lib/guest/api";
 import { createLocalHistory, type Stored } from "@/lib/history/local";
-import { CLIENT_ID } from "@/lib/mindsprint/records";
+import { dataOrNull, isClientId, isObject } from "@/lib/records";
+import { isIntInRange } from "@/lib/validation";
 import { hasMoves, highestTileOf, isPowerOfTwo } from "./engine";
 import { parseSessionData, MAX_SCORE } from "./records";
 import { CELLS, MAX_TILE, WIN_TILE, type GameState, type Grid, type SessionData, type Snapshot } from "./types";
@@ -14,10 +15,7 @@ export type StoredSession = Stored<SessionData>;
 
 export const game2048History = createLocalHistory<SessionData>({
   suffix: "game2048",
-  parse: (raw) => {
-    const parsed = parseSessionData(raw);
-    return parsed.ok ? parsed.data : null;
-  },
+  parse: dataOrNull(parseSessionData),
 });
 
 export const loadHistory = game2048History.load;
@@ -25,9 +23,6 @@ export const saveSession = game2048History.save;
 
 const gameKey = (store: LocalStore): string => `${store.key}:game2048:game`;
 const bestKey = (store: LocalStore): string => `${store.key}:game2048:best`;
-
-const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
-const isInt = (v: unknown, min: number, max: number): v is number => typeof v === "number" && Number.isInteger(v) && v >= min && v <= max;
 
 /** A board of 16 cells holding only empty or power-of-two tiles the board can reach, or null. */
 function parseGrid(raw: unknown): Grid | null {
@@ -40,7 +35,7 @@ function parseSnapshot(raw: unknown): Snapshot | null {
   if (!isObject(raw)) return null;
   const grid = parseGrid(raw.grid);
   const { score, best, moves, highestTile, reached2048, continued, status } = raw;
-  if (!grid || !isInt(score, 0, MAX_SCORE) || !isInt(best, 0, MAX_SCORE) || !isInt(moves, 0, 200_000) || !isInt(highestTile, 0, MAX_TILE)) return null;
+  if (!grid || !isIntInRange(score, 0, MAX_SCORE) || !isIntInRange(best, 0, MAX_SCORE) || !isIntInRange(moves, 0, 200_000) || !isIntInRange(highestTile, 0, MAX_TILE)) return null;
   if (typeof reached2048 !== "boolean" || typeof continued !== "boolean" || (status !== "playing" && status !== "won")) return null;
   return { grid, score, best, moves, highestTile, reached2048, continued, status };
 }
@@ -53,9 +48,9 @@ export function parseGame(raw: unknown): GameState | null {
   if (!isObject(raw)) return null;
   const { clientId, score, best, moves, highestTile, reached2048, continued, status, undosUsed, startedAt, elapsedMs } = raw;
   const grid = parseGrid(raw.grid);
-  if (typeof clientId !== "string" || !CLIENT_ID.test(clientId) || !grid) return null;
-  if (!isInt(score, 0, MAX_SCORE) || !isInt(best, 0, MAX_SCORE) || !isInt(moves, 0, 200_000) || !isInt(undosUsed, 0, 200_000)) return null;
-  if (!isInt(highestTile, 0, MAX_TILE) || highestTile < highestTileOf(grid)) return null;
+  if (!isClientId(clientId) || !grid) return null;
+  if (!isIntInRange(score, 0, MAX_SCORE) || !isIntInRange(best, 0, MAX_SCORE) || !isIntInRange(moves, 0, 200_000) || !isIntInRange(undosUsed, 0, 200_000)) return null;
+  if (!isIntInRange(highestTile, 0, MAX_TILE) || highestTile < highestTileOf(grid)) return null;
   if (typeof reached2048 !== "boolean" || typeof continued !== "boolean") return null;
   if (status !== "playing" && status !== "won") return null;
   if (reached2048 !== highestTile >= WIN_TILE) return null;

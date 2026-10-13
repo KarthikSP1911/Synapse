@@ -1,4 +1,5 @@
 import { createHistorySync } from "@/lib/history/sync";
+import { dataOrNull } from "@/lib/records";
 import { parseSessionData } from "./records";
 import { recallHistory } from "./storage";
 
@@ -6,10 +7,7 @@ import { recallHistory } from "./storage";
 const sync = createHistorySync({
   history: recallHistory,
   endpoint: "/api/sync/recall",
-  parse: (raw) => {
-    const parsed = parseSessionData(raw);
-    return parsed.ok ? parsed.data : null;
-  },
+  parse: dataOrNull(parseSessionData),
   payload: (s) => ({ clientId: s.clientId, startedAt: s.startedAt, endedAt: s.endedAt, config: s.config, rounds: s.rounds }),
 });
 

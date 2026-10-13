@@ -1,4 +1,5 @@
 import { createLocalHistory, type Stored } from "@/lib/history/local";
+import { dataOrNull } from "@/lib/records";
 import { defaultConfig, parseConfig } from "./config";
 import { parseSessionData } from "./records";
 import { RECALL_MODES, type RecallConfig, type RecallMode, type SessionData } from "./types";
@@ -12,10 +13,7 @@ export type StoredSession = Stored<SessionData>;
 
 export const recallHistory = createLocalHistory<SessionData>({
   suffix: "recall",
-  parse: (raw) => {
-    const parsed = parseSessionData(raw);
-    return parsed.ok ? parsed.data : null;
-  },
+  parse: dataOrNull(parseSessionData),
 });
 
 export const loadHistory = recallHistory.load;

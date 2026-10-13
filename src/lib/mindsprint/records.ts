@@ -1,3 +1,5 @@
+import { MAX_RESPONSE_MS, isObject, openRecord, type Parsed } from "@/lib/records";
+import { isIntInRange } from "@/lib/validation";
 import { MAX_ANSWER_CHARS, checkSequence } from "./arithmetic";
 import { parseRoundConfig } from "./config";
 import { LIMITS, OPERATIONS, type Flash, type Operation, type PlayedRound, type SessionData } from "./types";
@@ -9,16 +11,7 @@ import { LIMITS, OPERATIONS, type Flash, type Operation, type PlayedRound, type 
  * from the sequence and the answer wherever they are needed.
  */
 
-export const CLIENT_ID = /^[A-Za-z0-9-]{8,64}$/;
-/** Same ceiling as practice answers: nobody takes longer than ten minutes over one answer. */
-export const MAX_RESPONSE_MS = 10 * 60 * 1000;
-/** Local clocks drift; a session claiming to end further ahead than this is rejected. */
-const FUTURE_SLACK_MS = 5 * 60 * 1000;
-
-export type ParsedSession = { ok: true; data: SessionData } | { ok: false; clientId: string | null; reason: string };
-
-const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
-const isEpoch = (v: unknown): v is number => typeof v === "number" && Number.isSafeInteger(v) && v > 0;
+export type ParsedSession = Parsed<SessionData>;
 
 function parseFlashes(raw: unknown): Flash[] | null {
   if (!Array.isArray(raw)) return null;
@@ -33,14 +26,11 @@ function parseFlashes(raw: unknown): Flash[] | null {
 
 /** `now` makes the check against future dates; leave it out for data read back from this device. */
 export function parseSessionData(raw: unknown, now?: number): ParsedSession {
-  if (!isObject(raw)) return { ok: false, clientId: null, reason: "Session must be an object." };
-  const clientId = typeof raw.clientId === "string" && CLIENT_ID.test(raw.clientId) ? raw.clientId : null;
-  if (clientId === null) return { ok: false, clientId: null, reason: "Invalid clientId." };
-  const fail = (reason: string): ParsedSession => ({ ok: false, clientId, reason });
+  const head = openRecord(raw, "session", now);
+  if (!head.ok) return head;
+  const { clientId, startedAt, endedAt, fail } = head;
 
-  const { startedAt, endedAt, rounds } = raw;
-  if (!isEpoch(startedAt) || !isEpoch(endedAt) || endedAt < startedAt) return fail("Invalid session times.");
-  if (now !== undefined && endedAt > now + FUTURE_SLACK_MS) return fail("The session ends in the future.");
+  const { rounds } = head.raw;
   if (!Array.isArray(rounds) || rounds.length < LIMITS.rounds.min || rounds.length > LIMITS.rounds.max) return fail("Invalid rounds.");
 
   const played: PlayedRound[] = [];
@@ -55,8 +45,8 @@ export function parseSessionData(raw: unknown, now?: number): ParsedSession {
     if (problem) return fail(`${label}: ${problem}`);
     const { answer, responseMs } = item;
     if (answer !== null && (typeof answer !== "string" || answer.length > MAX_ANSWER_CHARS)) return fail(`${label}: invalid answer.`);
-    if (!Number.isInteger(responseMs) || (responseMs as number) < 0 || (responseMs as number) > MAX_RESPONSE_MS) return fail(`${label}: invalid response time.`);
-    played.push({ config: config.config, flashes, answer: answer as string | null, responseMs: responseMs as number });
+    if (!isIntInRange(responseMs, 0, MAX_RESPONSE_MS)) return fail(`${label}: invalid response time.`);
+    played.push({ config: config.config, flashes, answer: answer as string | null, responseMs });
   }
   return { ok: true, data: { clientId, startedAt, endedAt, rounds: played } };
 }

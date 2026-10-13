@@ -1,4 +1,5 @@
 import { createHistorySync } from "@/lib/history/sync";
+import { dataOrNull } from "@/lib/records";
 import { parseSessionData } from "./records";
 import { game2048History } from "./storage";
 
@@ -6,10 +7,7 @@ import { game2048History } from "./storage";
 const sync = createHistorySync({
   history: game2048History,
   endpoint: "/api/sync/game2048",
-  parse: (raw) => {
-    const parsed = parseSessionData(raw);
-    return parsed.ok ? parsed.data : null;
-  },
+  parse: dataOrNull(parseSessionData),
   payload: (s) => ({
     clientId: s.clientId,
     startedAt: s.startedAt,

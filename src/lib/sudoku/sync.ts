@@ -1,4 +1,5 @@
 import { createHistorySync } from "@/lib/history/sync";
+import { dataOrNull } from "@/lib/records";
 import { parseSessionData } from "./records";
 import { sudokuHistory } from "./storage";
 
@@ -6,10 +7,7 @@ import { sudokuHistory } from "./storage";
 const sync = createHistorySync({
   history: sudokuHistory,
   endpoint: "/api/sync/sudoku",
-  parse: (raw) => {
-    const parsed = parseSessionData(raw);
-    return parsed.ok ? parsed.data : null;
-  },
+  parse: dataOrNull(parseSessionData),
   payload: (s) => ({
     clientId: s.clientId,
     startedAt: s.startedAt,

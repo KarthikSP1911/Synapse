@@ -1,4 +1,5 @@
-import { CLIENT_ID, MAX_RESPONSE_MS } from "@/lib/mindsprint/records";
+import { MAX_RESPONSE_MS, isObject, openRecord, type Parsed } from "@/lib/records";
+import { isIntInRange } from "@/lib/validation";
 import { parseConfig } from "./config";
 import { isItem, nextLength } from "./sequence";
 import { scoreRound } from "./scoring";
@@ -11,25 +12,16 @@ import type { PlayedRound, SessionData } from "./types";
  * are not part of the record: they are worked out again wherever they are needed.
  */
 
-/** Local clocks drift; a session claiming to end further ahead than this is rejected. */
-const FUTURE_SLACK_MS = 5 * 60 * 1000;
-
-export type ParsedSession = { ok: true; data: SessionData } | { ok: false; clientId: string | null; reason: string };
-
-const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
-const isEpoch = (v: unknown): v is number => typeof v === "number" && Number.isSafeInteger(v) && v > 0;
+export type ParsedSession = Parsed<SessionData>;
 
 /** `now` makes the check against future dates; leave it out for data read back from this device. */
 export function parseSessionData(raw: unknown, now?: number): ParsedSession {
-  if (!isObject(raw)) return { ok: false, clientId: null, reason: "Session must be an object." };
-  const clientId = typeof raw.clientId === "string" && CLIENT_ID.test(raw.clientId) ? raw.clientId : null;
-  if (clientId === null) return { ok: false, clientId: null, reason: "Invalid clientId." };
-  const fail = (reason: string): ParsedSession => ({ ok: false, clientId, reason });
+  const head = openRecord(raw, "session", now);
+  if (!head.ok) return head;
+  const { clientId, startedAt, endedAt, fail } = head;
 
-  const { startedAt, endedAt, rounds } = raw;
-  if (!isEpoch(startedAt) || !isEpoch(endedAt) || endedAt < startedAt) return fail("Invalid session times.");
-  if (now !== undefined && endedAt > now + FUTURE_SLACK_MS) return fail("The session ends in the future.");
-  const parsed = parseConfig(raw.config);
+  const { rounds } = head.raw;
+  const parsed = parseConfig(head.raw.config);
   if (!parsed.ok) return fail(parsed.error);
   const { config } = parsed;
   if (!Array.isArray(rounds) || rounds.length !== config.rounds) return fail("The number of rounds does not match the settings.");
@@ -44,8 +36,8 @@ export function parseSessionData(raw: unknown, now?: number): ParsedSession {
     const expected = nextLength(config, previous ? { length: previous.sequence.length, perfect: scoreRound(config, previous).perfect } : null);
     if (sequence.length !== expected) return fail(`${label}: expected ${expected} items, got ${sequence.length}.`);
     if (answer !== null && (!Array.isArray(answer) || answer.length !== sequence.length || !answer.every((a) => isItem(config.mode, a)))) return fail(`${label}: invalid answer.`);
-    if (!Number.isInteger(responseMs) || (responseMs as number) < 0 || (responseMs as number) > MAX_RESPONSE_MS) return fail(`${label}: invalid response time.`);
-    played.push({ sequence: sequence as string[], answer: answer as string[] | null, responseMs: responseMs as number });
+    if (!isIntInRange(responseMs, 0, MAX_RESPONSE_MS)) return fail(`${label}: invalid response time.`);
+    played.push({ sequence: sequence as string[], answer: answer as string[] | null, responseMs });
   }
   return { ok: true, data: { clientId, startedAt, endedAt, config, rounds: played } };
 }

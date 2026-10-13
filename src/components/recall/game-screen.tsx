@@ -7,7 +7,7 @@ import { AnswerKeypad, useTouchKeypad } from "@/components/answer-keypad";
 import { Button } from "@/components/ui/button";
 import { EntryBoxes } from "@/components/recall/entry-boxes";
 import { PerfectLabel, SequenceComparison } from "@/components/recall/round-result";
-import { MAX_RESPONSE_MS } from "@/lib/mindsprint/records";
+import { MAX_RESPONSE_MS } from "@/lib/records";
 import type { SoundPlayer } from "@/lib/mindsprint/sound";
 import { buildTimeline, runTimeline } from "@/lib/mindsprint/timeline";
 import { entriesFromText, sanitizeEntry, validateEntries } from "@/lib/recall/answer";

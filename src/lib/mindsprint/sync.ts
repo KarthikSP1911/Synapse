@@ -1,4 +1,5 @@
 import { createHistorySync } from "@/lib/history/sync";
+import { dataOrNull } from "@/lib/records";
 import { mindsprintHistory } from "./storage";
 import { parseSessionData } from "./records";
 
@@ -6,10 +7,7 @@ import { parseSessionData } from "./records";
 const sync = createHistorySync({
   history: mindsprintHistory,
   endpoint: "/api/sync/mindsprint",
-  parse: (raw) => {
-    const parsed = parseSessionData(raw);
-    return parsed.ok ? parsed.data : null;
-  },
+  parse: dataOrNull(parseSessionData),
   payload: (s) => ({ clientId: s.clientId, startedAt: s.startedAt, endedAt: s.endedAt, rounds: s.rounds }),
 });
 

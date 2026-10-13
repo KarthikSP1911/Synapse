@@ -7,7 +7,7 @@ import { AnswerKeypad, useTouchKeypad } from "@/components/answer-keypad";
 import { Button } from "@/components/ui/button";
 import { RoundResult } from "@/components/mindsprint/round-result";
 import { displayNumber, displayOperand, parseAnswerText, sanitizeAnswer } from "@/lib/mindsprint/arithmetic";
-import { MAX_RESPONSE_MS } from "@/lib/mindsprint/records";
+import { MAX_RESPONSE_MS } from "@/lib/records";
 import { scoreRound, type RoundOutcome } from "@/lib/mindsprint/scoring";
 import type { SoundPlayer } from "@/lib/mindsprint/sound";
 import { COUNTDOWN_FROM, buildTimeline, runTimeline } from "@/lib/mindsprint/timeline";

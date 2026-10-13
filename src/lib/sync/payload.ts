@@ -1,3 +1,4 @@
+import { CLIENT_ID, FUTURE_SLACK_MS, isEpoch, isObject } from "@/lib/records";
 import { MAX_REVIEW_QUESTIONS, isQuestionInSession, parseSessionRequest, type SessionShape } from "@/lib/sessions";
 import { checkAnswer } from "@/lib/skills/answers";
 import { questionFromId } from "@/lib/skills/build";
@@ -19,10 +20,7 @@ import {
 
 export const MAX_SYNC_SESSIONS = 20;
 export const MAX_SYNC_ATTEMPTS = 1000;
-/** Local clocks drift; an attempt claiming to be from further ahead than this is clamped to the server's now. */
-const FUTURE_SLACK_MS = 5 * 60 * 1000;
 const MAX_PAUSED_MS = 24 * 60 * 60 * 1000;
-const CLIENT_ID = /^[A-Za-z0-9-]{8,64}$/;
 
 export interface ValidAttempt {
   question: Question;
@@ -61,9 +59,6 @@ export interface ValidSession {
 }
 
 export type SessionResult = { ok: true; session: ValidSession } | { ok: false; clientId: string | null; reason: string };
-
-const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
-const isEpoch = (v: unknown): v is number => typeof v === "number" && Number.isSafeInteger(v) && v > 0;
 
 /** The request body as a list of sessions, or an error for the whole request. */
 export function parseSyncBody(body: unknown): { ok: true; sessions: unknown[] } | { ok: false; error: string } {
