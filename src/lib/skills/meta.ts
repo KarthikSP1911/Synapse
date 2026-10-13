@@ -172,7 +172,8 @@ export const DIFFICULTY_META: Record<Difficulty, { label: string; description: R
   },
 };
 
-export const SKILL_ORDER: readonly Skill[] = ["multiplication", "addition", "subtraction", "division", "percentage", "fraction", "square", "exponents"];
+/** The order skills are listed in on the hub, progress and profile pages: the four operations first, then the rest. */
+export const SKILL_ORDER: readonly Skill[] = ["addition", "subtraction", "multiplication", "division", "percentage", "fraction", "square", "exponents"];
 
 export const skillTitle = (skill: string): string => SKILL_META[skill as Skill]?.title ?? skill;
 
