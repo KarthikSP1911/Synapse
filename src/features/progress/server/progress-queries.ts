@@ -1,6 +1,7 @@
 import { db } from "@/db";
-import { practiceSessions, questionAttempts, questionStats } from "@/db/schema";
-import { and, asc, desc, eq, gt, like, sql } from "drizzle-orm";
+import { game2048Sessions, mindsprintSessions, practiceSessions, questionAttempts, questionStats, recallSessions, sudokuSessions } from "@/db/schema";
+import { and, asc, desc, eq, gt, gte, inArray, like, or, sql, type AnyColumn } from "drizzle-orm";
+import { MIN_2048_MOVES } from "@/features/progress/lib/streak";
 import { SKILLS, type Skill } from "@/features/skills/lib/types";
 import { MASTERED_MAX_WEAKNESS, MASTERED_MIN_ATTEMPTS, WEAK_MIN_WEAKNESS, overviewOf } from "@/features/progress/lib/progress-shared";
 
@@ -384,6 +385,32 @@ export async function getActivityByDay(userId: number, timeZone: string, days: n
     // carry a different parameter and Postgres could not tell it matches the selected one.
     .groupBy(sql`1`);
   return new Map(rows.map((r) => [r.day, Number(r.count)]));
+}
+
+/**
+ * Every calendar day (`YYYY-MM-DD`, in the user's time zone) on which the user finished something, since they started:
+ * an answered practice question, a MindSprint or Number Recall session, a solved Sudoku, or a 2048 game that ended,
+ * reached 2048 or had enough moves. The same rules as `streak.ts`, which also turns these days into streaks.
+ * Nothing but days leaves the database, so this stays small however much history there is.
+ */
+export async function getActivityDays(userId: number, timeZone: string): Promise<string[]> {
+  // The zone is a bind parameter, never interpolated into the SQL text.
+  const dayOf = (instant: AnyColumn) => sql<string>`to_char((${instant} AT TIME ZONE 'UTC') AT TIME ZONE ${timeZone}, 'YYYY-MM-DD')`;
+  const rows = await db
+    .select({ day: dayOf(questionAttempts.createdAt) })
+    .from(questionAttempts)
+    .where(and(eq(questionAttempts.userId, userId), inArray(questionAttempts.outcome, ["correct", "incorrect"])))
+    // UNION (not UNION ALL) leaves each day once, however many tables and sessions it came from.
+    .union(db.select({ day: dayOf(mindsprintSessions.endedAt) }).from(mindsprintSessions).where(eq(mindsprintSessions.userId, userId)))
+    .union(db.select({ day: dayOf(recallSessions.endedAt) }).from(recallSessions).where(eq(recallSessions.userId, userId)))
+    .union(db.select({ day: dayOf(sudokuSessions.endedAt) }).from(sudokuSessions).where(and(eq(sudokuSessions.userId, userId), eq(sudokuSessions.completed, true))))
+    .union(
+      db
+        .select({ day: dayOf(game2048Sessions.endedAt) })
+        .from(game2048Sessions)
+        .where(and(eq(game2048Sessions.userId, userId), or(eq(game2048Sessions.gameOver, true), eq(game2048Sessions.reached2048, true), gte(game2048Sessions.moves, MIN_2048_MOVES))))
+    );
+  return rows.map((r) => r.day).sort();
 }
 
 /** Questions answered by a user since they started, across all skills. */

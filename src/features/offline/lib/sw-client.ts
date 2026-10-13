@@ -3,7 +3,7 @@ import { SKILL_PATHS } from "@/features/skills/lib/routes";
 /** Page-side helpers for talking to the service worker (`public/sw.js`). */
 
 /** Every screen that should open with no connection. `/play*` are the shells all local sessions share; each skill has its own page under `/skills`. */
-const OFFLINE_ROUTES = ["/", ...SKILL_PATHS, "/play", "/play/summary", "/games/mindsprint", "/games/recall", "/games/sudoku", "/games/2048", "/progress", "/tables", "/settings"];
+const OFFLINE_ROUTES = ["/", ...SKILL_PATHS, "/play", "/play/summary", "/games/mindsprint", "/games/recall", "/games/sudoku", "/games/2048", "/progress", "/tables", "/settings", "/profile"];
 
 type ServiceWorkerMessage = { type: "warm"; urls: string[] } | { type: "clear-pages" } | { type: "skip-waiting" };
 
@@ -22,6 +22,6 @@ export function postToServiceWorker(message: ServiceWorkerMessage): void {
  * Asks the worker to download the app's screens (and the scripts and styles they use) now, while there is a
  * connection, so they open instantly and offline later.
  */
-export function warmOfflineCache(signedIn: boolean): void {
-  postToServiceWorker({ type: "warm", urls: signedIn ? [...OFFLINE_ROUTES, "/profile"] : OFFLINE_ROUTES });
+export function warmOfflineCache(): void {
+  postToServiceWorker({ type: "warm", urls: OFFLINE_ROUTES });
 }

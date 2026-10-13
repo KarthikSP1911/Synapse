@@ -1,5 +1,7 @@
 import { applyAttempt } from "@/features/skills/lib/practice/item-stats";
 import { guestNextQuestion } from "@/features/offline/lib/guest/engine";
+import { recordActivityDay } from "@/features/offline/lib/activity-days";
+import { countsAsAnswer } from "@/features/progress/lib/streak";
 import {
   GUEST_STORAGE_KEY,
   MAX_ATTEMPTS_PER_SESSION,
@@ -324,7 +326,8 @@ function recordAttempt(store: LocalStore, data: GuestData, session: GuestSession
   data.stats[question.id] = stat;
 
   touch(store, session);
-  saveGuestData(data, store.key);
+  // A guest's day is noted as the answer is saved: the stored sessions are trimmed, a streak must not be.
+  if (saveGuestData(data, store.key) && countsAsAnswer(outcome)) recordActivityDay(store, now);
   return json({
     isCorrect,
     outcome,

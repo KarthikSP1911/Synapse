@@ -91,7 +91,7 @@ export function SyncManager() {
     if (kind === null || !navigator.onLine) return;
     const warm = () => {
       writeStorage(WARMED_KEY, String(Date.now()));
-      warmOfflineCache(kind === "user");
+      warmOfflineCache();
     };
     const last = Number(readStorage(WARMED_KEY) ?? 0);
     // Slightly delayed so it never competes with what the user just opened.

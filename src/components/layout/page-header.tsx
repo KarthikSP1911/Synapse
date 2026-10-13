@@ -47,15 +47,21 @@ export function StatTile({
   value,
   hint,
   tone,
+  icon,
 }: {
   label: string;
   value: React.ReactNode;
   hint?: string;
   tone?: "success" | "warning" | "danger";
+  /** A small decorative icon at the top right. */
+  icon?: React.ReactNode;
 }) {
   return (
     <div className="rounded-xl border border-border bg-card p-5 shadow-card">
-      <p className="text-sm text-muted-foreground">{label}</p>
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-sm text-muted-foreground">{label}</p>
+        {icon}
+      </div>
       <p
         className={cn(
           "mt-2 font-mono text-3xl font-semibold tabular-nums tracking-tight",

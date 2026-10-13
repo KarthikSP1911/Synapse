@@ -5,11 +5,11 @@ import { Page, StatTile } from "@/components/layout/page-header";
 import { SkillIcon } from "@/components/common/skill-icon";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { StreakTiles } from "@/features/progress/components/streak-tiles";
 import { buildHeatmap, dayKey, streaks } from "@/features/progress/lib/activity";
-import { GuestGate } from "@/features/auth/components/guest-gate";
 import { requireViewer } from "@/features/auth/server/auth";
 import { logoutAction } from "@/features/auth/server/auth-actions";
-import { getActivityByDay, getSkillSummaries, getTotalAnswered } from "@/features/progress/server/progress-queries";
+import { getActivityByDay, getActivityDays, getSkillSummaries, getTotalAnswered } from "@/features/progress/server/progress-queries";
 import { SKILL_META, SKILL_ORDER } from "@/features/skills/lib/meta";
 import { cn } from "@/lib/utils";
 
@@ -20,27 +20,61 @@ const WEEKS = 53;
 const accuracyColor = (accuracy: number) => (accuracy >= 85 ? "text-success" : accuracy >= 60 ? "text-warning" : "text-destructive");
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
+/** A guest has no account to read from: the streak comes from this browser (see StreakTiles). */
+function GuestProfile() {
+  return (
+    <Page>
+      <div className="flex min-w-0 items-center gap-4">
+        <span className="flex size-14 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+          <UserRound className="size-7" />
+        </span>
+        <div className="min-w-0 space-y-1">
+          <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Profile</p>
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Guest</h1>
+          <p className="text-sm text-muted-foreground">Your progress is saved in this browser only.</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
+        <StreakTiles />
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Keep your streak across devices</CardTitle>
+          <CardDescription>
+            A guest&rsquo;s practice and streak stay in this browser and are not carried over to a new account. Create an account to keep them wherever you
+            practise.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-2">
+          <Link href="/signup" className={buttonVariants({})}>
+            Create an account
+          </Link>
+          <Link href="/login" className={buttonVariants({ variant: "outline" })}>
+            Log in
+          </Link>
+        </CardContent>
+      </Card>
+    </Page>
+  );
+}
+
 export default async function ProfilePage() {
   const viewer = await requireViewer();
-  if (viewer.kind === "guest") {
-    return (
-      <GuestGate
-        title="Your profile"
-        description="Your profile, practice calendar and streaks are tied to an account. Create one to keep them across devices."
-      />
-    );
-  }
+  if (viewer.kind === "guest") return <GuestProfile />;
   const user = viewer.user;
   const today = dayKey(new Date(), user.timezone);
 
-  const [counts, summaries, totalAnswered] = await Promise.all([
+  const [counts, activityDays, summaries, totalAnswered] = await Promise.all([
     getActivityByDay(user.id, user.timezone, WEEKS * 7),
+    getActivityDays(user.id, user.timezone),
     getSkillSummaries(user.id),
     getTotalAnswered(user.id),
   ]);
 
   const heatmap = buildHeatmap(counts, today, WEEKS);
-  const { current, longest, activeDays } = streaks(counts, today);
+  const { activeDays } = streaks(counts, today);
   const yearTotal = heatmap.weeks.flat().reduce((sum, d) => sum + d.count, 0);
   const summary = `Practice activity over the last year: ${plural(yearTotal, "question")} answered on ${plural(activeDays, "day")}.`;
 
@@ -69,14 +103,7 @@ export default async function ProfilePage() {
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <StatTile
-          label="Current streak"
-          value={plural(current, "day")}
-          tone={current > 0 ? "success" : undefined}
-          hint={current > 0 ? "keep it going today" : "answer a question to start one"}
-        />
-        <StatTile label="Longest streak" value={plural(longest, "day")} hint="in the last year" />
-        <StatTile label="Active days" value={activeDays} hint="in the last year" />
+        <StreakTiles serverDays={activityDays} timeZone={user.timezone} initialToday={today} />
         <StatTile label="Questions answered" value={totalAnswered.toLocaleString()} hint="all time" />
       </div>
 

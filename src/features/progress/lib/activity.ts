@@ -18,9 +18,17 @@ export function isValidTimeZone(zone: unknown): zone is string {
   }
 }
 
+// Building a formatter is far dearer than using one, and the day of every stored attempt is looked up.
+const formatters = new Map<string, Intl.DateTimeFormat>();
+
 /** The calendar day of `instant` in `timeZone`, as `YYYY-MM-DD`. */
 export function dayKey(instant: Date, timeZone: string): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(instant);
+  let formatter = formatters.get(timeZone);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" });
+    formatters.set(timeZone, formatter);
+  }
+  return formatter.format(instant);
 }
 
 /** Day arithmetic on calendar strings. Uses UTC midnight so daylight-saving shifts cannot skip a day. */
