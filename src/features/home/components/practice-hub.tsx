@@ -13,6 +13,11 @@ import { computeStats as computeStats2048 } from "@/features/games/game2048/lib/
 import { loadBest as load2048Best, loadGame as load2048Game, loadHistory as load2048History } from "@/features/games/game2048/lib/storage";
 import { DIFFICULTY_LABEL } from "@/features/games/sudoku/lib/types";
 import { loadGame as loadSudokuGame, loadHistory as loadSudokuHistory } from "@/features/games/sudoku/lib/storage";
+import { computeStats as computeQueensStats } from "@/features/games/queens/lib/stats";
+import { loadGame as loadQueensGame, loadHistory as loadQueensHistory } from "@/features/games/queens/lib/storage";
+import { computeStats as computeZipStats } from "@/features/games/zip/lib/stats";
+import { loadGame as loadZipGame, loadHistory as loadZipHistory } from "@/features/games/zip/lib/storage";
+import { DIFFICULTIES } from "@/features/games/shared/lib/puzzle-session";
 import { loadGuestData } from "@/features/offline/lib/guest/storage";
 import { SKILL_META, SKILL_ORDER } from "@/features/skills/lib/meta";
 import { skillHref } from "@/features/skills/lib/routes";
@@ -67,11 +72,21 @@ interface GameProgress {
   recall: string | null;
   sudoku: string | null;
   game2048: string | null;
+  queens: string | null;
+  zip: string | null;
+}
+
+/** "Best score 1,234" over every difficulty, or a note when nothing has been solved yet; null when never played. */
+function puzzleProgress(stats: { attempted: number; byDifficulty: Record<(typeof DIFFICULTIES)[number], { bestScore: number }> }, unfinished: boolean): string | null {
+  const best = Math.max(...DIFFICULTIES.map((d) => stats.byDifficulty[d].bestScore));
+  if (best > 0) return `Best score ${best.toLocaleString()}`;
+  if (unfinished) return "Game in progress";
+  return stats.attempted > 0 ? "No puzzle solved yet" : null;
 }
 
 function useGameProgress(): GameProgress {
   const store = useLocalStore();
-  const [progress, setProgress] = useState<GameProgress>({ mindsprint: null, recall: null, sudoku: null, game2048: null });
+  const [progress, setProgress] = useState<GameProgress>({ mindsprint: null, recall: null, sudoku: null, game2048: null, queens: null, zip: null });
 
   useEffect(() => {
     if (!store) return;
@@ -84,7 +99,11 @@ function useGameProgress(): GameProgress {
       const solved = sudokuGames.filter((g) => g.completed).length;
       const games2048 = computeStats2048(load2048History(store));
       const best2048 = Math.max(load2048Best(store) ?? 0, games2048.highScore);
+      const queensSaved = loadQueensGame(store);
+      const zipSaved = loadZipGame(store);
       setProgress({
+        queens: puzzleProgress(computeQueensStats(loadQueensHistory(store), queensSaved?.difficulty ?? null), queensSaved !== null),
+        zip: puzzleProgress(computeZipStats(loadZipHistory(store), zipSaved?.difficulty ?? null), zipSaved !== null),
         game2048: best2048 > 0 ? `Best ${best2048.toLocaleString()} · tile ${games2048.bestTile || "—"}` : load2048Game(store) ? "Game in progress" : games2048.gamesPlayed > 0 ? "No score yet" : null,
         sudoku: unfinished ? `${DIFFICULTY_LABEL[unfinished.difficulty]} game in progress` : solved > 0 ? `${solved.toLocaleString()} solved · ${Math.floor((solved * 100) / sudokuGames.length)}% completed` : sudokuGames.length > 0 ? "No puzzle solved yet" : null,
         mindsprint: scores.length > 0 ? `Best score ${Math.max(...scores).toLocaleString()}` : null,
@@ -109,6 +128,8 @@ function GamesRow() {
         <HubCard href="/games/recall" title="Number Recall" accent="recall" description="Memorise digits or number pairs, then type them back in order." progress={progress.recall ?? "Not played yet"} />
         <HubCard href="/games/sudoku" title="Sudoku" accent="sudoku" description="Fill the grid so every row, column and box holds 1 to 9." progress={progress.sudoku ?? "Not played yet"} />
         <HubCard href="/games/2048" title="2048" accent="game2048" description="Slide and merge matching tiles to reach 2048." progress={progress.game2048 ?? "Not played yet"} />
+        <HubCard href="/games/queens" title="Queens" accent="queens" description="Place queens using logic so every row, column and colored region satisfies the rules." progress={progress.queens ?? "Not played yet"} />
+        <HubCard href="/games/zip" title="Zip" accent="zip" description="Connect numbered checkpoints with one continuous path that fills the entire grid." progress={progress.zip ?? "Not played yet"} />
       </div>
     </section>
   );

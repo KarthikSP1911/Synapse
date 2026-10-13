@@ -7,6 +7,8 @@ import { pendingCountFor as mindsprintPendingFor, syncMindsprint } from "@/featu
 import { pendingCountFor as recallPendingFor, syncRecall } from "@/features/games/recall/lib/sync";
 import { pendingCountFor as game2048PendingFor, syncGame2048 } from "@/features/games/game2048/lib/sync";
 import { pendingCountFor as sudokuPendingFor, syncSudoku } from "@/features/games/sudoku/lib/sync";
+import { pendingCountFor as queensPendingFor, syncQueens } from "@/features/games/queens/lib/sync";
+import { pendingCountFor as zipPendingFor, syncZip } from "@/features/games/zip/lib/sync";
 import { pendingCountFor, syncUser } from "@/features/offline/lib/sync/client";
 import { setSyncStatus } from "@/features/offline/lib/sync/status";
 import { postToServiceWorker, warmOfflineCache } from "@/features/offline/lib/sw-client";
@@ -122,7 +124,7 @@ export function SyncManager() {
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
 
     // MindSprint sessions wait for upload just like practice sessions do.
-    const countPending = () => pendingCountFor(userId) + mindsprintPendingFor(userId) + recallPendingFor(userId) + sudokuPendingFor(userId) + game2048PendingFor(userId);
+    const countPending = () => pendingCountFor(userId) + mindsprintPendingFor(userId) + recallPendingFor(userId) + sudokuPendingFor(userId) + game2048PendingFor(userId) + queensPendingFor(userId) + zipPendingFor(userId);
     const refreshPending = () => setSyncStatus({ pending: countPending() });
 
     const run = async () => {
@@ -139,9 +141,25 @@ export function SyncManager() {
         const recall = recallPendingFor(userId) > 0 ? await syncRecall(userId) : null;
         const sudoku = sudokuPendingFor(userId) > 0 ? await syncSudoku(userId) : null;
         const game2048 = game2048PendingFor(userId) > 0 ? await syncGame2048(userId) : null;
+        const queens = queensPendingFor(userId) > 0 ? await syncQueens(userId) : null;
+        const zip = zipPendingFor(userId) > 0 ? await syncZip(userId) : null;
         running = false;
         if (cancelled) return;
-        const result = !practice.ok ? practice : mindsprint && !mindsprint.ok ? mindsprint : recall && !recall.ok ? recall : sudoku && !sudoku.ok ? sudoku : game2048 && !game2048.ok ? game2048 : practice;
+        const result = !practice.ok
+          ? practice
+          : mindsprint && !mindsprint.ok
+            ? mindsprint
+            : recall && !recall.ok
+              ? recall
+              : sudoku && !sudoku.ok
+                ? sudoku
+                : game2048 && !game2048.ok
+                  ? game2048
+                  : queens && !queens.ok
+                    ? queens
+                    : zip && !zip.ok
+                      ? zip
+                      : practice;
         failures = result.ok ? 0 : failures + 1;
         setSyncStatus({ syncing: false, failed: !result.ok && result.reason !== "signed-out", pending: countPending() });
         clearTimeout(retryTimer);

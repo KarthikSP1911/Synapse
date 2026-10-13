@@ -8,8 +8,10 @@ import {
   dayOf,
   game2048Counts,
   isDayKey,
+  queensCounts,
   sudokuCounts,
   summarizeStreaks,
+  zipCounts,
 } from "./streak";
 
 const at = (iso: string) => Date.parse(iso);
@@ -166,6 +168,20 @@ describe("what counts as activity", () => {
   it("counts a Sudoku only when it was solved", () => {
     assert.equal(sudokuCounts({ completed: true }), true);
     assert.equal(sudokuCounts({ completed: false }), false);
+  });
+
+  it("counts a Queens or Zip puzzle only when it was solved", () => {
+    assert.equal(queensCounts({ completed: true }), true);
+    assert.equal(queensCounts({ completed: false }), false);
+    assert.equal(zipCounts({ completed: true }), true);
+    assert.equal(zipCounts({ completed: false }), false);
+  });
+
+  it("counts a Queens or Zip puzzle only when it was solved", () => {
+    assert.equal(queensCounts({ completed: true }), true);
+    assert.equal(queensCounts({ completed: false }), false);
+    assert.equal(zipCounts({ completed: true }), true);
+    assert.equal(zipCounts({ completed: false }), false);
   });
 
   it("counts a 2048 game that ended, reached 2048 or had enough moves", () => {
