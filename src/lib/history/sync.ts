@@ -1,6 +1,7 @@
 import type { LocalStore } from "@/lib/guest/api";
 import { userStorageKey } from "@/lib/guest/storage";
 import type { HistoryItem, createLocalHistory } from "./local";
+import { MAX_UPLOAD_SESSIONS } from "./upload";
 
 /**
  * Browser side of syncing a game's history for a signed-in user, in the same spirit as `src/lib/sync/client.ts`
@@ -9,8 +10,6 @@ import type { HistoryItem, createLocalHistory } from "./local";
  * client id, so repeating or interrupting an upload is harmless.
  */
 
-/** The most sessions one upload carries. */
-export const MAX_UPLOAD_SESSIONS = 10;
 const REQUEST_TIMEOUT_MS = 20000;
 
 export type HistorySyncResult = { ok: true; uploaded: number; pulled: number } | { ok: false; reason: "signed-out" | "network" | "server"; uploaded: number };
