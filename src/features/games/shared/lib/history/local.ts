@@ -1,4 +1,5 @@
 import type { LocalStore } from "@/features/offline/lib/guest/api";
+import { recordActivityDay } from "@/features/offline/lib/activity-days";
 
 /**
  * Finished-game history on this device, shared by the games that keep their own history (MindSprint, Number
@@ -26,9 +27,11 @@ interface LocalHistoryOptions<T extends HistoryItem> {
   suffix: string;
   /** A strictly validated copy of untrusted stored data, or null if it is not a valid session. */
   parse: (raw: unknown) => T | null;
+  /** Whether a saved session is a day of activity for the streak (default: every saved session is). */
+  countsAsActivity?: (session: T) => boolean;
 }
 
-export function createLocalHistory<T extends HistoryItem>({ suffix, parse }: LocalHistoryOptions<T>) {
+export function createLocalHistory<T extends HistoryItem>({ suffix, parse, countsAsActivity }: LocalHistoryOptions<T>) {
   const keyFor = (storeKey: string): string => `${storeKey}:${suffix}`;
 
   function read(key: string): Stored<T>[] {
@@ -79,13 +82,19 @@ export function createLocalHistory<T extends HistoryItem>({ suffix, parse }: Loc
     /** How many sessions under this store key still have to be uploaded. */
     pendingCountAt: (storeKey: string): number => read(keyFor(storeKey)).filter((s) => s.synced === false).length,
 
-    /** Saves a finished session. Safe to repeat: one already stored (same client id) is left as it is. Returns false if the browser refused. */
+    /**
+     * Saves a finished session. Safe to repeat: one already stored (same client id) is left as it is. Returns false if
+     * the browser refused. A guest's day is noted for their streak (see `activity-days.ts`) as the session is saved,
+     * because the history itself is trimmed.
+     */
     save(store: LocalStore, data: T): boolean {
       const key = keyFor(store.key);
       const sessions = read(key);
       if (sessions.some((s) => s.clientId === data.clientId)) return true;
       sessions.push(store.syncable ? { ...data, synced: false } : data);
-      return write(key, sessions);
+      const saved = write(key, sessions);
+      if (saved && (countsAsActivity?.(data) ?? true)) recordActivityDay(store, data.endedAt);
+      return saved;
     },
 
     /** Sessions the server has not confirmed yet. */

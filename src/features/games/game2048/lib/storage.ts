@@ -1,5 +1,6 @@
 import type { LocalStore } from "@/features/offline/lib/guest/api";
 import { createLocalHistory, type Stored } from "@/features/games/shared/lib/history/local";
+import { game2048Counts } from "@/features/progress/lib/streak";
 import { dataOrNull, isClientId, isObject } from "@/lib/records";
 import { isIntInRange } from "@/lib/validation";
 import { hasMoves, highestTileOf, isPowerOfTwo } from "./engine";
@@ -16,6 +17,7 @@ export type StoredSession = Stored<SessionData>;
 export const game2048History = createLocalHistory<SessionData>({
   suffix: "game2048",
   parse: dataOrNull(parseSessionData),
+  countsAsActivity: game2048Counts,
 });
 
 export const loadHistory = game2048History.load;

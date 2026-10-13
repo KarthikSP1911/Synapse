@@ -1,5 +1,6 @@
 import type { LocalStore } from "@/features/offline/lib/guest/api";
 import { createLocalHistory, type Stored } from "@/features/games/shared/lib/history/local";
+import { sudokuCounts } from "@/features/progress/lib/streak";
 import { dataOrNull, isClientId, isObject } from "@/lib/records";
 import { isIntInRange } from "@/lib/validation";
 import { MAX_HISTORY, isComplete } from "./game";
@@ -18,6 +19,7 @@ export type StoredSession = Stored<SessionData>;
 export const sudokuHistory = createLocalHistory<SessionData>({
   suffix: "sudoku",
   parse: dataOrNull(parseSessionData),
+  countsAsActivity: sudokuCounts,
 });
 
 export const loadHistory = sudokuHistory.load;
