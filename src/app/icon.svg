@@ -1,16 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect x="0" y="0" width="15" height="15" rx="3.5" fill="#0a0a0a"/>
-  <rect x="17" y="0" width="15" height="15" rx="3.5" fill="#52525b"/>
-  <rect x="0" y="17" width="15" height="15" rx="3.5" fill="#52525b"/>
-  <rect x="17" y="17" width="15" height="15" rx="3.5" fill="#0a0a0a"/>
-  <g fill="none" stroke="#fafafa" stroke-width="2.4" stroke-linecap="round">
-    <path d="M4.5 7.5h6M7.5 4.5v6"/>
-    <path d="M21.5 7.5h6"/>
-    <path d="M5.5 21.5l4 4M9.5 21.5l-4 4"/>
-    <path d="M21.5 24.5h6"/>
-  </g>
-  <g fill="#fafafa">
-    <circle cx="24.5" cy="21" r="1.3"/>
-    <circle cx="24.5" cy="28" r="1.3"/>
-  </g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 802 742"><path d="M80 0H308A80 80 0 0 1 388 80V280A80 80 0 0 1 308 360H80A80 80 0 0 1 0 280V80A80 80 0 0 1 80 0ZM157 110A34 34 0 0 1 225 110V154H280A34 34 0 0 1 280 222H225V263A34 34 0 0 1 157 263V222H103A34 34 0 0 1 103 154H157Z" fill="#ff2424" fill-rule="evenodd"></path><path d="M494 0H722A80 80 0 0 1 802 80V280A80 80 0 0 1 722 360H494A80 80 0 0 1 414 280V80A80 80 0 0 1 494 0ZM513 154H702A34 34 0 0 1 702 222H513A34 34 0 0 1 513 154Z" fill="#0575ff" fill-rule="evenodd"></path><path d="M80 382H308A80 80 0 0 1 388 462V662A80 80 0 0 1 308 742H80A80 80 0 0 1 0 662V462A80 80 0 0 1 80 382ZM194 517.9L250.18 462.73A34 34 0 0 1 297.82 511.27L242.53 565.5L297.82 619.73A34 34 0 0 1 250.18 668.27L194 613.1L137.82 668.27A34 34 0 0 1 90.18 619.73L145.47 565.5L90.18 511.27A34 34 0 0 1 137.82 462.73Z" fill="#04c45f" fill-rule="evenodd"></path><path d="M494 382H722A80 80 0 0 1 802 462V662A80 80 0 0 1 722 742H494A80 80 0 0 1 414 662V462A80 80 0 0 1 494 382ZM500 522.5H710A36.5 36.5 0 0 1 710 595.5H500A36.5 36.5 0 0 1 500 522.5ZM563 474a40 40 0 1 0 80 0a40 40 0 1 0 -80 0ZM563 650a40 40 0 1 0 80 0a40 40 0 1 0 -80 0Z" fill="#ffcc00" fill-rule="evenodd"></path></svg>

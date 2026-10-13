@@ -37,7 +37,7 @@ Approved scope: session summary page, progress charts, timed challenge mode, wor
 | Practice screen: countdown and redirect to summary | Not started |
 | Setup screen: timed options and settings | Not started |
 | Progress charts and recent-sessions list | Not started |
-| Settings page with saved values (`src/lib/settings.ts`) | Not started |
+| Settings page with saved values (`src/features/settings/lib/settings.ts`) | Not started |
 | Personal-best tracking for timed sessions | Not started |
 
 `tsc --noEmit` passed after the backend work. Lint and build have not been re-run since, and none of the new pieces have been tested at runtime.

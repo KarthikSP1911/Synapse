@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { LOGO_VIEW_BOX, logoShapes } from "@/components/layout/logo-mark";
 
 /** Icon files the web app manifest points at. `maskable` icons keep the mark inside the safe zone so Android can crop them to any shape. */
 export const PWA_ICONS = {
@@ -33,19 +34,8 @@ export function renderPwaIcon(file: PwaIconFile) {
           background: TILE,
         }}
       >
-        <svg width={mark} height={mark} viewBox="0 0 32 32">
-          <rect x="0" y="0" width="15" height="15" rx="3.5" fill="#fafafa" />
-          <rect x="17" y="0" width="15" height="15" rx="3.5" fill="#71717a" />
-          <rect x="0" y="17" width="15" height="15" rx="3.5" fill="#71717a" />
-          <rect x="17" y="17" width="15" height="15" rx="3.5" fill="#fafafa" />
-          <g fill="none" stroke={TILE} strokeWidth="2.4" strokeLinecap="round">
-            <path d="M4.5 7.5h6M7.5 4.5v6" />
-            <path d="M21.5 7.5h6" />
-            <path d="M5.5 21.5l4 4M9.5 21.5l-4 4" />
-            <path d="M21.5 24.5h6" />
-          </g>
-          <circle cx="24.5" cy="21" r="1.3" fill={TILE} />
-          <circle cx="24.5" cy="28" r="1.3" fill={TILE} />
+        <svg width={mark} height={mark} viewBox={LOGO_VIEW_BOX}>
+          {logoShapes()}
         </svg>
       </div>
     ),

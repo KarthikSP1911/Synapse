@@ -349,26 +349,20 @@ html[data-splash="skip"] .splash {
     visibility: hidden;
   }
 }
-.splash-logo rect {
+.splash-logo path {
   transform-box: fill-box;
   transform-origin: center;
   animation: splash-tile 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
 }
-.splash-logo rect:nth-of-type(1) { animation-delay: 0.05s; }
-.splash-logo rect:nth-of-type(2) { animation-delay: 0.15s; }
-.splash-logo rect:nth-of-type(3) { animation-delay: 0.25s; }
-.splash-logo rect:nth-of-type(4) { animation-delay: 0.35s; }
-.splash-logo g {
-  animation: splash-fade 0.4s ease-out 0.6s both;
-}
+.splash-logo path:nth-of-type(1) { animation-delay: 0.05s; }
+.splash-logo path:nth-of-type(2) { animation-delay: 0.15s; }
+.splash-logo path:nth-of-type(3) { animation-delay: 0.25s; }
+.splash-logo path:nth-of-type(4) { animation-delay: 0.35s; }
 .splash-name {
   animation: splash-rise 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) 0.55s both;
 }
 @keyframes splash-tile {
   from { opacity: 0; transform: scale(0.3); }
-}
-@keyframes splash-fade {
-  from { opacity: 0; }
 }
 @keyframes splash-rise {
   from { opacity: 0; transform: translateY(10px); }
