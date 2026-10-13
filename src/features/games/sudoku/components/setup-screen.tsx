@@ -51,7 +51,7 @@ export function SetupScreen({
             Difficulty
           </h2>
           <p className="mt-0.5 text-sm text-muted-foreground">Set by the techniques a puzzle needs, not by how many cells are empty.</p>
-          <div role="group" aria-labelledby="sdk-difficulty" className="mt-4 grid gap-2 sm:grid-cols-2">
+          <div role="group" aria-labelledby="sdk-difficulty" className="mt-4 grid grid-cols-2 gap-2">
             {DIFFICULTIES.map((d) => {
               const active = d === difficulty;
               const best = stats?.byDifficulty[d].bestTimeMs ?? null;
@@ -63,7 +63,7 @@ export function SetupScreen({
                   onClick={() => onDifficulty(d)}
                   style={active ? { borderColor: ACCENT.sudoku, boxShadow: `0 0 0 1px ${ACCENT.sudoku}` } : undefined}
                   className={cn(
-                    "flex flex-col items-start gap-1 rounded-xl border p-4 text-left transition-[color,background-color,border-color,transform] duration-150 active:scale-[0.98]",
+                    "flex flex-col items-start gap-1 rounded-xl border p-3 text-left transition-[color,background-color,border-color,transform] duration-150 active:scale-[0.98]",
                     "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
                     active ? "bg-card" : "border-border bg-background hover:border-input hover:bg-accent/60"
                   )}
@@ -94,7 +94,32 @@ export function SetupScreen({
         </section>
       </div>
 
-      <aside className="space-y-4 lg:sticky lg:top-20" aria-label="Start">
+      {/* Phones: the way in stays on screen above the tab bar instead of sitting at the end of a long page. */}
+      <div className="sdk-start-bar -mx-5 border-t border-border bg-background/90 px-5 py-3 backdrop-blur-md sm:-mx-6 sm:px-6 lg:hidden">
+        {saved && (
+          <p className="mb-2 text-xs text-muted-foreground">
+            Unfinished {DIFFICULTY_LABEL[saved.difficulty]} · {formatTime(elapsedAt(saved, 0))} played · {left} {left === 1 ? "cell" : "cells"} left
+          </p>
+        )}
+        <div className="flex gap-2">
+          {saved && (
+            <Button size="lg" className="flex-1" onClick={onResume}>
+              <Play /> Resume
+            </Button>
+          )}
+          <Button size="lg" variant={saved ? "outline" : "default"} className="flex-1" disabled={generating} onClick={onStart}>
+            {generating ? "Building…" : saved ? "New game" : `Start ${DIFFICULTY_LABEL[difficulty]} game`}
+            {!generating && !saved && <ArrowRight />}
+          </Button>
+        </div>
+        {failed && (
+          <p role="alert" className="mt-2 text-center text-xs text-destructive">
+            A puzzle could not be built. Please try again.
+          </p>
+        )}
+      </div>
+
+      <aside className="hidden space-y-4 lg:sticky lg:top-20 lg:block" aria-label="Start">
         {saved && (
           <div className="rounded-xl border border-border bg-card p-5 shadow-card" style={{ borderColor: ACCENT.sudoku }}>
             <h2 className="text-[15px] font-semibold tracking-tight">Unfinished game</h2>
