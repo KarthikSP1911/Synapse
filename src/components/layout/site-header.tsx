@@ -72,7 +72,7 @@ export function SiteHeader({ viewer }: { viewer: "user" | "guest" | null }) {
   const profileActive = pathname.startsWith("/profile");
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background/80 pt-[env(safe-area-inset-top)] backdrop-blur-md">
+    <header data-chrome className="sticky top-0 z-50 border-b border-border bg-background/80 pt-[env(safe-area-inset-top)] backdrop-blur-md">
       <div className="container flex h-14 items-center justify-between gap-4">
         <Logo />
         <div className="flex items-center gap-1 sm:gap-3">
@@ -120,8 +120,9 @@ export function MobileNav({ viewer }: { viewer: "user" | "guest" | null }) {
   return (
     <>
       {/* Keeps the end of every page clear of the fixed bar. */}
-      <div aria-hidden className="sm:hidden" style={{ height: `calc(${MOBILE_NAV_HEIGHT} + env(safe-area-inset-bottom))` }} />
+      <div data-chrome aria-hidden className="sm:hidden" style={{ height: `calc(${MOBILE_NAV_HEIGHT} + env(safe-area-inset-bottom))` }} />
       <nav
+        data-chrome
         aria-label="Main"
         className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-md sm:hidden"
       >
