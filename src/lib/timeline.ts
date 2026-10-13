@@ -16,7 +16,7 @@ export type TimelineEvent =
   | { at: number; kind: "answer" };
 
 /** How long a round shows its items: how many, for how long each, and the gap between them. */
-export interface TimelineShape {
+interface TimelineShape {
   flashes: number;
   displayMs: number;
   gapMs: number;

@@ -7,7 +7,7 @@ import { buildTimeline, runTimeline, type Timers, type TimelineEvent } from "@/l
 
 export type CountdownStep = { kind: "count"; value: number } | { kind: "go" } | { kind: "done" };
 
-export const countdownEvents = (): TimelineEvent[] => buildTimeline({ flashes: 0, displayMs: 0, gapMs: 0 });
+const countdownEvents = (): TimelineEvent[] => buildTimeline({ flashes: 0, displayMs: 0, gapMs: 0 });
 
 /** How long the countdown and the signal last, in milliseconds. */
 export const countdownLength = (): number => countdownEvents().at(-1)?.at ?? 0;

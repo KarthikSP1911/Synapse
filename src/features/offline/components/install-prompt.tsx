@@ -24,7 +24,7 @@ declare global {
 }
 
 /** Fired by that same script whenever it has stored a (new) install event. */
-export const INSTALLABLE_EVENT = "mathz:installable";
+const INSTALLABLE_EVENT = "mathz:installable";
 
 const STORAGE_KEY = "mathz-install-prompt";
 const SHOW_DELAY_MS = 4000;

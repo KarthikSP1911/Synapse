@@ -3,7 +3,7 @@ import { DIFFICULTIES, type Difficulty, type SessionData } from "./types";
 
 /** Progress figures over finished and abandoned games, worked out for each difficulty on its own. */
 
-export interface DifficultyStats {
+interface DifficultyStats {
   difficulty: Difficulty;
   /** Games started and ended, plus the unfinished one in progress, if any. */
   attempted: number;

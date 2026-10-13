@@ -21,7 +21,7 @@ export interface HistoryItem {
 /** A stored session; `synced: false` marks one the server has not confirmed yet (signed-in stores only). */
 export type Stored<T> = T & { synced?: false };
 
-export interface LocalHistoryOptions<T extends HistoryItem> {
+interface LocalHistoryOptions<T extends HistoryItem> {
   /** Appended to the store's key: `mathz:user:v1:5` becomes `mathz:user:v1:5:<suffix>`. */
   suffix: string;
   /** A strictly validated copy of untrusted stored data, or null if it is not a valid session. */

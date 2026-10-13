@@ -20,7 +20,7 @@ export const EXPONENT_BASE_MAX = 20;
 /** Largest exponent written in a question. */
 export const EXPONENT_LIMIT = 12;
 /** Largest exponent an answer may be: (2^12)^12 = 2^144 is the biggest a configuration can produce. */
-export const RESULT_EXPONENT_LIMIT = 150;
+const RESULT_EXPONENT_LIMIT = 150;
 /** Largest whole number, numerator or denominator any final-value answer may have. */
 export const EXPONENT_RESULT_MAX = 1_000_000;
 export const EXPONENT_RESULT_MIN = 10;
@@ -86,7 +86,7 @@ export function variantsFor(type: ExponentType, mode: ExponentMode): Array<{ var
     .map(([variant, shape]) => ({ variant, exps: shape.exps }));
 }
 
-export const isExponentType = (value: unknown): value is ExponentType =>
+const isExponentType = (value: unknown): value is ExponentType =>
   typeof value === "string" && Object.prototype.hasOwnProperty.call(SHAPES, value);
 
 // ---------------------------------------------------------------------------
@@ -176,7 +176,7 @@ const EXPONENT_FORMAT: AnswerFormat = { kind: "integer", signed: true };
 // Building a question
 // ---------------------------------------------------------------------------
 
-export interface ExponentCore {
+interface ExponentCore {
   prompt: string;
   answerFormat: AnswerFormat;
   answerText: string;

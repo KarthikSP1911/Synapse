@@ -16,7 +16,7 @@ export function nextBox(currentBox: number, isCorrect: boolean): number {
   return isCorrect ? Math.min(currentBox + 1, MAX_BOX) : 1;
 }
 
-export interface AttemptResult {
+interface AttemptResult {
   outcome: Outcome;
   /** The user asked for a hint before answering. */
   hinted: boolean;

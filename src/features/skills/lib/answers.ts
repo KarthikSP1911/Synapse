@@ -14,16 +14,16 @@ import { eq, isLowestTerms, parseDecimal, rat, type Rational } from "@/lib/ratio
  *  - Text that merely looks similar ("3/40" vs "3/4") is never matched by string comparison.
  */
 
-export const MAX_ANSWER_LENGTH = 24;
+const MAX_ANSWER_LENGTH = 24;
 
 export type ParsedAnswer =
   | { kind: "number"; value: Rational }
   | { kind: "fraction"; value: Rational; typedNumerator: bigint; typedDenominator: bigint }
   | { kind: "choice"; value: string };
 
-export type ParseResult = { ok: true; answer: ParsedAnswer } | { ok: false; reason: string };
+type ParseResult = { ok: true; answer: ParsedAnswer } | { ok: false; reason: string };
 
-export function parseAnswer(format: AnswerFormat, raw: unknown, choices?: Choice[]): ParseResult {
+function parseAnswer(format: AnswerFormat, raw: unknown, choices?: Choice[]): ParseResult {
   if (typeof raw !== "string") return { ok: false, reason: "Enter an answer." };
   const text = raw.trim();
   if (text === "") return { ok: false, reason: "Enter an answer." };

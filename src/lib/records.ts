@@ -17,11 +17,11 @@ export const isEpoch = (v: unknown): v is number => typeof v === "number" && Num
 export const isClientId = (v: unknown): v is string => typeof v === "string" && CLIENT_ID.test(v);
 
 /** A record that failed validation. `clientId` is null when the record was too broken to identify. */
-export type Rejected = { ok: false; clientId: string | null; reason: string };
+type Rejected = { ok: false; clientId: string | null; reason: string };
 export type Parsed<T> = { ok: true; data: T } | Rejected;
 
 /** The result of `openRecord`: the fields every finished-session record has, checked, plus a way to reject. */
-export type RecordHead = {
+type RecordHead = {
   ok: true;
   raw: Record<string, unknown>;
   clientId: string;

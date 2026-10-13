@@ -10,7 +10,7 @@ import { questionFromId } from "@/features/skills/lib/build";
 import { skillHref } from "@/features/skills/lib/routes";
 import type { Skill } from "@/features/skills/lib/types";
 
-export interface SummarySession {
+interface SummarySession {
   skill: Skill;
   mode: string;
   durationSeconds: number | null;
@@ -25,7 +25,7 @@ export interface SummarySession {
   endedAt: Date | null;
 }
 
-export interface MissedQuestion {
+interface MissedQuestion {
   questionId: string;
   prompt: string;
   correctAnswerText: string;

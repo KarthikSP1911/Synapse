@@ -60,7 +60,7 @@ export { isSkill };
 // Session creation requests
 // ---------------------------------------------------------------------------
 
-export interface NewPracticeSession {
+interface NewPracticeSession {
   skill: Skill;
   mode: Exclude<SessionMode, "review">;
   focus: Focus;
@@ -83,7 +83,7 @@ export interface ReviewRequest {
   exerciseType?: string;
 }
 
-export type SessionRequest =
+type SessionRequest =
   | { ok: true; kind: "practice"; session: NewPracticeSession }
   | { ok: true; kind: "review"; review: ReviewRequest; weakFocusPercent: number; recentWindow: number; questionTimeLimitSeconds: number | null }
   | { ok: false; error: string };

@@ -1,4 +1,4 @@
-export interface SquareRangeInput {
+interface SquareRangeInput {
   n: number;
   attempts: number;
   correct: number;

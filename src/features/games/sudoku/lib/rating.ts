@@ -12,11 +12,11 @@ import { CELLS, SIZE, type Difficulty } from "./types";
  *   expert  these techniques run out: the puzzle needs deeper chains or trial and error
  */
 
-export const TECHNIQUES = ["naked-single", "hidden-single", "locked-candidates", "naked-pair", "hidden-pair", "naked-triple", "hidden-triple", "x-wing", "xy-wing"] as const;
-export type Technique = (typeof TECHNIQUES)[number];
+const TECHNIQUES = ["naked-single", "hidden-single", "locked-candidates", "naked-pair", "hidden-pair", "naked-triple", "hidden-triple", "x-wing", "xy-wing"] as const;
+type Technique = (typeof TECHNIQUES)[number];
 
 /** 1 = easy, 2 = medium, 3 = hard. */
-export const TECHNIQUE_LEVEL: Record<Technique, 1 | 2 | 3> = {
+const TECHNIQUE_LEVEL: Record<Technique, 1 | 2 | 3> = {
   "naked-single": 1,
   "hidden-single": 1,
   "locked-candidates": 2,
@@ -28,9 +28,9 @@ export const TECHNIQUE_LEVEL: Record<Technique, 1 | 2 | 3> = {
   "xy-wing": 3,
 };
 
-export const LEVEL_DIFFICULTY: Record<1 | 2 | 3, Difficulty> = { 1: "easy", 2: "medium", 3: "hard" };
+const LEVEL_DIFFICULTY: Record<1 | 2 | 3, Difficulty> = { 1: "easy", 2: "medium", 3: "hard" };
 
-export interface Rating {
+interface Rating {
   /** Whether the listed techniques alone completed the grid. */
   solved: boolean;
   /** The grid contradicts itself (an empty cell with no candidate left); never the case for a valid puzzle. */

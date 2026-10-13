@@ -25,7 +25,7 @@ export function showsMobileNav(pathname: string, viewer: "user" | "guest" | null
 /** Height of the tab bar without the device's bottom inset; other bottom-fixed UI offsets itself by this much. */
 export const MOBILE_NAV_HEIGHT = "3.75rem";
 
-export function Logo() {
+function Logo() {
   return (
     <Link href="/" className="flex items-center gap-2.5 rounded-md" aria-label="Mathz home">
       <LogoMark className="size-7" />

@@ -33,7 +33,7 @@ const ALL_TYPES = EXERCISE_TYPES.exponents as readonly ExponentType[];
  * Medium: bigger exponents, missing bases and exponents, power of a power and the zero exponent.
  * Hard: negative exponents and bases, mixed laws, brackets and multi-step simplifying.
  */
-export const EXPONENT_PRESETS: Record<"easy" | "medium" | "hard", ExponentOptions & { exerciseTypes: ExponentType[] }> = {
+const EXPONENT_PRESETS: Record<"easy" | "medium" | "hard", ExponentOptions & { exerciseTypes: ExponentType[] }> = {
   easy: {
     exerciseTypes: ["evaluate", "mul-law", "div-law"],
     baseMin: 2,
@@ -108,7 +108,7 @@ export function presetFor(level: "easy" | "medium" | "hard", answerMode: Exponen
 }
 
 /** The exponents a configuration may write: its range, narrowed to the kinds that are switched on. */
-export function allowedExponents(c: Pick<ExponentsConfig, "expMin" | "expMax"> & Kinds): number[] {
+function allowedExponents(c: Pick<ExponentsConfig, "expMin" | "expMax"> & Kinds): number[] {
   const out: number[] = [];
   for (let e = c.expMin; e <= c.expMax; e += 1) {
     if ((e > 0 && c.allowPositive) || (e === 0 && c.allowZero) || (e < 0 && c.allowNegative)) out.push(e);
@@ -120,7 +120,7 @@ export function allowedExponents(c: Pick<ExponentsConfig, "expMin" | "expMax"> &
 // Validation
 // ---------------------------------------------------------------------------
 
-export type ExponentsConfigResult = { ok: true; config: ExponentsConfig } | { ok: false; error: string };
+type ExponentsConfigResult = { ok: true; config: ExponentsConfig } | { ok: false; error: string };
 
 const fail = (error: string): ExponentsConfigResult => ({ ok: false, error });
 const isInt = (v: unknown, min: number, max: number): v is number => typeof v === "number" && Number.isInteger(v) && v >= min && v <= max;

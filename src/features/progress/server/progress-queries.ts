@@ -218,7 +218,7 @@ export async function getWeakConcepts(userId: number, filter: SkillFilter, limit
 // Spaced repetition
 // ---------------------------------------------------------------------------
 
-export interface UpcomingReviews {
+interface UpcomingReviews {
   dueNow: number;
   /** Items becoming due, bucketed by how far away their review date is. */
   upcoming: { label: string; count: number }[];

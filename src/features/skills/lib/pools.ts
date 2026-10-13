@@ -463,7 +463,7 @@ export function poolSizeByType(config: PracticeConfig): Partial<Record<ExerciseT
 // Config validation
 // ---------------------------------------------------------------------------
 
-export type ConfigResult = { ok: true; config: PracticeConfig } | { ok: false; error: string };
+type ConfigResult = { ok: true; config: PracticeConfig } | { ok: false; error: string };
 
 const fail = (error: string): ConfigResult => ({ ok: false, error });
 const isInt = (v: unknown, min: number, max: number): v is number =>

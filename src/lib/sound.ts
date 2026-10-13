@@ -3,7 +3,7 @@
  * offline). Browsers only allow sound after a tap or key press, so the player is `unlock`ed from the Start button.
  */
 
-export type Cue = "tick" | "go" | "correct" | "wrong";
+type Cue = "tick" | "go" | "correct" | "wrong";
 
 interface Note {
   /** Frequency in hertz. */

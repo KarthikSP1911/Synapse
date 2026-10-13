@@ -8,7 +8,7 @@ export const PWA_ICONS = {
   "maskable-512.png": { size: 512, maskable: true },
 } as const;
 
-export type PwaIconFile = keyof typeof PWA_ICONS;
+type PwaIconFile = keyof typeof PWA_ICONS;
 
 export const isPwaIconFile = (file: string): file is PwaIconFile => Object.hasOwn(PWA_ICONS, file);
 

@@ -11,7 +11,7 @@ export interface UploadReply {
   body: Record<string, unknown>;
 }
 
-export interface UploadOptions<Data> {
+interface UploadOptions<Data> {
   /** What a record is called in log lines, e.g. "2048 games". */
   label: string;
   parse: (raw: unknown) => Parsed<Data>;

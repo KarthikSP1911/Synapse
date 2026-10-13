@@ -3,7 +3,7 @@
  * user's own time zone, so an attempt late in the evening counts toward the day the user lived it.
  */
 
-export type DayCounts = ReadonlyMap<string, number>;
+type DayCounts = ReadonlyMap<string, number>;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -38,7 +38,7 @@ export function weekday(key: string): number {
   return new Date(parseDay(key)).getUTCDay();
 }
 
-export interface StreakStats {
+interface StreakStats {
   /** Consecutive active days up to today. A streak is still alive if today has no activity yet but yesterday had. */
   current: number;
   longest: number;
@@ -75,7 +75,7 @@ export interface HeatmapDay {
   future: boolean;
 }
 
-export interface HeatmapMonth {
+interface HeatmapMonth {
   /** Index of the week column the month label sits above. */
   week: number;
   label: string;

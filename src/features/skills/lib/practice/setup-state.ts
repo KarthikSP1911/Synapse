@@ -157,7 +157,7 @@ export function initialSetupState(settings: Settings): SetupState {
   };
 }
 
-export type ConfigFromState = { ok: true; config: PracticeConfig } | { ok: false; error: string };
+type ConfigFromState = { ok: true; config: PracticeConfig } | { ok: false; error: string };
 
 const toInt = (text: string) => (/^\d+$/.test(text) ? Number(text) : NaN);
 const toSignedInt = (text: string) => (/^-?\d+$/.test(text) ? Number(text) : NaN);

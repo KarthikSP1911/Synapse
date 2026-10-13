@@ -7,7 +7,7 @@ import type { Skill } from "@/features/skills/lib/types";
 
 export { MAX_REVIEW_DAYS, MAX_REVIEW_QUESTIONS };
 
-export interface MistakeScope {
+interface MistakeScope {
   userId: number;
   sessionId?: number;
   sinceDays?: number;

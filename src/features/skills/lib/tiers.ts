@@ -9,11 +9,11 @@ import { exponentCore } from "./exponents";
  */
 
 /** Common percentages everyone should know cold. */
-export const BEGINNER_PERCENTS = [1, 5, 10, 20, 25, 50, 75] as const;
+const BEGINNER_PERCENTS = [1, 5, 10, 20, 25, 50, 75] as const;
 /** Less common whole-number percentages. */
-export const INTERMEDIATE_PERCENTS = [2, 3, 4, 6, 8, 9, 12, 15, 18, 30, 35, 40, 45, 60, 65, 70, 80, 90] as const;
+const INTERMEDIATE_PERCENTS = [2, 3, 4, 6, 8, 9, 12, 15, 18, 30, 35, 40, 45, 60, 65, 70, 80, 90] as const;
 /** Decimal percentages and percentages above 100. */
-export const ADVANCED_PERCENTS = [0.5, 1.5, 2.5, 4.5, 7.5, 12.5, 17.5, 22.5, 37.5, 62.5, 87.5, 110, 120, 125, 150, 175, 200] as const;
+const ADVANCED_PERCENTS = [0.5, 1.5, 2.5, 4.5, 7.5, 12.5, 17.5, 22.5, 37.5, 62.5, 87.5, 110, 120, 125, 150, 175, 200] as const;
 
 export const PERCENTS_BY_DIFFICULTY: Record<Difficulty, readonly number[]> = {
   beginner: BEGINNER_PERCENTS,
@@ -21,31 +21,31 @@ export const PERCENTS_BY_DIFFICULTY: Record<Difficulty, readonly number[]> = {
   advanced: ADVANCED_PERCENTS,
 };
 
-export function percentTier(percent: number): Difficulty {
+function percentTier(percent: number): Difficulty {
   if ((BEGINNER_PERCENTS as readonly number[]).includes(percent)) return "beginner";
   return Number.isInteger(percent) && percent <= 100 ? "intermediate" : "advanced";
 }
 
 /** Tier of a fraction n/d by how familiar its denominator is. */
-export function fractionTier(n: number, d: number): Difficulty {
+function fractionTier(n: number, d: number): Difficulty {
   if (n > d) return "advanced";
   if ([2, 4, 5, 10].includes(d)) return "beginner";
   return d <= 50 ? "intermediate" : "advanced";
 }
 
-export function squareTier(n: number): Difficulty {
+function squareTier(n: number): Difficulty {
   return n <= 20 ? "beginner" : n <= 50 ? "intermediate" : "advanced";
 }
 
 /** Tier of an addition, subtraction or division by the size of its biggest number: two digits or fewer is beginner. */
-export function digitTier(biggest: number): Difficulty {
+function digitTier(biggest: number): Difficulty {
   return biggest < 100 ? "beginner" : biggest < 1000 ? "intermediate" : "advanced";
 }
 
 type Spec<S extends QuestionSpec["skill"]> = Extract<QuestionSpec, { skill: S }>;
 
 /** A rational as a plain percentage number (1/8 -> 12.5). Only used on values that end cleanly. */
-export function percentValue(r: Rational): number {
+function percentValue(r: Rational): number {
   return Number(toPercentNumber(r) ?? "NaN");
 }
 

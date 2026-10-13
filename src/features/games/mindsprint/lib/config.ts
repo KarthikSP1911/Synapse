@@ -106,7 +106,7 @@ const inRange = (v: unknown, min: number, max: number): v is number => Number.is
 /** `step` keeps timings on the grid the controls use (200, 300 ... not 237). */
 const onGrid = (v: unknown, { min, max, step }: { min: number; max: number; step: number }): v is number => inRange(v, min, max) && ((v as number) - min) % step === 0;
 
-export type ParsedRound = { ok: true; config: RoundConfig } | { ok: false; error: string };
+type ParsedRound = { ok: true; config: RoundConfig } | { ok: false; error: string };
 
 /** Strictly checks an untrusted round configuration (from storage or an upload) and returns a clean copy. */
 export function parseRoundConfig(raw: unknown): ParsedRound {

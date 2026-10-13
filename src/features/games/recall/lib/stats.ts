@@ -6,7 +6,7 @@ import { RECALL_MODES, type RecallMode, type SessionData } from "./types";
  * two-digit recall are different skills, so their sessions are never mixed.
  */
 
-export interface LengthBucket {
+interface LengthBucket {
   length: number;
   rounds: number;
   perfect: number;
@@ -26,7 +26,7 @@ export interface SessionSummary {
   longest: number;
 }
 
-export interface RecallStats {
+interface RecallStats {
   mode: RecallMode;
   sessions: number;
   rounds: number;

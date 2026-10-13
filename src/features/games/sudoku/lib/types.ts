@@ -60,7 +60,7 @@ export interface GameState {
   resumedAt: number | null;
 }
 
-export type HighlightMode = "instant" | "check";
+type HighlightMode = "instant" | "check";
 
 export interface SudokuSettings {
   /** Mark conflicting and wrong entries as they are made, or only when the player presses Check. */

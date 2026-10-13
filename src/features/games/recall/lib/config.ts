@@ -21,7 +21,7 @@ const PRESETS: Record<RecallMode, Record<Exclude<Difficulty, "custom">, Preset>>
   },
 };
 
-export const DEFAULT_ROUNDS = 5;
+const DEFAULT_ROUNDS = 5;
 
 /** A configuration for a mode and difficulty. "Custom" starts from the medium values. */
 export function configFor(mode: RecallMode, difficulty: Difficulty, rest: Partial<Pick<RecallConfig, "rounds" | "progressive" | "partialCredit">> = {}): RecallConfig {
@@ -43,7 +43,7 @@ export function difficultyOf(config: Pick<RecallConfig, "mode" | "length" | "dis
 const inRange = (v: unknown, min: number, max: number): v is number => Number.isInteger(v) && (v as number) >= min && (v as number) <= max;
 const onGrid = (v: unknown, { min, max, step }: { min: number; max: number; step: number }): v is number => inRange(v, min, max) && ((v as number) - min) % step === 0;
 
-export type ParsedConfig = { ok: true; config: RecallConfig } | { ok: false; error: string };
+type ParsedConfig = { ok: true; config: RecallConfig } | { ok: false; error: string };
 
 /** Strictly checks an untrusted configuration (from storage or an upload) and returns a clean copy. */
 export function parseConfig(raw: unknown): ParsedConfig {

@@ -18,11 +18,11 @@ import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, decoyHash, hashPassword, veri
  */
 
 /** "Remember me" keeps the login for 12 months. */
-export const REMEMBER_MS = 365 * 24 * 60 * 60 * 1000;
+const REMEMBER_MS = 365 * 24 * 60 * 60 * 1000;
 /** Without it the cookie dies with the browser, and the session row expires after a day regardless. */
-export const SHORT_SESSION_MS = 24 * 60 * 60 * 1000;
+const SHORT_SESSION_MS = 24 * 60 * 60 * 1000;
 
-export interface AuthUser {
+interface AuthUser {
   id: number;
   email: string;
   timezone: string;
@@ -115,7 +115,7 @@ export const getCurrentUser = cache(async (): Promise<AuthUser | null> => {
 });
 
 /** Who is looking at a page: a signed-in user, a guest, or nobody (who belongs on the login screen). */
-export type Viewer = { kind: "user"; user: AuthUser } | { kind: "guest" };
+type Viewer = { kind: "user"; user: AuthUser } | { kind: "guest" };
 
 export async function getViewer(): Promise<Viewer | null> {
   const user = await getCurrentUser();
@@ -144,7 +144,7 @@ export async function requireUser(): Promise<AuthUser> {
 // Sign up and log in
 // ---------------------------------------------------------------------------
 
-export type AuthResult = { ok: true; userId: number } | { ok: false; error: string };
+type AuthResult = { ok: true; userId: number } | { ok: false; error: string };
 
 const zoneOrUtc = (zone: unknown) => (isValidTimeZone(zone) ? zone : "UTC");
 

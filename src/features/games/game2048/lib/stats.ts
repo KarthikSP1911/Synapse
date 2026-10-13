@@ -2,7 +2,7 @@ import { WIN_TILE, type SessionData } from "./types";
 
 /** Progress figures over every game that ended or was given up. */
 
-export interface TileCount {
+interface TileCount {
   tile: number;
   /** Games whose highest tile was exactly this. */
   games: number;

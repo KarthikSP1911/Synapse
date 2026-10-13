@@ -23,7 +23,7 @@ export interface SessionSummary {
   accuracy: number;
 }
 
-export interface MindsprintStats {
+interface MindsprintStats {
   sessions: number;
   rounds: number;
   correct: number;

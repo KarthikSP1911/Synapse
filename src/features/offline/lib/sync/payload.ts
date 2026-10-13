@@ -34,7 +34,7 @@ export interface ValidAttempt {
 }
 
 /** The columns of a session that come from the upload, after validation. */
-export interface SessionFields {
+interface SessionFields {
   skill: Skill;
   mode: SessionMode;
   focus: Focus;
@@ -58,7 +58,7 @@ export interface ValidSession {
   attempts: ValidAttempt[];
 }
 
-export type SessionResult = { ok: true; session: ValidSession } | { ok: false; clientId: string | null; reason: string };
+type SessionResult = { ok: true; session: ValidSession } | { ok: false; clientId: string | null; reason: string };
 
 /** The request body as a list of sessions, or an error for the whole request. */
 export function parseSyncBody(body: unknown): { ok: true; sessions: unknown[] } | { ok: false; error: string } {

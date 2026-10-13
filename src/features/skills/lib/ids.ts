@@ -20,7 +20,7 @@ import { decimalPlaces, gcd, isTerminating, mul, parseDecimal, PERCENT, rat, typ
 
 export const MAX_BASE = 10000;
 /** Largest operand of an addition, subtraction or division question (four digits). */
-export const MAX_OPERAND_VALUE = 9999;
+const MAX_OPERAND_VALUE = 9999;
 const MAX_PERCENT = 500;
 
 /** Formats a number that only ever has a couple of decimals, exactly as it appears in ids. */

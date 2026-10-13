@@ -26,7 +26,7 @@ export function parseValue(text: string): Rational | null {
 }
 
 /** The canonical string for a value (what flashes and answers are stored as), or null if it never terminates. */
-export const valueToString = (value: Rational): string | null => toDecimalString(value);
+const valueToString = (value: Rational): string | null => toDecimalString(value);
 
 /** One step of the calculation; null for division by zero. */
 export function applyOperation(op: Operation, total: Rational, operand: Rational): Rational | null {
@@ -42,14 +42,14 @@ export function applyOperation(op: Operation, total: Rational, operand: Rational
   }
 }
 
-export interface Step {
+interface Step {
   op: Operation | null;
   value: string;
   /** The running total after this step. */
   total: string;
 }
 
-export type Evaluation = { ok: true; steps: Step[]; answer: string } | { ok: false; reason: string };
+type Evaluation = { ok: true; steps: Step[]; answer: string } | { ok: false; reason: string };
 
 /** Evaluates a sequence left to right. Fails on malformed input, division by zero or a result that is not a finite decimal. */
 export function evaluateSequence(flashes: readonly Flash[]): Evaluation {
@@ -184,7 +184,7 @@ export const displayNumber = (value: string): string => value.replace("-", "−"
 export const displayOperand = (value: string): string => (value.startsWith("-") ? `(${displayNumber(value)})` : value);
 
 /** "× 3" for a flash, or just the number for the first one. */
-export const displayFlash = (flash: Flash): string => (flash.op === null ? displayNumber(flash.value) : `${OPERATION_SYMBOL[flash.op]} ${displayOperand(flash.value)}`);
+const displayFlash = (flash: Flash): string => (flash.op === null ? displayNumber(flash.value) : `${OPERATION_SYMBOL[flash.op]} ${displayOperand(flash.value)}`);
 
 /** The whole calculation on one line: "20 × 3 − 5 = 55". */
 export function displayCalculation(flashes: readonly Flash[], answer: string): string {

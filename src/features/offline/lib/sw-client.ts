@@ -5,7 +5,7 @@ import { SKILL_PATHS } from "@/features/skills/lib/routes";
 /** Every screen that should open with no connection. `/play*` are the shells all local sessions share; each skill has its own page under `/skills`. */
 const OFFLINE_ROUTES = ["/", ...SKILL_PATHS, "/play", "/play/summary", "/games/mindsprint", "/games/recall", "/games/sudoku", "/games/2048", "/progress", "/tables", "/settings"];
 
-export type ServiceWorkerMessage = { type: "warm"; urls: string[] } | { type: "clear-pages" } | { type: "skip-waiting" };
+type ServiceWorkerMessage = { type: "warm"; urls: string[] } | { type: "clear-pages" } | { type: "skip-waiting" };
 
 /** Sends a message to the active worker (waiting for it if the page has not been claimed yet). Silently does nothing without one. */
 export function postToServiceWorker(message: ServiceWorkerMessage): void {

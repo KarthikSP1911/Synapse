@@ -13,7 +13,7 @@ import { readJson } from "@/lib/validation";
 export const MAX_COMPRESSED_BYTES = 1024 * 1024;
 export const MAX_DECOMPRESSED_BYTES = 4 * 1024 * 1024;
 
-export type SyncBody = { ok: true; body: Record<string, unknown> | null } | { ok: false; status: 413 | 415; error: string };
+type SyncBody = { ok: true; body: Record<string, unknown> | null } | { ok: false; status: 413 | 415; error: string };
 
 export async function readSyncBody(request: Request): Promise<SyncBody> {
   const encoding = request.headers.get("content-encoding")?.trim().toLowerCase() ?? "";

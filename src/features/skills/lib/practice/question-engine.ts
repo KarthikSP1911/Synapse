@@ -7,7 +7,7 @@ import type { Focus, Question } from "@/features/skills/lib/types";
 import { MIN_CONCEPT_ATTEMPTS, WEAK_SCORE_THRESHOLD, selectNext, selectReview, type StatLite } from "@/features/skills/lib/practice/selection";
 import { reviewQuestionIds, sessionConfig, type SessionShape } from "@/features/skills/lib/practice/sessions";
 
-export interface EngineSession extends SessionShape {
+interface EngineSession extends SessionShape {
   id: number;
   userId: number | null;
   focus: string;

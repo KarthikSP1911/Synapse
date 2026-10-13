@@ -13,7 +13,7 @@ const EMPTY_CELL: CellState = { value: 0, notes: 0, hinted: false };
 
 export const isGiven = (state: Pick<GameState, "puzzle">, index: number): boolean => state.puzzle[index] !== "0";
 
-export const valuesOf = (cells: readonly CellState[]): number[] => cells.map((c) => c.value);
+const valuesOf = (cells: readonly CellState[]): number[] => cells.map((c) => c.value);
 
 export function newGame(puzzle: Puzzle, clientId: string, now: number): GameState {
   const grid = parseGrid(puzzle.puzzle);
@@ -67,7 +67,7 @@ export function freezeForStorage(state: GameState, now: number): GameState {
 // Moves
 // ---------------------------------------------------------------------------
 
-export interface EntryOptions {
+interface EntryOptions {
   /** Enter pencil marks instead of a digit. */
   notes: boolean;
   /** Count a wrong digit as a mistake. */
@@ -117,7 +117,7 @@ function changesFrom(state: GameState, pending: Map<number, CellState>): CellCha
 }
 
 /** Whether the player may change a cell: it must not be a clue or a revealed hint, and the game must be running. */
-export const isEditable = (state: GameState, index: number): boolean => state.status === "playing" && !isGiven(state, index) && !state.cells[index].hinted;
+const isEditable = (state: GameState, index: number): boolean => state.status === "playing" && !isGiven(state, index) && !state.cells[index].hinted;
 
 /**
  * Puts a digit in a cell, or switches a pencil mark on or off. Clues and revealed hints cannot be changed. In

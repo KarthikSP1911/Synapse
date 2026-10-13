@@ -3,7 +3,7 @@
 import { useSyncExternalStore } from "react";
 
 /** What the connection badge shows: whether the device is online, whether an upload is running, and how much is waiting. */
-export interface SyncStatus {
+interface SyncStatus {
   online: boolean;
   syncing: boolean;
   /** Sessions with answers that the server has not confirmed yet. */
@@ -23,7 +23,7 @@ export function setSyncStatus(patch: Partial<SyncStatus>): void {
   listeners.forEach((l) => l());
 }
 
-export const getSyncStatus = (): SyncStatus => status;
+const getSyncStatus = (): SyncStatus => status;
 
 function subscribe(listener: () => void): () => void {
   listeners.add(listener);

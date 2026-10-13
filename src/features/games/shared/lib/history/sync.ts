@@ -12,7 +12,7 @@ import { MAX_UPLOAD_SESSIONS } from "./upload";
 
 const REQUEST_TIMEOUT_MS = 20000;
 
-export type HistorySyncResult = { ok: true; uploaded: number; pulled: number } | { ok: false; reason: "signed-out" | "network" | "server"; uploaded: number };
+type HistorySyncResult = { ok: true; uploaded: number; pulled: number } | { ok: false; reason: "signed-out" | "network" | "server"; uploaded: number };
 
 async function request(fetcher: typeof fetch, url: string, init?: RequestInit): Promise<Response> {
   const controller = new AbortController();
@@ -24,7 +24,7 @@ async function request(fetcher: typeof fetch, url: string, init?: RequestInit): 
   }
 }
 
-export interface HistorySyncOptions<T extends HistoryItem> {
+interface HistorySyncOptions<T extends HistoryItem> {
   history: ReturnType<typeof createLocalHistory<T>>;
   /** e.g. `/api/sync/mindsprint`: POST takes `{ sessions }`, GET returns `{ sessions }`. */
   endpoint: string;

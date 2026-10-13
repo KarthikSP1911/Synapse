@@ -2,7 +2,7 @@
 
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
-export interface SessionPoint {
+interface SessionPoint {
   label: string;
   accuracy: number;
   avgSeconds: number;

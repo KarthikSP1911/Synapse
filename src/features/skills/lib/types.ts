@@ -74,8 +74,8 @@ export interface Choice {
 // Question specs (operands only)
 // ---------------------------------------------------------------------------
 
-export type PercentConvertDirection = "d2p" | "p2d" | "p2f" | "f2p";
-export type FractionConvertDirection = "f2d" | "f2p" | "d2f" | "p2f";
+type PercentConvertDirection = "d2p" | "p2d" | "p2f" | "f2p";
+type FractionConvertDirection = "f2d" | "f2p" | "d2f" | "p2f";
 
 export type QuestionSpec =
   | { skill: "multiplication"; exerciseType: "multiply"; left: number; right: number }

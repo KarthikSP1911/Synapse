@@ -18,9 +18,9 @@ export interface SyncDeps {
   now: () => number;
 }
 
-export const defaultDeps = (): SyncDeps => ({ fetch: (...args) => fetch(...args), now: () => Date.now() });
+const defaultDeps = (): SyncDeps => ({ fetch: (...args) => fetch(...args), now: () => Date.now() });
 
-export type SyncOutcome =
+type SyncOutcome =
   | { ok: true; uploaded: number; rejected: number; pulledStats: boolean }
   | { ok: false; reason: "signed-out" | "network" | "server"; uploaded: number };
 
@@ -31,7 +31,7 @@ const lastActivity = (s: GuestSession) => s.attempts.reduce((latest, a) => Math.
 const fingerprint = (s: GuestSession) => `${s.attempts.length}:${s.actualQuestionCount}:${s.endedAt}:${s.pausedMs}:${s.pausedAt}`;
 
 /** Sessions waiting to be uploaded (`synced: false`), ignoring one still being played. */
-export function readyToUpload(data: GuestData, now: number): GuestSession[] {
+function readyToUpload(data: GuestData, now: number): GuestSession[] {
   return data.sessions.filter((s) => s.synced === false && s.clientId && (s.endedAt !== null || now - lastActivity(s) > IDLE_UPLOAD_MS));
 }
 

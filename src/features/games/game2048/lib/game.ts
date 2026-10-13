@@ -53,7 +53,7 @@ export function startClock(state: GameState, now: number): GameState {
 // Moves
 // ---------------------------------------------------------------------------
 
-export interface MoveOutcome {
+interface MoveOutcome {
   state: GameState;
   /** What moved, for animation; null when the move did nothing. */
   result: MoveResult | null;

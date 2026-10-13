@@ -21,7 +21,7 @@ const MISTAKE_CAP = 0.3;
 const HINT_SHARE = 0.03;
 const HINT_CAP = 0.25;
 
-export interface ScoreBreakdown {
+interface ScoreBreakdown {
   base: number;
   timeBonus: number;
   mistakePenalty: number;

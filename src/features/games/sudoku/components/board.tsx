@@ -63,7 +63,7 @@ const Cell = memo(function Cell({ index, cell, given, selected, related, match, 
   );
 });
 
-export interface BoardProps {
+interface BoardProps {
   cells: readonly CellState[];
   puzzle: string;
   selected: number | null;

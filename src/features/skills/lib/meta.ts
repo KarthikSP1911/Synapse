@@ -2,7 +2,7 @@ import type { Difficulty, ExerciseType, ExponentLevel, ExponentMode, Skill } fro
 
 /** Display text for skills and exercise types. No React here, so server and client share it. */
 
-export interface SkillMeta {
+interface SkillMeta {
   title: string;
   short: string;
   description: string;
@@ -51,7 +51,7 @@ export const SKILL_META: Record<Skill, SkillMeta> = {
   },
 };
 
-export interface ExerciseMeta {
+interface ExerciseMeta {
   label: string;
   description: string;
 }

@@ -24,7 +24,7 @@ export function entriesFromText(mode: RecallMode, text: string, length: number):
   return entries;
 }
 
-export type EntryCheck = { ok: true; entries: string[] } | { ok: false; reason: string; /** Zero-based boxes that are empty or incomplete. */ incomplete: number[] };
+type EntryCheck = { ok: true; entries: string[] } | { ok: false; reason: string; /** Zero-based boxes that are empty or incomplete. */ incomplete: number[] };
 
 /** Whether the boxes can be submitted: there is one box per item and each holds a complete item. */
 export function validateEntries(mode: RecallMode, length: number, entries: readonly string[]): EntryCheck {
@@ -45,7 +45,7 @@ export function validateEntries(mode: RecallMode, length: number, entries: reado
   };
 }
 
-export interface Comparison {
+interface Comparison {
   /** True at each position where the player entered the right item. */
   positions: boolean[];
   correct: number;

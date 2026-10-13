@@ -6,7 +6,7 @@ export const WEAK_SCORE_THRESHOLD = 50;
 /** Chance of drawing an item that is due for spaced-repetition review, when one exists. */
 export const DUE_PICK_PROBABILITY = 0.6;
 /** Unseen questions inherit this share of their concept's weakness score. */
-export const CONCEPT_WEIGHT = 0.5;
+const CONCEPT_WEIGHT = 0.5;
 /** A concept needs this many attempts before it can lift its unseen variations. */
 export const MIN_CONCEPT_ATTEMPTS = 3;
 
@@ -16,7 +16,7 @@ export interface StatLite {
   dueAt: Date | null;
 }
 
-export interface SelectionInput {
+interface SelectionInput {
   pool: readonly PoolItem[];
   /** Performance history keyed by question id (any skill; only pool ids are consulted). */
   stats: ReadonlyMap<string, StatLite>;

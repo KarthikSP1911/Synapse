@@ -25,7 +25,7 @@ export interface ItemStats {
   lastAttemptedAt: Date | null;
 }
 
-export interface AttemptInput {
+interface AttemptInput {
   outcome: Outcome;
   hinted: boolean;
   responseTimeMs: number;
@@ -35,7 +35,7 @@ export interface AttemptInput {
  * Average response above which an item counts as slow. Multiplication keeps its original 5 s;
  * the other skills involve several mental steps, so they get proportionally more time.
  */
-export const SLOW_RESPONSE_MS: Record<Skill, number> = {
+const SLOW_RESPONSE_MS: Record<Skill, number> = {
   multiplication: 5000,
   addition: 5000,
   subtraction: 6000,

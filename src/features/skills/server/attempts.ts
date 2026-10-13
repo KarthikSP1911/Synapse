@@ -6,7 +6,7 @@ import type { Outcome, Question } from "@/features/skills/lib/types";
 
 const SLOW_TABLE_RESPONSE_MS = 5000;
 
-export interface AttemptRecord {
+interface AttemptRecord {
   userId: number;
   sessionId: number;
   question: Question;

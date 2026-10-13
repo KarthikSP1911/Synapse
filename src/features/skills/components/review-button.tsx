@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import type { Skill } from "@/features/skills/lib/types";
 
 /** Where the mistakes come from: one session, or the last few days (optionally narrowed to a skill and exercise type). */
-export type ReviewSource =
+type ReviewSource =
   | { reviewSessionId: number }
   | { reviewRecentDays: number; skill?: Skill; exerciseType?: string };
 
