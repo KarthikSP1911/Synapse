@@ -99,7 +99,7 @@ Two columns were added to `pair_statistics` for spaced repetition (feature 6):
 - `POST /api/sessions` validates and stores both values.
 
 **To do:**
-- `src/lib/settings.ts` with defaults and `localStorage` load/save (wrapped in try/catch).
+- `src/features/settings/lib/settings.ts` with defaults and `localStorage` load/save (wrapped in try/catch).
 - Settings page as a form with Save, a "Saved" confirmation and reset to defaults.
 - Setup screen sends the saved values when it creates a session.
 
@@ -116,9 +116,9 @@ These are ideas only, not approved. Each one notes what it reuses, so it can be 
 - A "Review recent mistakes" option on the setup screen uses every pair answered wrong in the last 7 days.
 
 **As built:**
-- `POST /api/sessions` accepts `mode: "review"` with exactly one of `reviewSessionId` or `reviewRecentDays` (1–30). The server derives the pairs itself from `question_attempts` where `is_correct = false` (distinct pairs, most recent mistake first, at most 50) via `getMistakePairs` in `src/lib/mistakes.ts`. It answers 400 "No mistakes to review" when there are none.
+- `POST /api/sessions` accepts `mode: "review"` with exactly one of `reviewSessionId` or `reviewRecentDays` (1–30). The server derives the pairs itself from `question_attempts` where `is_correct = false` (distinct pairs, most recent mistake first, at most 50) via `getMistakePairs` in `src/features/skills/server/mistakes.ts`. It answers 400 "No mistakes to review" when there are none.
 - New nullable `pair_list` (jsonb) column on `practice_sessions`. The session's target is the number of pairs, so each missed pair is asked once, in random order, and the session ends on its own.
-- `getNextQuestion` in `src/lib/question-engine.ts` uses the list instead of the cross product and skips the weak/due logic in review sessions.
+- `getNextQuestion` in `src/features/skills/lib/practice/question-engine.ts` uses the list instead of the cross product and skips the weak/due logic in review sessions.
 - UI: `src/components/review-button.tsx` is used for "Retry missed" on the summary page (shown only when something was missed) and "Review mistakes from the last 7 days" on the setup screen.
 
 ### 6. Spaced repetition (implemented)
@@ -128,7 +128,7 @@ These are ideas only, not approved. Each one notes what it reuses, so it can be 
 **How it works:** a Leitner system with five boxes per pair. A correct answer moves the pair up a box and a wrong answer sends it back to box 1. Boxes are reviewed after 1, 2, 4, 8 and 16 days.
 
 **As built:**
-- New `box` (default 1) and `due_at` columns on `pair_statistics`, updated by `recordPair` in `src/app/api/sessions/[id]/attempt/route.ts`. The rules live in `src/lib/spaced-repetition.ts` (`nextBox`, `dueDateForBox`).
+- New `box` (default 1) and `due_at` columns on `pair_statistics`, updated by `recordPair` in `src/app/api/sessions/[id]/attempt/route.ts`. The rules live in `src/features/skills/lib/practice/spaced-repetition.ts` (`nextBox`, `dueDateForBox`).
 - Pairs answered before this feature have no `due_at`; they count as due until their next answer schedules them.
 - The question engine picks in this order: the weak-pair roll (Settings), then, with a 60% chance, a due pair from your selection, then uniform random. Recently asked pairs are still avoided.
 - The Progress page has a "Due for Review" card with the number of due pairs.

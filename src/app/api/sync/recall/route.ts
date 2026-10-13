@@ -1,9 +1,9 @@
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { recallSessions } from "@/db/schema";
-import { createHistoryRoute } from "@/lib/history/route";
-import { parseSessionData } from "@/lib/recall/records";
-import { scoreSession } from "@/lib/recall/scoring";
+import { createHistoryRoute } from "@/features/games/shared/lib/history/route";
+import { parseSessionData } from "@/features/games/recall/lib/records";
+import { scoreSession } from "@/features/games/recall/lib/scoring";
 
 export const dynamic = "force-dynamic";
 

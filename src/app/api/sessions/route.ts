@@ -2,12 +2,12 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { practiceSessions } from "@/db/schema";
 import { readJson } from "@/lib/validation";
-import { getMistakeQuestionIds } from "@/lib/mistakes";
-import { parseSessionRequest } from "@/lib/sessions";
+import { getMistakeQuestionIds } from "@/features/skills/server/mistakes";
+import { parseSessionRequest } from "@/features/skills/lib/practice/sessions";
 import { and, eq } from "drizzle-orm";
-import { getCurrentUser, unauthorized } from "@/lib/auth";
-import { isSkill } from "@/lib/sessions";
-import { EXERCISE_TYPES } from "@/lib/skills/types";
+import { getCurrentUser, unauthorized } from "@/features/auth/server/auth";
+import { isSkill } from "@/features/skills/lib/practice/sessions";
+import { EXERCISE_TYPES } from "@/features/skills/lib/types";
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();

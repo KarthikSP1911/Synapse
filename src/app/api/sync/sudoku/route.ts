@@ -1,9 +1,9 @@
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { sudokuSessions } from "@/db/schema";
-import { createHistoryRoute } from "@/lib/history/route";
-import { parseSessionData } from "@/lib/sudoku/records";
-import { scoreGame } from "@/lib/sudoku/scoring";
+import { createHistoryRoute } from "@/features/games/shared/lib/history/route";
+import { parseSessionData } from "@/features/games/sudoku/lib/records";
+import { scoreGame } from "@/features/games/sudoku/lib/scoring";
 
 export const dynamic = "force-dynamic";
 

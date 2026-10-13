@@ -7,7 +7,7 @@
  *  - Icons and the manifest: cached copy first, refreshed in the background.
  *  - The page asks this worker to download the main screens (and the files they use) while online, so
  *    they are ready before the connection is lost ("warm").
- *  - API calls and Server Actions are never touched: practice runs on the device (see src/lib/guest/api.ts)
+ *  - API calls and Server Actions are never touched: practice runs on the device (see src/lib/offline/guest/api.ts)
  *    and its results are uploaded by the page when the network allows.
  *
  * The page and asset caches are not versioned on purpose: assets never change for a given URL, and pages

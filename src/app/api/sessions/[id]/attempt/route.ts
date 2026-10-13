@@ -2,12 +2,12 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { practiceSessions } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
-import { recordAttempt } from "@/lib/attempts";
-import { getCurrentUser, unauthorized } from "@/lib/auth";
-import { checkAnswer } from "@/lib/skills/answers";
-import { questionFromId } from "@/lib/skills/build";
-import type { Outcome } from "@/lib/skills/types";
-import { isQuestionInSession } from "@/lib/sessions";
+import { recordAttempt } from "@/features/skills/server/attempts";
+import { getCurrentUser, unauthorized } from "@/features/auth/server/auth";
+import { checkAnswer } from "@/features/skills/lib/answers";
+import { questionFromId } from "@/features/skills/lib/build";
+import type { Outcome } from "@/features/skills/lib/types";
+import { isQuestionInSession } from "@/features/skills/lib/practice/sessions";
 import {
   MAX_RESPONSE_TIME_MS,
   QUESTION_LIMIT_SLACK_MS,

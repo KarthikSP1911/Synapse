@@ -1,5 +1,5 @@
-import SettingsForm from "@/components/settings-form";
-import { Page, PageHeader } from "@/components/page-header";
+import SettingsForm from "@/features/settings/components/settings-form";
+import { Page, PageHeader } from "@/components/layout/page-header";
 
 export const metadata = { title: "Settings" };
 

@@ -1,8 +1,8 @@
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { game2048Sessions } from "@/db/schema";
-import { parseSessionData } from "@/lib/game2048/records";
-import { createHistoryRoute } from "@/lib/history/route";
+import { parseSessionData } from "@/features/games/game2048/lib/records";
+import { createHistoryRoute } from "@/features/games/shared/lib/history/route";
 
 export const dynamic = "force-dynamic";
 

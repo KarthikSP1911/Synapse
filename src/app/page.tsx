@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
-import PracticeHub from "@/components/practice-hub";
-import { getSkillSummaries } from "@/lib/progress-queries";
-import { legacySkillRedirect } from "@/lib/skills/routes";
-import { requireViewer } from "@/lib/auth";
+import PracticeHub from "@/features/skills/components/practice-hub";
+import { getSkillSummaries } from "@/features/progress/server/progress-queries";
+import { legacySkillRedirect } from "@/features/skills/lib/routes";
+import { requireViewer } from "@/features/auth/server/auth";
 
 // The skill cards show live progress, so the page is rendered per request.
 export const dynamic = "force-dynamic";

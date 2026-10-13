@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { getMultiplicationCells, getSquareCells, type MatrixCell, type SquareCell } from "@/lib/progress-queries";
+import { getMultiplicationCells, getSquareCells, type MatrixCell, type SquareCell } from "@/features/progress/server/progress-queries";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Page, PageHeader } from "@/components/page-header";
+import { Page, PageHeader } from "@/components/layout/page-header";
 import { cn } from "@/lib/utils";
-import { GuestGate } from "@/components/guest-gate";
-import { requireViewer } from "@/lib/auth";
+import { GuestGate } from "@/features/auth/components/guest-gate";
+import { requireViewer } from "@/features/auth/server/auth";
 
 export const dynamic = "force-dynamic";
 

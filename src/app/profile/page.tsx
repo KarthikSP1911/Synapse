@@ -1,16 +1,16 @@
 import Link from "next/link";
 import { ArrowRight, UserRound } from "lucide-react";
-import { ActivityHeatmap } from "@/components/activity-heatmap";
-import { Page, StatTile } from "@/components/page-header";
-import { SkillIcon } from "@/components/skill-icon";
+import { ActivityHeatmap } from "@/features/progress/components/activity-heatmap";
+import { Page, StatTile } from "@/components/layout/page-header";
+import { SkillIcon } from "@/components/common/skill-icon";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { buildHeatmap, dayKey, streaks } from "@/lib/activity";
-import { GuestGate } from "@/components/guest-gate";
-import { requireViewer } from "@/lib/auth";
-import { logoutAction } from "@/lib/auth-actions";
-import { getActivityByDay, getSkillSummaries, getTotalAnswered } from "@/lib/progress-queries";
-import { SKILL_META, SKILL_ORDER } from "@/lib/skills/meta";
+import { buildHeatmap, dayKey, streaks } from "@/features/progress/lib/activity";
+import { GuestGate } from "@/features/auth/components/guest-gate";
+import { requireViewer } from "@/features/auth/server/auth";
+import { logoutAction } from "@/features/auth/server/auth-actions";
+import { getActivityByDay, getSkillSummaries, getTotalAnswered } from "@/features/progress/server/progress-queries";
+import { SKILL_META, SKILL_ORDER } from "@/features/skills/lib/meta";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";

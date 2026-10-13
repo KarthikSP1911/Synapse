@@ -18,7 +18,7 @@ Mathz is an adaptive mental-maths trainer. It drills four skills — **multiplic
 - **Profile** (the user icon in the header): a year-long practice calendar heatmap (one square per day, darker for busier days), current and longest streak, active days, and a per-skill summary. Days follow the time zone your browser reports at login.
 - **Settings** (stored in this browser): weak-question share, recent-question window, default difficulty, enabled exercise types per skill, default session length, per-question time limit, explanations, hints and live stats.
 - **Installable app (PWA)**: a web app manifest, generated icons (including a maskable one) and a service worker. On phones and tablets a non-intrusive "Install Mathz" banner appears when installation is supported (the native prompt on Chromium, Share-sheet steps on iOS Safari); it stays away once installed, running as an app, or dismissed. The service worker is registered in production builds only.
-- **Offline and slow networks**: after one online visit the app opens and practice runs with no connection. Practice always runs in the browser (`src/lib/guest/api.ts`), so answers never wait on the network. Signed-in users' sessions are saved on the device and uploaded in the background (`src/lib/sync/`, `POST /api/sync`) when the network is back; the server re-checks every answer and ignores repeats, so a retry can never double-count. Screens are served network-first with a 4 s cut-off, then from the last stored copy (`public/sw.js`). First sign-in, sign-up and "Try without an account" still need a connection once. Run `npm run db:migrate` to add the `client_id` column the upload uses.
+- **Offline and slow networks**: after one online visit the app opens and practice runs with no connection. Practice always runs in the browser (`src/lib/offline/guest/api.ts`), so answers never wait on the network. Signed-in users' sessions are saved on the device and uploaded in the background (`src/lib/sync/`, `POST /api/sync`) when the network is back; the server re-checks every answer and ignores repeats, so a retry can never double-count. Screens are served network-first with a 4 s cut-off, then from the last stored copy (`public/sw.js`). First sign-in, sign-up and "Try without an account" still need a connection once. Run `npm run db:migrate` to add the `client_id` column the upload uses.
 - **Keyboard-first** practice with visible focus rings, light/dark themes, and respect for `prefers-reduced-motion`.
 
 ## Skills and exercises
@@ -120,8 +120,8 @@ Run `npm run db:migrate` to create the table before signed-in users play MindSpr
 ## How it works
 
 1. **Setup**: the home page shows the four skills with your progress. Choosing a skill shows only that skill's options. Starting creates a session (`POST /api/sessions`) storing the validated configuration.
-2. **Pools**: a configuration defines a finite, deterministic **pool** of questions (`src/lib/skills/pools.ts`), filtered by difficulty tier and range, with every question parsed back through the id parser so it has an exact, sensible answer. Because pools are finite, the same question comes round again and its history accumulates.
-3. **Ask**: `GET /api/sessions/:id/next` loads that skill's statistics and `selectNext` (`src/lib/selection.ts`) picks a question. The response contains the prompt and answer format, never the answer.
+2. **Pools**: a configuration defines a finite, deterministic **pool** of questions (`src/features/skills/lib/pools.ts`), filtered by difficulty tier and range, with every question parsed back through the id parser so it has an exact, sensible answer. Because pools are finite, the same question comes round again and its history accumulates.
+3. **Ask**: `GET /api/sessions/:id/next` loads that skill's statistics and `selectNext` (`src/features/skills/lib/practice/selection.ts`) picks a question. The response contains the prompt and answer format, never the answer.
 4. **Answer**: `POST /api/sessions/:id/attempt` sends the question id and the raw answer. The server **rebuilds the question from its id**, checks it belongs to the session, validates the answer, and records the attempt, the session totals, the question's statistics and its Leitner box.
 5. **Review and report**: the summary, progress and tables pages read the stored data.
 
@@ -162,7 +162,7 @@ Per question: starts from the error rate (`100 − accuracy`), adds 10 if the av
 
 ### Compression
 
-- **Practice kept on the device** (`mathz:guest:v1`, `mathz:user:v1:<id>`): a prompt, skill, exercise type, difficulty and correct answer repeat on every attempt and statistics row, yet all follow from the question id. `src/lib/guest/pack.ts` leaves them out (keeping a record whole whenever the rebuilt text would differ), then `src/lib/compression.ts` compresses each part with lz-string. Each session and each slice of the statistics is its own part, so saving after an answer only recompresses what changed. Data saved before this existed is still read and is converted on the next save.
+- **Practice kept on the device** (`mathz:guest:v1`, `mathz:user:v1:<id>`): a prompt, skill, exercise type, difficulty and correct answer repeat on every attempt and statistics row, yet all follow from the question id. `src/lib/offline/guest/pack.ts` leaves them out (keeping a record whole whenever the rebuilt text would differ), then `src/lib/offline/compression.ts` compresses each part with lz-string. Each session and each slice of the statistics is its own part, so saving after an answer only recompresses what changed. Data saved before this existed is still read and is converted on the next save.
   Measured on simulated play across all four skills (characters stored, including the cost of splitting into parts):
 
   | History | Plain JSON | Stored now | Reduction | Load + save |
@@ -171,7 +171,7 @@ Per question: starts from the error rate (`100 − accuracy`), adds 10 if the av
   | 6,000 attempts (40 sessions) | 2,094,254 | 62,296 | **33.6x** | about 21 ms |
 
   localStorage counts two bytes per character, so the larger history went from about 4 MB, close to the usual 5 MB quota, to about 120 KB.
-- **Uploading offline practice** (`POST /api/sync`): the browser gzips bodies over 1 KB (`Content-Encoding: gzip`) and falls back to plain JSON if the server refuses. The server accepts both and caps the decompressed size (`src/lib/sync/body.ts`).
+- **Uploading offline practice** (`POST /api/sync`): the browser gzips bodies over 1 KB (`Content-Encoding: gzip`) and falls back to plain JSON if the server refuses. The server accepts both and caps the decompressed size (`src/lib/offline/sync/body.ts`).
 - **Pages, scripts and API responses** are gzipped by `next start` (Vercel does the same, with brotli), so they are not compressed again in code.
 - **Not compressed on purpose:** the database (Postgres already compresses large values, and these columns are short), React state, and small `localStorage` values such as settings, where the result would be larger than the input.
 

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
-import AuthForm from "@/components/auth-form";
-import { AuthShell } from "@/components/auth-shell";
-import { getCurrentUser } from "@/lib/auth";
+import AuthForm from "@/features/auth/components/auth-form";
+import { AuthShell } from "@/features/auth/components/auth-shell";
+import { getCurrentUser } from "@/features/auth/server/auth";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Create account" };
