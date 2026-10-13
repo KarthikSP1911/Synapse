@@ -82,6 +82,14 @@ export function SiteHeader({ viewer }: { viewer: "user" | "guest" | null }) {
           <ThemeToggle />
           {viewer === "guest" && !onAuthScreen && (
             <>
+              <Link
+                href="/profile"
+                aria-label="Profile"
+                aria-current={profileActive ? "page" : undefined}
+                className={cn(buttonVariants({ variant: "ghost", size: "icon" }), profileActive && "bg-accent text-foreground")}
+              >
+                <UserRound className="size-4" />
+              </Link>
               <span
                 className="hidden rounded-full border border-border px-2.5 py-0.5 text-xs font-medium text-muted-foreground sm:inline"
                 title="Your progress is saved in this browser only"

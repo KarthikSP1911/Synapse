@@ -101,6 +101,24 @@ because moving storage keys risks the persisted data format for no user-visible 
 - **Errors**: API routes answer 400 for malformed input, 401 when signed out, 500 for failures (with whatever was
   stored before the failure, so a device only retries the rest).
 
+## Activity streaks
+
+A streak is the run of consecutive calendar days (in the user's own time zone) on which they finished something. All
+of it is a **set of `YYYY-MM-DD` days**; `features/progress/lib/streak.ts` turns a set into current and longest.
+
+- **What counts** (`streak.ts`, mirrored in SQL by `getActivityDays`): an answered practice question (right or wrong,
+  not skipped or timed out), a finished MindSprint or Number Recall session, a solved Sudoku, a 2048 game that ended,
+  reached 2048 or had 20+ moves. Opening a page or starting a game records nothing.
+- **Signed in**: the server derives every day, all-time, from the existing tables with one `UNION` query bucketed in
+  `users.timezone` (no new table or migration). The profile adds the days of the device's offline copy
+  (`local-activity.ts`, same zone), so a day played offline counts before it has been uploaded. A day known to both
+  sides is one day.
+- **Guest**: saved sessions are trimmed (40 practice, 100 per game), so a guest also has a permanent day record
+  (`features/offline/lib/activity-days.ts`, key `<store key>:activity-days`) written as each activity is saved. Days
+  of sessions saved before it existed are added once. A guest's data is not carried to a new account.
+- **Why a set**: retries, reloads, syncs and pulling history from another device can only re-add a day that is
+  already there, so nothing can be counted twice.
+
 ## Decisions
 
 1. **Features over layers.** The code used to be `components/` and `lib/` with a folder per game inside each, so one
