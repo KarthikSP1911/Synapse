@@ -1,18 +1,15 @@
 "use client";
 
-import { ChevronDown, RotateCcw, SlidersHorizontal, Trophy } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { Page, PageHeader, StatTile } from "@/components/layout/page-header";
+import { RecordBanner, ResultActions, SaveStatus, type SaveState } from "@/features/games/shared/components/result-parts";
+import { formatSeconds } from "@/features/games/shared/lib/format";
 import { LevelBadge } from "@/features/games/mindsprint/components/round-editor";
 import { RoundResult, VerdictLabel, shownAnswer } from "@/features/games/mindsprint/components/round-result";
 import { displayNumber } from "@/features/games/mindsprint/lib/arithmetic";
 import { scoreSession } from "@/features/games/mindsprint/lib/scoring";
 import type { SessionData } from "@/features/games/mindsprint/lib/types";
-
-export const formatSeconds = (ms: number) => `${(ms / 1000).toFixed(1)}s`;
-
-export type SaveState = "saved" | "failed";
 
 /** The end-of-session screen: totals, then every round with its working. */
 export function SummaryScreen({
@@ -38,23 +35,11 @@ export function SummaryScreen({
         eyebrow="Session complete"
         title={`${scored.score.toLocaleString()} points`}
         description={`${scored.correct} of ${scored.total} ${scored.total === 1 ? "round" : "rounds"} correct.`}
-        actions={
-          <>
-            <Button variant="outline" onClick={onNewSetup}>
-              <SlidersHorizontal /> Change setup
-            </Button>
-            <Button onClick={onReplay} autoFocus>
-              <RotateCcw /> Play again
-            </Button>
-          </>
-        }
+        actions={<ResultActions onChange={onNewSetup} onReplay={onReplay} />}
       />
 
       {newBest && (
-        <p className="animate-pop flex items-center gap-2 rounded-lg border border-success/30 bg-success-soft px-4 py-3 text-sm font-medium text-success" role="status">
-          <Trophy className="size-4" aria-hidden />
-          New best score{previousBest > 0 ? `, up from ${previousBest.toLocaleString()}` : ""}.
-        </p>
+        <RecordBanner>New best score{previousBest > 0 ? `, up from ${previousBest.toLocaleString()}` : ""}.</RecordBanner>
       )}
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
@@ -98,9 +83,7 @@ export function SummaryScreen({
         </ul>
       </section>
 
-      <p role="status" className={cn("text-center text-xs", saveState === "failed" ? "text-warning" : "text-muted-foreground")}>
-        {saveState === "saved" ? "Saved to your progress." : "This session could not be saved: the browser's storage is full or blocked."}
-      </p>
+      <SaveStatus state={saveState} noun="session" className="text-center" />
     </Page>
   );
 }

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Stepper, Switch } from "@/components/form/game-controls";
 import { LevelBadge, RoundEditor } from "@/features/games/mindsprint/components/round-editor";
 import { PRESETS, describeRound, difficultyMultiplier, type Preset } from "@/features/games/mindsprint/lib/config";
+import { formatApproxDuration } from "@/features/games/shared/lib/format";
 import { pointsFor } from "@/features/games/mindsprint/lib/scoring";
 import { defaultSetup, loadSetup, saveSetup } from "@/features/games/mindsprint/lib/storage";
 import { COUNTDOWN_FROM, COUNT_STEP_MS, GO_MS } from "@/features/games/mindsprint/lib/timeline";
@@ -29,7 +30,6 @@ function estimateSeconds(rounds: readonly RoundConfig[]): number {
   return rounds.reduce((sum, r) => sum + (COUNTDOWN_FROM * COUNT_STEP_MS + GO_MS + r.flashes * (r.displayMs + r.gapMs)) / 1000 + ANSWER_SECONDS, 0);
 }
 
-const formatDuration = (seconds: number) => (seconds < 90 ? `about ${Math.round(seconds / 5) * 5} sec` : `about ${Math.round(seconds / 60)} min`);
 
 export interface SetupProblem {
   message: string;
@@ -244,7 +244,7 @@ export function SetupScreen({
           </div>
           <div className="flex justify-between gap-4">
             <dt className="text-muted-foreground">Length</dt>
-            <dd className="font-medium">{formatDuration(estimateSeconds(configs))}</dd>
+            <dd className="font-medium">{formatApproxDuration(estimateSeconds(configs))}</dd>
           </div>
         </dl>
 

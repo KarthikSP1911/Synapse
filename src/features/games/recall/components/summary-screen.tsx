@@ -1,16 +1,13 @@
 "use client";
 
-import { ChevronDown, RotateCcw, SlidersHorizontal, Trophy } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { Page, PageHeader, StatTile } from "@/components/layout/page-header";
+import { RecordBanner, ResultActions, SaveStatus, type SaveState } from "@/features/games/shared/components/result-parts";
+import { formatSeconds } from "@/features/games/shared/lib/format";
 import { PerfectLabel, SequenceComparison } from "@/features/games/recall/components/round-result";
 import { scoreSession } from "@/features/games/recall/lib/scoring";
 import { ITEM_NAME, MODE_LABEL, type SessionData } from "@/features/games/recall/lib/types";
-
-export const formatSeconds = (ms: number) => `${(ms / 1000).toFixed(1)}s`;
-
-export type SaveState = "saved" | "failed";
 
 /** The end-of-session screen: totals, then every round with the original sequence next to the answer. */
 export function SummaryScreen({
@@ -42,31 +39,16 @@ export function SummaryScreen({
         eyebrow={`Session complete · ${MODE_LABEL[config.mode]}`}
         title={`${scored.score.toLocaleString()} points`}
         description={`${scored.perfect} of ${scored.total} ${scored.total === 1 ? "round" : "rounds"} recalled perfectly.`}
-        actions={
-          <>
-            <Button variant="outline" onClick={onNewSetup}>
-              <SlidersHorizontal /> Change setup
-            </Button>
-            <Button onClick={onReplay} autoFocus>
-              <RotateCcw /> Play again
-            </Button>
-          </>
-        }
+        actions={<ResultActions onChange={onNewSetup} onReplay={onReplay} />}
       />
 
       {(newBest || newLongest) && (
         <div className="space-y-2" role="status">
-          {newBest && (
-            <p className="animate-pop flex items-center gap-2 rounded-lg border border-success/30 bg-success-soft px-4 py-3 text-sm font-medium text-success">
-              <Trophy className="size-4" aria-hidden />
-              New best score{previousBest > 0 ? `, up from ${previousBest.toLocaleString()}` : ""}.
-            </p>
-          )}
+          {newBest && <RecordBanner announce={false}>New best score{previousBest > 0 ? `, up from ${previousBest.toLocaleString()}` : ""}.</RecordBanner>}
           {newLongest && (
-            <p className="animate-pop flex items-center gap-2 rounded-lg border border-success/30 bg-success-soft px-4 py-3 text-sm font-medium text-success">
-              <Trophy className="size-4" aria-hidden />
+            <RecordBanner announce={false}>
               Longest recall so far: {scored.longestRecalled} {scored.longestRecalled === 1 ? itemOne : itemMany}.
-            </p>
+            </RecordBanner>
           )}
         </div>
       )}
@@ -111,9 +93,7 @@ export function SummaryScreen({
         </ul>
       </section>
 
-      <p role="status" className={cn("text-center text-xs", saveState === "failed" ? "text-warning" : "text-muted-foreground")}>
-        {saveState === "saved" ? "Saved to your progress." : "This session could not be saved: the browser's storage is full or blocked."}
-      </p>
+      <SaveStatus state={saveState} noun="session" className="text-center" />
     </Page>
   );
 }

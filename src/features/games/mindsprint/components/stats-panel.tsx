@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { StatTile } from "@/components/layout/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { formatSeconds } from "@/features/games/mindsprint/components/summary-screen";
+import { formatSeconds } from "@/features/games/shared/lib/format";
 import { DIFFICULTY_LEVELS } from "@/features/games/mindsprint/lib/config";
 import { computeStats, type Bucket } from "@/features/games/mindsprint/lib/stats";
 import { OPERATIONS, OPERATION_LABEL, OPERATION_SYMBOL, type SessionData } from "@/features/games/mindsprint/lib/types";

@@ -1,14 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, RotateCcw, SlidersHorizontal, Trophy } from "lucide-react";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
+import { buttonVariants } from "@/components/ui/button";
 import { Page, PageHeader, StatTile } from "@/components/layout/page-header";
+import { RecordBanner, ResultActions, SaveStatus, type SaveState } from "@/features/games/shared/components/result-parts";
 import { formatTime, scoreGame } from "@/features/games/sudoku/lib/scoring";
 import { DIFFICULTY_LABEL, type SessionData } from "@/features/games/sudoku/lib/types";
 import { cn } from "@/lib/utils";
-
-export type SaveState = "saved" | "failed";
 
 /** The end-of-game screen: what happened, how the points add up, and where to go next. */
 export function ResultScreen({
@@ -42,23 +41,11 @@ export function ResultScreen({
               : `Solved with ${data.hintsUsed} ${data.hintsUsed === 1 ? "hint" : "hints"}.`
             : "This game was not counted as solved."
         }
-        actions={
-          <>
-            <Button variant="outline" onClick={onChangeDifficulty}>
-              <SlidersHorizontal /> Another difficulty
-            </Button>
-            <Button onClick={onReplay} autoFocus>
-              <RotateCcw /> Play again
-            </Button>
-          </>
-        }
+        actions={<ResultActions onChange={onChangeDifficulty} onReplay={onReplay} changeLabel="Another difficulty" />}
       />
 
       {newBest && (
-        <p role="status" className="animate-pop flex items-center gap-2 rounded-lg border border-success/30 bg-success-soft px-4 py-3 text-sm font-medium text-success">
-          <Trophy className="size-4" aria-hidden />
-          {previousBestMs === null ? `First ${label.toLowerCase()} puzzle solved.` : `New best time, ${formatTime(previousBestMs - data.elapsedMs)} faster than before.`}
-        </p>
+        <RecordBanner>{previousBestMs === null ? `First ${label.toLowerCase()} puzzle solved.` : `New best time, ${formatTime(previousBestMs - data.elapsedMs)} faster than before.`}</RecordBanner>
       )}
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
@@ -102,9 +89,7 @@ export function ResultScreen({
         <Link href="/#games" className={cn(buttonVariants({ variant: "ghost" }), "-ml-3")}>
           <ArrowLeft /> Back to Games
         </Link>
-        <p role="status" className={cn("text-xs", saveState === "failed" ? "text-warning" : "text-muted-foreground")}>
-          {saveState === "saved" ? "Saved to your progress." : "This game could not be saved: the browser's storage is full or blocked."}
-        </p>
+        <SaveStatus state={saveState} noun="game" />
       </div>
     </Page>
   );

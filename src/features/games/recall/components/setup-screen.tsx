@@ -7,6 +7,7 @@ import { Slider, Stepper, Switch } from "@/components/form/game-controls";
 import { Chip } from "@/components/form/setup-controls";
 import { configFor, difficultyOf } from "@/features/games/recall/lib/config";
 import { COUNT_STEP_MS, GO_MS } from "@/features/games/mindsprint/lib/timeline";
+import { formatApproxDuration } from "@/features/games/shared/lib/format";
 import { DIGITS_PER_ITEM, ITEM_NAME, LIMITS, MODE_EXAMPLE, MODE_LABEL, RECALL_MODES, type Difficulty, type RecallConfig, type RecallMode } from "@/features/games/recall/lib/types";
 
 const seconds = (ms: number) => `${(ms / 1000).toFixed(1)} s`;
@@ -20,7 +21,6 @@ function estimateSeconds(config: RecallConfig): number {
   return config.rounds * ((config.countdown * COUNT_STEP_MS + GO_MS + config.length * (config.displayMs + config.gapMs)) / 1000 + ANSWER_SECONDS);
 }
 
-const formatDuration = (s: number) => (s < 90 ? `about ${Math.round(s / 5) * 5} sec` : `about ${Math.round(s / 60)} min`);
 
 export function SetupScreen({
   mode,
@@ -187,7 +187,7 @@ export function SetupScreen({
           </div>
           <div className="flex justify-between gap-4">
             <dt className="text-muted-foreground">Length</dt>
-            <dd className="font-medium">{formatDuration(estimateSeconds(config))}</dd>
+            <dd className="font-medium">{formatApproxDuration(estimateSeconds(config))}</dd>
           </div>
         </dl>
 

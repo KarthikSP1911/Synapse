@@ -5,7 +5,7 @@ import { StatTile } from "@/components/layout/page-header";
 import { Chip } from "@/components/form/setup-controls";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { formatSeconds } from "@/features/games/recall/components/summary-screen";
+import { formatSeconds } from "@/features/games/shared/lib/format";
 import { computeAllStats } from "@/features/games/recall/lib/stats";
 import { ITEM_NAME, MODE_LABEL, RECALL_MODES, type RecallMode, type SessionData } from "@/features/games/recall/lib/types";
 
