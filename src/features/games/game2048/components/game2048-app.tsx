@@ -9,6 +9,7 @@ import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { Board } from "@/features/games/game2048/components/board";
 import { formatDuration } from "@/features/games/game2048/components/format";
 import { StatsPanel } from "@/features/games/game2048/components/stats-panel";
+import { useSwipe } from "@/features/games/game2048/components/use-swipe";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { useLocalStore, useViewerInfo } from "@/features/auth/components/viewer-provider";
 import { emptyCells } from "@/features/games/game2048/lib/engine";
@@ -326,9 +327,26 @@ export default function Game2048App() {
     { id: "stats", label: "Your stats" },
   ] as const;
 
+  const playing = tab === "play";
+  // The first move starts the game: the intro and the settings are only there before it.
+  const started = !!game && hasProgress(game);
+  const swipe = useSwipe(play, playing && dialog === null);
+
+  // While playing, the page is exactly one screen tall and cannot scroll, so a swipe can only ever move tiles.
+  useEffect(() => {
+    if (!playing) return;
+    const root = document.documentElement;
+    root.classList.add("g48-lock");
+    return () => root.classList.remove("g48-lock");
+  }, [playing]);
+
   return (
-    <div className="container py-5 sm:py-8" style={{ "--g48": ACCENT.game2048 } as React.CSSProperties}>
-      <div className="mx-auto w-full max-w-lg space-y-4">
+    <div
+      className={cn("container", playing ? "g48-screen flex flex-col py-3 sm:py-4" : "py-5 sm:py-8")}
+      style={{ "--g48": ACCENT.game2048 } as React.CSSProperties}
+      {...(playing ? swipe : {})}
+    >
+      <div className={cn("mx-auto w-full max-w-lg", playing ? "flex min-h-0 flex-1 flex-col gap-3" : "space-y-4")}>
         <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-3">
           <div className="flex shrink-0 items-center gap-3">
             <AccentTile id="game2048" active />
@@ -341,9 +359,9 @@ export default function Game2048App() {
             <ScoreBox label="Best" value={game?.best ?? 0} />
           </div>
         </div>
-        <p className="text-sm text-muted-foreground">Slide the tiles. When two with the same number touch, they merge into one. Reach 2048!</p>
+        {(!playing || !started) && <p className="text-sm text-muted-foreground">Slide the tiles. When two with the same number touch, they merge into one. Reach 2048!</p>}
 
-        <div role="tablist" aria-label="2048" className="grid w-full max-w-xs grid-cols-2 gap-1 rounded-lg bg-secondary p-1">
+        <div role="tablist" aria-label="2048" className="grid w-full max-w-xs shrink-0 grid-cols-2 gap-1 rounded-lg bg-secondary p-1">
           {tabs.map(({ id, label }) => (
             <button
               key={id}
@@ -364,8 +382,13 @@ export default function Game2048App() {
           ))}
         </div>
 
-        <div role="tabpanel" id="g48-panel-play" aria-labelledby="g48-tab-play" hidden={tab !== "play"} className="space-y-4">
-          <Board tiles={tiles} onSwipe={play} overlay={overlay || undefined} description={game ? describeGrid(game.grid) : "2048 board"} />
+        <div role="tabpanel" id="g48-panel-play" aria-labelledby="g48-tab-play" hidden={!playing} className={cn(playing && "flex min-h-0 flex-1 flex-col gap-3")}>
+          {/* The board takes whatever height is left and is as large a square as fits in it. */}
+          <div className="g48-stage min-h-0 flex-1">
+            <div className="g48-square">
+              <Board tiles={tiles} overlay={overlay || undefined} description={game ? describeGrid(game.grid) : "2048 board"} />
+            </div>
+          </div>
 
           <p role="status" aria-live="polite" className="sr-only">
             Score {game?.score ?? 0}. Highest tile {highest}. {emptyCells(game?.grid ?? []).length} empty cells.
@@ -374,7 +397,7 @@ export default function Game2048App() {
           </p>
 
           {status === "over" && overDismissed && (
-            <p className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card px-4 py-2.5 text-sm shadow-card" role="status">
+            <p className="flex shrink-0 items-center justify-between gap-3 rounded-lg border border-border bg-card px-4 py-2.5 text-sm shadow-card" role="status">
               <span>
                 Game over · score <span className="font-mono font-semibold tabular-nums">{game?.score.toLocaleString()}</span>
               </span>
@@ -384,7 +407,7 @@ export default function Game2048App() {
             </p>
           )}
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid shrink-0 grid-cols-2 gap-2">
             <Button variant="outline" size="lg" onClick={undoMove} disabled={!canUndo}>
               <Undo2 /> Undo
             </Button>
@@ -393,27 +416,32 @@ export default function Game2048App() {
             </Button>
           </div>
 
-          <p className="text-center text-xs text-muted-foreground">
+          <p className="shrink-0 text-center text-xs text-muted-foreground">
             <span className="hidden sm:inline">Arrow keys or W A S D to slide · U or Ctrl+Z to undo · R for a new game · dragging with the mouse works too.</span>
-            <span className="sm:hidden">Swipe on the board to slide. Undo takes back your last move.</span>
+            <span className="sm:hidden">Swipe anywhere to slide. Undo takes back your last move.</span>
           </p>
 
-          <details className="rounded-xl border border-border bg-card px-4 py-3 text-sm shadow-card">
-            <summary className="cursor-pointer list-none font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">Settings</summary>
-            <div className="mt-3 flex items-center justify-between gap-4">
-              <div className="min-w-0">
-                <p className="font-medium">Best score</p>
-                <p className="text-xs text-muted-foreground">Starts it over from the score of this game. Your game history is kept.</p>
-              </div>
-              <Button variant="destructive" size="sm" onClick={() => setDialog("reset")}>
-                Reset best
-              </Button>
-            </div>
-          </details>
+          {/* Before the first move only: once a game is under way nothing here can change it mid-play. */}
+          {!started && (
+            <div className="flex shrink-0 flex-wrap items-start justify-between gap-2">
+              <Link href="/#games" className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "-ml-2")}>
+                <ArrowLeft /> Back to Games
+              </Link>
 
-          <Link href="/#games" className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "-ml-2")}>
-            <ArrowLeft /> Back to Games
-          </Link>
+              <details className="rounded-xl border border-border bg-card px-3 py-1.5 text-sm shadow-card open:w-full open:px-4 open:py-3">
+                <summary className="cursor-pointer list-none font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">Settings</summary>
+                <div className="mt-3 flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="font-medium">Best score</p>
+                    <p className="text-xs text-muted-foreground">Starts it over from the score of this game. Your game history is kept.</p>
+                  </div>
+                  <Button variant="destructive" size="sm" onClick={() => setDialog("reset")}>
+                    Reset best
+                  </Button>
+                </div>
+              </details>
+            </div>
+          )}
         </div>
 
         <div role="tabpanel" id="g48-panel-stats" aria-labelledby="g48-tab-stats" hidden={tab !== "stats"}>

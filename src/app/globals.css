@@ -472,14 +472,43 @@ html[data-splash="skip"] .splash {
   --slide: 110ms;
   container-type: inline-size;
 }
+/*
+  While the Play tab is open the page is exactly one screen tall and cannot scroll (g48-lock on <html>, set by the
+  game), and the whole play area owns the touch gestures (touch-action: none), so a swipe moves tiles and never the
+  page. The height is the viewport minus the sticky header (3.5rem + its border + the top inset) and, on phones, the
+  tab bar (MOBILE_NAV_HEIGHT + the bottom inset), the same space the layout reserves for them.
+*/
+html.g48-lock,
+html.g48-lock body {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+.g48-screen {
+  height: calc(100dvh - 3.5rem - 1px - env(safe-area-inset-top) - 3.75rem - env(safe-area-inset-bottom));
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+@media (width >= 40rem) {
+  .g48-screen {
+    height: calc(100dvh - 3.5rem - 1px - env(safe-area-inset-top));
+  }
+}
+/* The board's room: it is the biggest square that fits in the height and width left over. */
+.g48-stage {
+  container-type: size;
+  display: grid;
+  place-items: center;
+}
+.g48-square {
+  width: min(100cqw, 100cqh);
+}
 .g48-frame {
   position: relative;
   aspect-ratio: 1 / 1;
   border-radius: 0.875rem;
   background: color-mix(in oklab, var(--foreground) 12%, var(--card));
   touch-action: none;
-  user-select: none;
-  -webkit-user-select: none;
   overscroll-behavior: contain;
   cursor: grab;
 }
