@@ -315,3 +315,64 @@ export const game2048Sessions = pgTable(
     index("game2048_sessions_user_ended_idx").on(table.userId, table.endedAt),
   ]
 );
+
+/**
+ * Queens games of a signed-in user that ended (solved or given up), uploaded from the device. `puzzle` is the board's
+ * region digits (N*N characters, exactly one solution), so nothing else about the board needs storing; points are
+ * worked out from the other fields again (see `src/features/games/queens/lib/scoring.ts`), so `score` is only a copy
+ * kept for listing and aggregating.
+ */
+export const queensSessions = pgTable(
+  "queens_sessions",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    /** The browser's random id for the game; unique per user, which makes uploads idempotent. */
+    clientId: varchar("client_id", { length: 64 }).notNull(),
+    difficulty: varchar("difficulty", { length: 10 }).notNull(), // easy | medium | hard | expert
+    puzzle: varchar("puzzle", { length: 128 }).notNull(),
+    completed: boolean("completed").notNull(),
+    elapsedMs: integer("elapsed_ms").notNull(),
+    hintsUsed: integer("hints_used").notNull(),
+    score: integer("score").notNull(),
+    startedAt: timestamp("started_at").notNull(),
+    endedAt: timestamp("ended_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("queens_sessions_user_client_idx").on(table.userId, table.clientId),
+    index("queens_sessions_user_difficulty_ended_idx").on(table.userId, table.difficulty, table.endedAt),
+  ]
+);
+
+/**
+ * Zip games of a signed-in user that ended (solved or given up), uploaded from the device. `puzzle` is the board's
+ * text form (size, numbered cells and walls, see `src/features/games/zip/lib/puzzle-format.ts`), whose solution is
+ * unique, so nothing else needs storing; `score` is a copy of what the other fields work out to.
+ */
+export const zipSessions = pgTable(
+  "zip_sessions",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    /** The browser's random id for the game; unique per user, which makes uploads idempotent. */
+    clientId: varchar("client_id", { length: 64 }).notNull(),
+    difficulty: varchar("difficulty", { length: 10 }).notNull(), // easy | medium | hard | expert
+    puzzle: varchar("puzzle", { length: 512 }).notNull(),
+    completed: boolean("completed").notNull(),
+    elapsedMs: integer("elapsed_ms").notNull(),
+    hintsUsed: integer("hints_used").notNull(),
+    score: integer("score").notNull(),
+    startedAt: timestamp("started_at").notNull(),
+    endedAt: timestamp("ended_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("zip_sessions_user_client_idx").on(table.userId, table.clientId),
+    index("zip_sessions_user_difficulty_ended_idx").on(table.userId, table.difficulty, table.endedAt),
+  ]
+);

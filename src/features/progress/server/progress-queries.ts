@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { game2048Sessions, mindsprintSessions, practiceSessions, questionAttempts, questionStats, recallSessions, sudokuSessions } from "@/db/schema";
+import { game2048Sessions, mindsprintSessions, practiceSessions, queensSessions, questionAttempts, questionStats, recallSessions, sudokuSessions, zipSessions } from "@/db/schema";
 import { and, asc, desc, eq, gt, gte, inArray, like, or, sql, type AnyColumn } from "drizzle-orm";
 import { MIN_2048_MOVES } from "@/features/progress/lib/streak";
 import { SKILLS, type Skill } from "@/features/skills/lib/types";
@@ -389,8 +389,8 @@ export async function getActivityByDay(userId: number, timeZone: string, days: n
 
 /**
  * Every calendar day (`YYYY-MM-DD`, in the user's time zone) on which the user finished something, since they started:
- * an answered practice question, a MindSprint or Number Recall session, a solved Sudoku, or a 2048 game that ended,
- * reached 2048 or had enough moves. The same rules as `streak.ts`, which also turns these days into streaks.
+ * an answered practice question, a MindSprint or Number Recall session, a solved Sudoku, Queens or Zip puzzle, or a
+ * 2048 game that ended, reached 2048 or had enough moves. The same rules as `streak.ts`, which also turns these days into streaks.
  * Nothing but days leaves the database, so this stays small however much history there is.
  */
 export async function getActivityDays(userId: number, timeZone: string): Promise<string[]> {
@@ -404,6 +404,8 @@ export async function getActivityDays(userId: number, timeZone: string): Promise
     .union(db.select({ day: dayOf(mindsprintSessions.endedAt) }).from(mindsprintSessions).where(eq(mindsprintSessions.userId, userId)))
     .union(db.select({ day: dayOf(recallSessions.endedAt) }).from(recallSessions).where(eq(recallSessions.userId, userId)))
     .union(db.select({ day: dayOf(sudokuSessions.endedAt) }).from(sudokuSessions).where(and(eq(sudokuSessions.userId, userId), eq(sudokuSessions.completed, true))))
+    .union(db.select({ day: dayOf(queensSessions.endedAt) }).from(queensSessions).where(and(eq(queensSessions.userId, userId), eq(queensSessions.completed, true))))
+    .union(db.select({ day: dayOf(zipSessions.endedAt) }).from(zipSessions).where(and(eq(zipSessions.userId, userId), eq(zipSessions.completed, true))))
     .union(
       db
         .select({ day: dayOf(game2048Sessions.endedAt) })

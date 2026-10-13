@@ -789,3 +789,294 @@ html.play-focus body {
   .g48-gain { animation: none !important; }
   .g48-tile[data-ghost="true"] { display: none; }
 }
+
+/*
+  Queens and Zip play screens reuse Sudoku's layout classes (`.sdk-screen`, `.sdk-layout`, `.sdk-side`, `.sdk-stage`,
+  `.sdk-square`, `.sdk-start-bar` above): a full-screen board on phones, two columns from `lg`, board left and
+  controls right on a phone held sideways. Only the boards below are their own.
+*/
+
+/*
+  Queens board. `--qn` (the game's violet) is set inline from lib/accent.ts. Sizes are in cqw, a share of the
+  board's own width, so lines and icons scale with the board from a 320px phone to a desktop. Each cell takes
+  the colour of its region (`data-region`); a thick line marks where regions meet (`data-t`, `data-l`: the region
+  above or to the left differs), so regions never depend on colour alone. One cell is 1/n of the board.
+*/
+.qn-board {
+  --qn-ink: #1c1c22;
+  --qn-line: #1c1c22;
+  --qn-grid: rgb(28 28 34 / 0.28);
+  --qn-r0: #f6a6a6;
+  --qn-r1: #fbc18a;
+  --qn-r2: #f3df7a;
+  --qn-r3: #a6dfa0;
+  --qn-r4: #8adbd0;
+  --qn-r5: #9bbff2;
+  --qn-r6: #c1aef2;
+  --qn-r7: #f2aed4;
+  --qn-r8: #cdd3dc;
+  container-type: inline-size;
+}
+.dark .qn-board {
+  --qn-ink: #f4f4f6;
+  --qn-line: #f4f4f6;
+  --qn-grid: rgb(244 244 246 / 0.3);
+  --qn-r0: #8a3535;
+  --qn-r1: #8a5320;
+  --qn-r2: #766a1c;
+  --qn-r3: #2f7440;
+  --qn-r4: #1f716c;
+  --qn-r5: #2b5a9e;
+  --qn-r6: #5845a0;
+  --qn-r7: #8c3a73;
+  --qn-r8: #525a68;
+}
+.qn-board[data-covered="true"] .qn-grid {
+  filter: blur(14px);
+  pointer-events: none;
+}
+.qn-grid {
+  display: grid;
+  aspect-ratio: 1 / 1;
+  border: max(2px, 0.9cqw) solid var(--qn-line);
+  border-radius: 0.625rem;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  overscroll-behavior: contain;
+}
+.qn-cell {
+  --cell: var(--card);
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-top: max(1px, 0.25cqw) solid var(--qn-grid);
+  border-left: max(1px, 0.25cqw) solid var(--qn-grid);
+  background: var(--cell);
+  color: var(--qn-ink);
+  cursor: pointer;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: filter 120ms ease;
+}
+.qn-cell[data-t="edge"] {
+  border-top: 0;
+}
+.qn-cell[data-l="edge"] {
+  border-left: 0;
+}
+.qn-cell[data-t="1"] {
+  border-top: max(2px, 0.8cqw) solid var(--qn-line);
+}
+.qn-cell[data-l="1"] {
+  border-left: max(2px, 0.8cqw) solid var(--qn-line);
+}
+.qn-cell[data-region="0"] { --cell: var(--qn-r0); }
+.qn-cell[data-region="1"] { --cell: var(--qn-r1); }
+.qn-cell[data-region="2"] { --cell: var(--qn-r2); }
+.qn-cell[data-region="3"] { --cell: var(--qn-r3); }
+.qn-cell[data-region="4"] { --cell: var(--qn-r4); }
+.qn-cell[data-region="5"] { --cell: var(--qn-r5); }
+.qn-cell[data-region="6"] { --cell: var(--qn-r6); }
+.qn-cell[data-region="7"] { --cell: var(--qn-r7); }
+.qn-cell[data-region="8"] { --cell: var(--qn-r8); }
+@media (hover: hover) {
+  .qn-cell:hover {
+    filter: brightness(1.08) saturate(1.1);
+  }
+}
+.qn-queen {
+  width: 64%;
+  height: 64%;
+  fill: currentColor;
+  fill-opacity: 0.88;
+  pointer-events: none;
+}
+.qn-cross {
+  width: 40%;
+  height: 40%;
+  opacity: 0.5;
+  pointer-events: none;
+}
+.qn-cell[data-preview="true"] {
+  filter: brightness(0.92);
+}
+/* A queen from a hint is locked: a ring and a corner mark say so without colour. */
+.qn-cell[data-mark="3"] {
+  box-shadow: inset 0 0 0 max(2px, 0.55cqw) var(--qn-ink);
+}
+.qn-cell[data-mark="3"]::after {
+  content: "";
+  position: absolute;
+  top: 8%;
+  right: 8%;
+  width: 14%;
+  height: 14%;
+  background: var(--qn-ink);
+  transform: rotate(45deg);
+}
+/* A queen that breaks a rule: hatching and a red ring, so it is not only a colour. */
+.qn-cell[data-conflict="true"] {
+  background-image: repeating-linear-gradient(45deg, rgb(217 45 32 / 0.5) 0 0.9cqw, transparent 0.9cqw 1.8cqw);
+  box-shadow: inset 0 0 0 max(2px, 0.7cqw) var(--destructive);
+  z-index: 1;
+}
+/* Hints: the units they talk about get a ring; the cells they point at a stronger one. */
+.qn-cell[data-unit="true"] {
+  box-shadow: inset 0 0 0 max(2px, 0.45cqw) var(--qn-ink);
+}
+.qn-cell[data-hint="cell"] {
+  box-shadow: inset 0 0 0 max(3px, 0.9cqw) var(--qn), inset 0 0 0 max(5px, 1.3cqw) var(--qn-ink);
+  z-index: 1;
+  animation: qn-hint 1.2s ease-in-out infinite alternate;
+}
+.qn-cell[data-hint="wrong"] {
+  box-shadow: inset 0 0 0 max(3px, 0.9cqw) var(--destructive), inset 0 0 0 max(5px, 1.3cqw) var(--qn-ink);
+  z-index: 1;
+  animation: qn-hint 1.2s ease-in-out infinite alternate;
+}
+@keyframes qn-hint {
+  to { filter: brightness(1.18); }
+}
+.qn-cell:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: -3px;
+  z-index: 2;
+}
+@media (prefers-reduced-motion: reduce) {
+  .qn-cell { transition: none; }
+  .qn-cell[data-hint] { animation: none; }
+}
+
+/*
+  Zip board. `--zp` (the game's blue) is set inline from lib/accent.ts and `--zpn` is the number of columns, which
+  sizes the badges and the grid lines from the board's width (cqw), so the board scales with the screen. The path and
+  the walls are drawn in one SVG laid over the cells with a viewBox of one unit per cell; the numbers sit above it.
+  The board is the only thing with `touch-action: none`, so the rest of the page still scrolls and zooms.
+*/
+.zp-board {
+  --zp-ink: color-mix(in oklab, var(--zp) 72%, #000);
+  container-type: inline-size;
+}
+.dark .zp-board {
+  --zp-ink: var(--zp);
+}
+.zp-board[data-covered="true"] .zp-grid {
+  filter: blur(14px);
+  pointer-events: none;
+}
+.zp-grid {
+  position: relative;
+  display: grid;
+  aspect-ratio: 1 / 1;
+  border: max(2px, 0.9cqw) solid var(--foreground);
+  border-radius: 0.625rem;
+  overflow: hidden;
+  background: var(--card);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  overscroll-behavior: contain;
+  cursor: pointer;
+}
+.zp-grid:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+.zp-cell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  border-top: max(1px, 0.2cqw) solid var(--border);
+  border-left: max(1px, 0.2cqw) solid var(--border);
+  transition: background-color 120ms ease;
+}
+.zp-cell[data-on="true"] {
+  background: color-mix(in oklab, var(--zp) 16%, var(--card));
+}
+.zp-cell[data-head="true"] {
+  background: color-mix(in oklab, var(--zp) 32%, var(--card));
+}
+.zp-cell[data-hint="true"] {
+  background: color-mix(in oklab, var(--warning) 35%, var(--card));
+}
+.zp-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+.zp-path {
+  fill: none;
+  stroke: var(--zp-ink);
+  stroke-width: 0.42;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.9;
+}
+.zp-head {
+  fill: var(--zp-ink);
+  stroke: var(--card);
+  stroke-width: 0.06;
+}
+.zp-wall {
+  stroke: var(--foreground);
+  stroke-width: 0.13;
+  stroke-linecap: round;
+}
+.zp-badge {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 58%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--foreground);
+  color: var(--background);
+  font-size: calc(40cqw / var(--zpn));
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+/* A number the path has passed. */
+.zp-badge[data-reached="true"] {
+  background: var(--zp);
+  color: #0b1020;
+}
+/* The number the path is heading for. */
+.zp-badge[data-next="true"] {
+  outline: max(2px, calc(5cqw / var(--zpn))) solid var(--zp-ink);
+  outline-offset: max(1px, calc(2cqw / var(--zpn)));
+}
+/* The last number is closed until every other square is filled (dashed and dimmed), then it opens (ringed). */
+.zp-badge[data-locked="true"] {
+  background: var(--card);
+  color: var(--muted-foreground);
+  border: max(2px, calc(4cqw / var(--zpn))) dashed var(--muted-foreground);
+}
+.zp-badge[data-open="true"] {
+  animation: zp-open 0.9s ease-in-out infinite alternate;
+}
+@keyframes zp-open {
+  to { transform: scale(1.12); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .zp-cell,
+  .zp-badge { transition: none; }
+  .zp-badge[data-open="true"] { animation: none; }
+}
