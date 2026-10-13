@@ -107,7 +107,7 @@ Open <http://localhost:3000>.
 
 ### MindSprint (flash arithmetic)
 
-`/mindsprint` is a game rather than a drill: numbers flash one at a time, and the player gives the result after the last one disappears. Logic is in `src/features/games/mindsprint/lib/`, UI in `src/features/games/mindsprint/components/`.
+`/games/mindsprint` is a game rather than a drill: numbers flash one at a time, and the player gives the result after the last one disappears. Logic is in `src/features/games/mindsprint/lib/`, UI in `src/features/games/mindsprint/components/`.
 
 - **Sequential evaluation**: operators apply left to right to the running total (`20 × 3 − 5 = 55`, `10 + 5 × 2 = 30`).
 - **Exact**: all arithmetic uses the rationals in `src/lib/rational.ts`. Every number, running total and answer is a finite decimal with at most the round's decimal places; divisions are always exact and never by zero. Answers are compared exactly (`3.50` equals `3.5`).

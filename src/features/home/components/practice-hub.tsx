@@ -105,8 +105,8 @@ function GamesRow() {
         Games
       </h2>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <HubCard href="/mindsprint" title="MindSprint" accent="mindsprint" description="Numbers flash by. Calculate in your head, then give the result." progress={progress.mindsprint ?? "Not played yet"} />
-        <HubCard href="/recall" title="Number Recall" accent="recall" description="Memorise digits or number pairs, then type them back in order." progress={progress.recall ?? "Not played yet"} />
+        <HubCard href="/games/mindsprint" title="MindSprint" accent="mindsprint" description="Numbers flash by. Calculate in your head, then give the result." progress={progress.mindsprint ?? "Not played yet"} />
+        <HubCard href="/games/recall" title="Number Recall" accent="recall" description="Memorise digits or number pairs, then type them back in order." progress={progress.recall ?? "Not played yet"} />
         <HubCard href="/games/sudoku" title="Sudoku" accent="sudoku" description="Fill the grid so every row, column and box holds 1 to 9." progress={progress.sudoku ?? "Not played yet"} />
         <HubCard href="/games/2048" title="2048" accent="game2048" description="Slide and merge matching tiles to reach 2048." progress={progress.game2048 ?? "Not played yet"} />
       </div>

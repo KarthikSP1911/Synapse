@@ -3,7 +3,7 @@ import { SKILL_PATHS } from "@/features/skills/lib/routes";
 /** Page-side helpers for talking to the service worker (`public/sw.js`). */
 
 /** Every screen that should open with no connection. `/play*` are the shells all local sessions share; each skill has its own page under `/skills`. */
-const OFFLINE_ROUTES = ["/", ...SKILL_PATHS, "/play", "/play/summary", "/mindsprint", "/recall", "/games/sudoku", "/games/2048", "/progress", "/tables", "/settings"];
+const OFFLINE_ROUTES = ["/", ...SKILL_PATHS, "/play", "/play/summary", "/games/mindsprint", "/games/recall", "/games/sudoku", "/games/2048", "/progress", "/tables", "/settings"];
 
 export type ServiceWorkerMessage = { type: "warm"; urls: string[] } | { type: "clear-pages" } | { type: "skip-waiting" };
 

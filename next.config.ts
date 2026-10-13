@@ -1,6 +1,13 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    // MindSprint and Number Recall used to live at the top level; keep bookmarks and installed shortcuts working.
+    return [
+      { source: "/mindsprint", destination: "/games/mindsprint", permanent: true },
+      { source: "/recall", destination: "/games/recall", permanent: true },
+    ];
+  },
   async headers() {
     return [
       {
