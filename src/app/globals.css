@@ -426,6 +426,18 @@ html.play-focus body {
   }
 }
 
+/* Sudoku's Start bar on phones: stuck to the bottom of the screen, above the tab bar (MOBILE_NAV_HEIGHT + the bottom inset). */
+.sdk-start-bar {
+  position: sticky;
+  bottom: calc(3.75rem + 1px + env(safe-area-inset-bottom));
+  z-index: 10;
+}
+@media (width >= 40rem) {
+  .sdk-start-bar {
+    bottom: 0;
+  }
+}
+
 /*
   Sudoku play screen. Below `lg` it is a full-screen play screen: board in the middle taking whatever height is left,
   the tools and number pad under it. From `lg` up it is the ordinary scrolling two-column page (`.play-below-lg`

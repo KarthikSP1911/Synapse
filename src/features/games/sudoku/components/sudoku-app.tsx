@@ -230,7 +230,7 @@ export default function SudokuApp() {
             aria-controls={`sdk-panel-${id}`}
             onClick={() => setTab(id)}
             className={cn(
-              "flex h-8 items-center justify-center rounded-md text-sm font-medium transition-colors pointer-coarse:h-10",
+              "flex h-8 items-center justify-center rounded-md text-sm font-medium transition-colors pointer-coarse:h-11",
               "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
               tab === id ? "bg-background text-foreground shadow-card" : "text-muted-foreground hover:text-foreground"
             )}
