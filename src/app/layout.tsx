@@ -4,7 +4,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { MobileNav, SiteHeader } from "@/components/site-header";
-import { SiteFooter } from "@/components/site-footer";
 import { SplashScreen } from "@/components/splash-screen";
 import { InstallPrompt } from "@/components/install-prompt";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
@@ -82,7 +81,6 @@ export default async function RootLayout({
             <main id="main" className="flex-1">
               {children}
             </main>
-            <SiteFooter />
             <MobileNav viewer={viewer?.kind ?? null} />
             <InstallPrompt />
             <ServiceWorkerRegister />
