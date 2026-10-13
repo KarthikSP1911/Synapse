@@ -10,7 +10,7 @@ import { ServiceWorkerRegister } from "@/features/offline/components/service-wor
 import { ViewerProvider } from "@/features/auth/components/viewer-provider";
 import { SyncManager } from "@/features/offline/components/sync-manager";
 import { getViewer } from "@/features/auth/server/auth";
-import type { ViewerInfo } from "@/lib/offline/local-store";
+import type { ViewerInfo } from "@/features/offline/lib/local-store";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });

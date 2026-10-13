@@ -1,4 +1,4 @@
-import type { LocalStore } from "@/lib/offline/guest/api";
+import type { LocalStore } from "@/features/offline/lib/guest/api";
 import { createLocalHistory, type Stored } from "@/features/games/shared/lib/history/local";
 import { dataOrNull, isClientId, isObject } from "@/lib/records";
 import { isIntInRange } from "@/lib/validation";

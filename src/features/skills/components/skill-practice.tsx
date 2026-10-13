@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Infinity as InfinityIcon, ListOrdered, Timer, Volume2, VolumeX } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { localFetchFor, playHref } from "@/lib/offline/local-store";
+import { localFetchFor, playHref } from "@/features/offline/lib/local-store";
 import { useLocalStore } from "@/features/auth/components/viewer-provider";
 import { DEFAULT_SETTINGS, isSessionChoice, loadSettings, type Settings } from "@/features/settings/lib/settings";
 import { configFromState, initialSetupState, loadExponentsSetup, saveExponentsSetup, type SetupState } from "@/features/skills/lib/practice/setup-state";
@@ -61,7 +61,7 @@ interface SessionPlan {
 /** One skill's page: its options, the session panel and the Start button. `/` only lists the skills. */
 export default function SkillPractice({ skill }: { skill: Skill }) {
   const router = useRouter();
-  // Sessions run on this device (see `src/lib/offline/guest/api.ts`), so starting one never waits on the network.
+  // Sessions run on this device (see `src/features/offline/lib/guest/api.ts`), so starting one never waits on the network.
   const store = useLocalStore();
   const { player: sound, soundOn, changeSound } = usePracticeSound();
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);

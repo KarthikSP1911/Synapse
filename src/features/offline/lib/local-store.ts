@@ -1,5 +1,5 @@
-import { GUEST_STORE, createLocalFetch, type LocalStore } from "@/lib/offline/guest/api";
-import { userStorageKey } from "@/lib/offline/guest/storage";
+import { GUEST_STORE, createLocalFetch, type LocalStore } from "@/features/offline/lib/guest/api";
+import { userStorageKey } from "@/features/offline/lib/guest/storage";
 
 /** Who is using this device, as far as the browser-side code needs to know. */
 export type ViewerInfo = { kind: "guest" } | { kind: "user"; userId: number } | { kind: null };

@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { requireViewer } from "@/features/auth/server/auth";
-import { playHref } from "@/lib/offline/local-store";
+import { playHref } from "@/features/offline/lib/local-store";
 import { parseId } from "@/lib/validation";
 
 export const metadata = { title: "Practice" };

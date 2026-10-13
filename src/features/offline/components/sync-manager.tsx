@@ -7,9 +7,9 @@ import { pendingCountFor as mindsprintPendingFor, syncMindsprint } from "@/featu
 import { pendingCountFor as recallPendingFor, syncRecall } from "@/features/games/recall/lib/sync";
 import { pendingCountFor as game2048PendingFor, syncGame2048 } from "@/features/games/game2048/lib/sync";
 import { pendingCountFor as sudokuPendingFor, syncSudoku } from "@/features/games/sudoku/lib/sync";
-import { pendingCountFor, syncUser } from "@/lib/offline/sync/client";
-import { setSyncStatus } from "@/lib/offline/sync/status";
-import { postToServiceWorker, warmOfflineCache } from "@/lib/offline/sw-client";
+import { pendingCountFor, syncUser } from "@/features/offline/lib/sync/client";
+import { setSyncStatus } from "@/features/offline/lib/sync/status";
+import { postToServiceWorker, warmOfflineCache } from "@/features/offline/lib/sw-client";
 
 const IDENTITY_KEY = "mathz:identity";
 /** While the app is open, look for unsent practice this often (the `online` event covers most reconnects). */

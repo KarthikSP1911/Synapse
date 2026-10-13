@@ -5,7 +5,7 @@ import { practiceSessions, questionAttempts } from "@/db/schema";
 import { SessionSummary } from "@/features/skills/components/session-summary";
 import { SKILLS, type Skill } from "@/features/skills/lib/types";
 import { getViewer } from "@/features/auth/server/auth";
-import { summaryHref } from "@/lib/offline/local-store";
+import { summaryHref } from "@/features/offline/lib/local-store";
 import { parseId } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";

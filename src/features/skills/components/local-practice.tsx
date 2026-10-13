@@ -30,7 +30,7 @@ function NotFound() {
   );
 }
 
-/** The live practice screen for a session stored on this device (see `src/lib/offline/guest/api.ts`). */
+/** The live practice screen for a session stored on this device (see `src/features/offline/lib/guest/api.ts`). */
 export function LocalPractice() {
   const id = useSessionIdFromUrl();
   const store = useLocalStore();

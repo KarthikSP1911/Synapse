@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { RotateCcw } from "lucide-react";
-import { localFetchFor, playHref } from "@/lib/offline/local-store";
+import { localFetchFor, playHref } from "@/features/offline/lib/local-store";
 import { useLocalStore } from "@/features/auth/components/viewer-provider";
 import { loadSettings } from "@/features/settings/lib/settings";
 import { Button } from "@/components/ui/button";

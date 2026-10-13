@@ -1,8 +1,8 @@
 import { beforeEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { gunzipSync } from "node:zlib";
-import { createLocalFetch } from "@/lib/offline/guest/api";
-import { loadGuestData, saveGuestData, userStorageKey, MAX_GUEST_SESSIONS } from "@/lib/offline/guest/storage";
+import { createLocalFetch } from "@/features/offline/lib/guest/api";
+import { loadGuestData, saveGuestData, userStorageKey, MAX_GUEST_SESSIONS } from "@/features/offline/lib/guest/storage";
 import { IDLE_UPLOAD_MS, batches, pendingCount, syncUser, type SyncDeps } from "./client";
 
 class MemoryStorage {

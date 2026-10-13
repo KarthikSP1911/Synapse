@@ -16,9 +16,9 @@ import {
   guestRecentSessions,
   guestSkillSummaries,
   guestWeakItems,
-} from "@/lib/offline/guest/progress";
-import { clearGuestData, loadGuestData, type GuestData } from "@/lib/offline/guest/storage";
-import { summaryHref } from "@/lib/offline/local-store";
+} from "@/features/offline/lib/guest/progress";
+import { clearGuestData, loadGuestData, type GuestData } from "@/features/offline/lib/guest/storage";
+import { summaryHref } from "@/features/offline/lib/local-store";
 import { overviewOf } from "@/features/progress/lib/progress-shared";
 import type { SkillFilter } from "@/features/progress/server/progress-queries";
 import { SKILL_META, SKILL_ORDER, exerciseLabel, modeLabel, skillTitle } from "@/features/skills/lib/meta";

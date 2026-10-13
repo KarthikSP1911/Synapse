@@ -5,8 +5,8 @@ import Link from "next/link";
 import { Page } from "@/components/layout/page-header";
 import { SessionSummary, type ExerciseTypeRow } from "@/features/skills/components/session-summary";
 import { buttonVariants } from "@/components/ui/button";
-import type { LocalStore } from "@/lib/offline/guest/api";
-import { findSession, loadGuestData, type GuestSession } from "@/lib/offline/guest/storage";
+import type { LocalStore } from "@/features/offline/lib/guest/api";
+import { findSession, loadGuestData, type GuestSession } from "@/features/offline/lib/guest/storage";
 
 /** A locally stored session's summary: the same page as for accounts, with the figures read from this browser. */
 export default function GuestSummary({ sessionId, store }: { sessionId: number; store: LocalStore }) {

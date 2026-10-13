@@ -1,8 +1,8 @@
 "use client";
 
 import { createContext, useContext, useMemo } from "react";
-import type { LocalStore } from "@/lib/offline/guest/api";
-import { storeFor, type ViewerInfo } from "@/lib/offline/local-store";
+import type { LocalStore } from "@/features/offline/lib/guest/api";
+import { storeFor, type ViewerInfo } from "@/features/offline/lib/local-store";
 
 const ViewerContext = createContext<ViewerInfo>({ kind: null });
 

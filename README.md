@@ -18,7 +18,7 @@ Mathz is an adaptive mental-maths trainer. It drills four skills — **multiplic
 - **Profile** (the user icon in the header): a year-long practice calendar heatmap (one square per day, darker for busier days), current and longest streak, active days, and a per-skill summary. Days follow the time zone your browser reports at login.
 - **Settings** (stored in this browser): weak-question share, recent-question window, default difficulty, enabled exercise types per skill, default session length, per-question time limit, explanations, hints and live stats.
 - **Installable app (PWA)**: a web app manifest, generated icons (including a maskable one) and a service worker. On phones and tablets a non-intrusive "Install Mathz" banner appears when installation is supported (the native prompt on Chromium, Share-sheet steps on iOS Safari); it stays away once installed, running as an app, or dismissed. The service worker is registered in production builds only.
-- **Offline and slow networks**: after one online visit the app opens and practice runs with no connection. Practice always runs in the browser (`src/lib/offline/guest/api.ts`), so answers never wait on the network. Signed-in users' sessions are saved on the device and uploaded in the background (`src/lib/sync/`, `POST /api/sync`) when the network is back; the server re-checks every answer and ignores repeats, so a retry can never double-count. Screens are served network-first with a 4 s cut-off, then from the last stored copy (`public/sw.js`). First sign-in, sign-up and "Try without an account" still need a connection once. Run `npm run db:migrate` to add the `client_id` column the upload uses.
+- **Offline and slow networks**: after one online visit the app opens and practice runs with no connection. Practice always runs in the browser (`src/features/offline/lib/guest/api.ts`), so answers never wait on the network. Signed-in users' sessions are saved on the device and uploaded in the background (`src/features/offline/lib/sync/`, `POST /api/sync`) when the network is back; the server re-checks every answer and ignores repeats, so a retry can never double-count. Screens are served network-first with a 4 s cut-off, then from the last stored copy (`public/sw.js`). First sign-in, sign-up and "Try without an account" still need a connection once. Run `npm run db:migrate` to add the `client_id` column the upload uses.
 - **Keyboard-first** practice with visible focus rings, light/dark themes, and respect for `prefers-reduced-motion`.
 
 ## Skills and exercises
@@ -107,10 +107,10 @@ Open <http://localhost:3000>.
 
 ### MindSprint (flash arithmetic)
 
-`/mindsprint` is a game rather than a drill: numbers flash one at a time, and the player gives the result after the last one disappears. Logic is in `src/lib/mindsprint/`, UI in `src/components/mindsprint/`.
+`/mindsprint` is a game rather than a drill: numbers flash one at a time, and the player gives the result after the last one disappears. Logic is in `src/features/games/mindsprint/lib/`, UI in `src/features/games/mindsprint/components/`.
 
 - **Sequential evaluation**: operators apply left to right to the running total (`20 × 3 − 5 = 55`, `10 + 5 × 2 = 30`).
-- **Exact**: all arithmetic uses the rationals in `skills/rational.ts`. Every number, running total and answer is a finite decimal with at most the round's decimal places; divisions are always exact and never by zero. Answers are compared exactly (`3.50` equals `3.5`).
+- **Exact**: all arithmetic uses the rationals in `src/lib/rational.ts`. Every number, running total and answer is a finite decimal with at most the round's decimal places; divisions are always exact and never by zero. Answers are compared exactly (`3.50` equals `3.5`).
 - **Digits** means digits in the whole part (`1` = 1-9, `2` = 10-99 ...). With negatives off, no number, total or answer is below zero.
 - **Scoring**: a correct round earns `100 × difficulty multiplier` points (digits, length, operations, decimals, negatives and speed raise it); anything else earns 0.
 - **Persistence**: finished sessions are saved on the device under the viewer's storage key (`...:mindsprint`) and, for accounts, uploaded to `POST /api/sync/mindsprint` (table `mindsprint_sessions`, migration `0004_mindsprint.sql`). The server re-checks every sequence and recomputes the score.
@@ -140,17 +140,12 @@ Related questions share a **concept** (`square:17` covers `17²`, `√289` and t
 
 ### Code layout
 
-```
-src/lib/skills/    Pure, database-free core: types, rational arithmetic, question ids,
-                   generators + explanations (build.ts), pools, answer validation, UI labels
-src/lib/           item-stats.ts (weakness + Leitner updates), spaced-repetition.ts, selection.ts,
-                   sessions.ts (request validation), settings.ts, setup-state.ts   — all pure
-                   question-engine.ts, attempts.ts, mistakes.ts, progress-queries.ts — database access
-src/app/           pages and API routes
-src/components/    UI; setup/ holds the per-skill option panels
-src/db/            Drizzle schema, migrations
-scripts/           migrate.ts
-```
+Code is grouped by feature (`src/features/<feature>/{components,lib,server}`), with shared UI in `src/components`
+and shared logic in `src/lib`. The practice core is `src/features/skills/lib/`: types, question ids, generators and
+explanations (`build.ts`), pools and answer validation, all database-free. Database access lives in each feature's
+`server/` folder, pages and API routes in `src/app/`, and the schema and migrations in `src/db/`.
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full folder tree, conventions and the reasoning behind them.
 
 ### Answer validation
 
@@ -162,7 +157,7 @@ Per question: starts from the error rate (`100 − accuracy`), adds 10 if the av
 
 ### Compression
 
-- **Practice kept on the device** (`mathz:guest:v1`, `mathz:user:v1:<id>`): a prompt, skill, exercise type, difficulty and correct answer repeat on every attempt and statistics row, yet all follow from the question id. `src/lib/offline/guest/pack.ts` leaves them out (keeping a record whole whenever the rebuilt text would differ), then `src/lib/offline/compression.ts` compresses each part with lz-string. Each session and each slice of the statistics is its own part, so saving after an answer only recompresses what changed. Data saved before this existed is still read and is converted on the next save.
+- **Practice kept on the device** (`mathz:guest:v1`, `mathz:user:v1:<id>`): a prompt, skill, exercise type, difficulty and correct answer repeat on every attempt and statistics row, yet all follow from the question id. `src/features/offline/lib/guest/pack.ts` leaves them out (keeping a record whole whenever the rebuilt text would differ), then `src/features/offline/lib/compression.ts` compresses each part with lz-string. Each session and each slice of the statistics is its own part, so saving after an answer only recompresses what changed. Data saved before this existed is still read and is converted on the next save.
   Measured on simulated play across all four skills (characters stored, including the cost of splitting into parts):
 
   | History | Plain JSON | Stored now | Reduction | Load + save |
@@ -171,7 +166,7 @@ Per question: starts from the error rate (`100 − accuracy`), adds 10 if the av
   | 6,000 attempts (40 sessions) | 2,094,254 | 62,296 | **33.6x** | about 21 ms |
 
   localStorage counts two bytes per character, so the larger history went from about 4 MB, close to the usual 5 MB quota, to about 120 KB.
-- **Uploading offline practice** (`POST /api/sync`): the browser gzips bodies over 1 KB (`Content-Encoding: gzip`) and falls back to plain JSON if the server refuses. The server accepts both and caps the decompressed size (`src/lib/offline/sync/body.ts`).
+- **Uploading offline practice** (`POST /api/sync`): the browser gzips bodies over 1 KB (`Content-Encoding: gzip`) and falls back to plain JSON if the server refuses. The server accepts both and caps the decompressed size (`src/features/offline/lib/sync/body.ts`).
 - **Pages, scripts and API responses** are gzipped by `next start` (Vercel does the same, with brotli), so they are not compressed again in code.
 - **Not compressed on purpose:** the database (Postgres already compresses large values, and these columns are short), React state, and small `localStorage` values such as settings, where the result would be larger than the input.
 

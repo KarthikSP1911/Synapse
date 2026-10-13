@@ -1,5 +1,5 @@
 import { applyAttempt } from "@/features/skills/lib/practice/item-stats";
-import { guestNextQuestion } from "@/lib/offline/guest/engine";
+import { guestNextQuestion } from "@/features/offline/lib/guest/engine";
 import {
   GUEST_STORAGE_KEY,
   MAX_ATTEMPTS_PER_SESSION,
@@ -11,7 +11,7 @@ import {
   type GuestData,
   type GuestSession,
   type GuestStat,
-} from "@/lib/offline/guest/storage";
+} from "@/features/offline/lib/guest/storage";
 import { MAX_REVIEW_QUESTIONS, isQuestionInSession, parseSessionRequest } from "@/features/skills/lib/practice/sessions";
 import { checkAnswer } from "@/features/skills/lib/answers";
 import { questionFromId, toPublicQuestion } from "@/features/skills/lib/build";
@@ -25,7 +25,7 @@ import { MAX_RESPONSE_TIME_MS, QUESTION_LIMIT_SLACK_MS, TIMED_GRACE_MS, isTimedO
  * never wait on the server.
  *
  * Two stores use it. A guest's data stays in the browser for good. A signed-in user's data is a local
- * copy of their account, whose sessions are flagged `synced: false` until `src/lib/offline/sync` has uploaded them.
+ * copy of their account, whose sessions are flagged `synced: false` until `src/features/offline/lib/sync` has uploaded them.
  *
  * Unlike the server, nothing here is a security boundary: the data is the user's own practice. The
  * checks are kept anyway so both modes behave identically (a stray request cannot corrupt the history),

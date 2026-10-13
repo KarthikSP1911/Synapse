@@ -1,4 +1,4 @@
-import type { LocalStore } from "@/lib/offline/guest/api";
+import type { LocalStore } from "@/features/offline/lib/guest/api";
 
 /**
  * Finished-game history on this device, shared by the games that keep their own history (MindSprint, Number

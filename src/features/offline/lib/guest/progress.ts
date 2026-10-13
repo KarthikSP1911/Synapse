@@ -1,7 +1,7 @@
 import { MASTERED_MAX_WEAKNESS, MASTERED_MIN_ATTEMPTS, WEAK_MIN_WEAKNESS } from "@/features/progress/lib/progress-shared";
 import type { ExerciseBreakdown, ItemRow, SkillFilter, SkillSummary } from "@/features/progress/server/progress-queries";
 import { SKILLS, type Skill } from "@/features/skills/lib/types";
-import type { GuestData, GuestSession, GuestStat } from "@/lib/offline/guest/storage";
+import type { GuestData, GuestSession, GuestStat } from "@/features/offline/lib/guest/storage";
 
 /**
  * Browser-side twins of the read queries in `progress-queries.ts`, computed from a guest's

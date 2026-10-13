@@ -1,6 +1,6 @@
 import { beforeEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { COMPRESSED_TAG } from "@/lib/offline/compression";
+import { COMPRESSED_TAG } from "@/features/offline/lib/compression";
 import { createLocalFetch, guestFetch } from "./api";
 import { GUEST_STORAGE_KEY, emptyGuestData, loadGuestData, saveGuestData, userStorageKey } from "./storage";
 

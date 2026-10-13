@@ -1,10 +1,10 @@
-import { GZIP_MIN_CHARS, gzipText } from "@/lib/offline/compression";
-import { loadGuestData, saveGuestData, userStorageKey, type GuestData, type GuestSession, type GuestStat } from "@/lib/offline/guest/storage";
-import { MAX_SYNC_ATTEMPTS, MAX_SYNC_SESSIONS } from "@/lib/offline/sync/payload";
+import { GZIP_MIN_CHARS, gzipText } from "@/features/offline/lib/compression";
+import { loadGuestData, saveGuestData, userStorageKey, type GuestData, type GuestSession, type GuestStat } from "@/features/offline/lib/guest/storage";
+import { MAX_SYNC_ATTEMPTS, MAX_SYNC_SESSIONS } from "@/features/offline/lib/sync/payload";
 
 /**
  * Browser side of syncing. A signed-in user's practice is saved on the device first (see
- * `src/lib/offline/guest/api.ts`); this uploads the sessions the server has not received and refreshes the
+ * `src/features/offline/lib/guest/api.ts`); this uploads the sessions the server has not received and refreshes the
  * device's copy of the account's statistics. Everything here is safe to repeat and to interrupt: the
  * server recognises sessions it already has, and a session is only marked uploaded after the server says so.
  */

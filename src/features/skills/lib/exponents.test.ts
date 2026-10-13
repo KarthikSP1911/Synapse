@@ -1,8 +1,8 @@
 import { beforeEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { guestFetch } from "@/lib/offline/guest/api";
-import { guestSkillSummaries } from "@/lib/offline/guest/progress";
-import { loadGuestData } from "@/lib/offline/guest/storage";
+import { guestFetch } from "@/features/offline/lib/guest/api";
+import { guestSkillSummaries } from "@/features/offline/lib/guest/progress";
+import { loadGuestData } from "@/features/offline/lib/guest/storage";
 import {
   chooseExponentsLevel,
   chooseExponentsMode,

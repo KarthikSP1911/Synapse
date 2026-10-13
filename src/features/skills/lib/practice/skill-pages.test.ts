@@ -45,7 +45,7 @@ describe("skill routes", () => {
 
   it("lists every skill page in the service worker and the offline warm-up", () => {
     const worker = readFileSync(join(process.cwd(), "public", "sw.js"), "utf8");
-    const client = readFileSync(join(process.cwd(), "src", "lib", "offline", "sw-client.ts"), "utf8");
+    const client = readFileSync(join(process.cwd(), "src", "features", "offline", "lib", "sw-client.ts"), "utf8");
     for (const path of SKILL_PATHS) assert.ok(worker.includes(`"${path}"`), `sw.js is missing ${path}`);
     assert.ok(client.includes("SKILL_PATHS"), "sw-client.ts does not warm the skill pages");
   });

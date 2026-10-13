@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import PracticeHub from "@/features/skills/components/practice-hub";
+import PracticeHub from "@/features/home/components/practice-hub";
 import { getSkillSummaries } from "@/features/progress/server/progress-queries";
 import { legacySkillRedirect } from "@/features/skills/lib/routes";
 import { requireViewer } from "@/features/auth/server/auth";

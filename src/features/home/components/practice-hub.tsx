@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useLocalStore } from "@/features/auth/components/viewer-provider";
-import { guestSkillSummaries } from "@/lib/offline/guest/progress";
+import { guestSkillSummaries } from "@/features/offline/lib/guest/progress";
 import { scoreSession } from "@/features/games/mindsprint/lib/scoring";
 import { loadHistory as loadMindsprintHistory } from "@/features/games/mindsprint/lib/storage";
 import { computeAllStats as computeAllRecallStats } from "@/features/games/recall/lib/stats";
@@ -13,7 +13,7 @@ import { computeStats as computeStats2048 } from "@/features/games/game2048/lib/
 import { loadBest as load2048Best, loadGame as load2048Game, loadHistory as load2048History } from "@/features/games/game2048/lib/storage";
 import { DIFFICULTY_LABEL } from "@/features/games/sudoku/lib/types";
 import { loadGame as loadSudokuGame, loadHistory as loadSudokuHistory } from "@/features/games/sudoku/lib/storage";
-import { loadGuestData } from "@/lib/offline/guest/storage";
+import { loadGuestData } from "@/features/offline/lib/guest/storage";
 import { SKILL_META, SKILL_ORDER } from "@/features/skills/lib/meta";
 import { skillHref } from "@/features/skills/lib/routes";
 import type { Skill } from "@/features/skills/lib/types";

@@ -3,7 +3,7 @@ import { reviewQuestionIds, sessionConfig } from "@/features/skills/lib/practice
 import { questionFromId } from "@/features/skills/lib/build";
 import { buildPool } from "@/features/skills/lib/pools";
 import type { Focus, Question } from "@/features/skills/lib/types";
-import type { GuestSession, GuestStat } from "@/lib/offline/guest/storage";
+import type { GuestSession, GuestStat } from "@/features/offline/lib/guest/storage";
 
 /**
  * Picks a guest session's next question: the browser-side twin of `getNextQuestion`, which reads the

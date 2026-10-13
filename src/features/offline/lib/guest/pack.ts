@@ -1,4 +1,4 @@
-import type { GuestAttempt, GuestData, GuestSession, GuestStat } from "@/lib/offline/guest/storage";
+import type { GuestAttempt, GuestData, GuestSession, GuestStat } from "@/features/offline/lib/guest/storage";
 import { questionFromId } from "@/features/skills/lib/build";
 import type { Outcome } from "@/features/skills/lib/types";
 
@@ -12,7 +12,7 @@ import type { Outcome } from "@/features/skills/lib/types";
  * rebuilt value is identical to the stored one. When it is not, or the id is no longer understood, the
  * whole record is stored as it was, so packing never changes what is read back.
  *
- * Layout, as separate texts so each can be compressed (and cached) on its own, see `src/lib/offline/compression.ts`:
+ * Layout, as separate texts so each can be compressed (and cached) on its own, see `src/features/offline/lib/compression.ts`:
  *   [header, ...statistics shards, ...sessions]
  */
 

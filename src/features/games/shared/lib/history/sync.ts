@@ -1,10 +1,10 @@
-import type { LocalStore } from "@/lib/offline/guest/api";
-import { userStorageKey } from "@/lib/offline/guest/storage";
+import type { LocalStore } from "@/features/offline/lib/guest/api";
+import { userStorageKey } from "@/features/offline/lib/guest/storage";
 import type { HistoryItem, createLocalHistory } from "./local";
 import { MAX_UPLOAD_SESSIONS } from "./upload";
 
 /**
- * Browser side of syncing a game's history for a signed-in user, in the same spirit as `src/lib/offline/sync/client.ts`
+ * Browser side of syncing a game's history for a signed-in user, in the same spirit as `src/features/offline/lib/sync/client.ts`
  * for practice: finished sessions are saved on the device first, uploaded when there is a connection, and only
  * marked as uploaded once the server says it has them. The server recognises a session it already has by its
  * client id, so repeating or interrupting an upload is harmless.

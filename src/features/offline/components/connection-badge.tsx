@@ -2,7 +2,7 @@
 
 import { CloudOff, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useSyncStatus } from "@/lib/offline/sync/status";
+import { useSyncStatus } from "@/features/offline/lib/sync/status";
 
 /**
  * Tells the user when practice is only saved on this device. Hidden while everything is up to date, so

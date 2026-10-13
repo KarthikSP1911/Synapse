@@ -2,7 +2,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { practiceSessions, questionAttempts, questionStats } from "@/db/schema";
 import { applyAttempt, type ItemStats } from "@/features/skills/lib/practice/item-stats";
-import type { ValidAttempt, ValidSession } from "@/lib/offline/sync/payload";
+import type { ValidAttempt, ValidSession } from "@/features/offline/lib/sync/payload";
 
 export interface SyncedSession {
   clientId: string;

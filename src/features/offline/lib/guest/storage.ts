@@ -1,5 +1,5 @@
-import { compressSegments, decompressSegments } from "@/lib/offline/compression";
-import { packData, unpackData } from "@/lib/offline/guest/pack";
+import { compressSegments, decompressSegments } from "@/features/offline/lib/compression";
+import { packData, unpackData } from "@/features/offline/lib/guest/pack";
 import type { ItemStats } from "@/features/skills/lib/practice/item-stats";
 import type { PracticeConfig, Outcome, Skill } from "@/features/skills/lib/types";
 
@@ -92,7 +92,7 @@ export interface GuestData {
 export const emptyGuestData = (): GuestData => ({ version: 1, nextId: 1, sessions: [], stats: {} });
 
 /**
- * What is stored is compressed (see `pack.ts` and `src/lib/offline/compression.ts`), which keeps a long history
+ * What is stored is compressed (see `pack.ts` and `src/features/offline/lib/compression.ts`), which keeps a long history
  * far below the storage quota. Data saved before compression existed is plain JSON; it is still read
  * here and is replaced by the compressed form the next time it is saved.
  */
