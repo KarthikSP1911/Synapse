@@ -19,13 +19,6 @@ export const POPCOUNT: readonly number[] = Array.from({ length: 512 }, (_, n) =>
 /** The digit of a mask that has exactly one bit set. */
 export const digitOf = (mask: number): number => 32 - Math.clz32(mask);
 
-/** The digits in a mask, smallest first. */
-export function digitsIn(mask: number): number[] {
-  const out: number[] = [];
-  for (let d = 1; d <= SIZE; d++) if (mask & bit(d)) out.push(d);
-  return out;
-}
-
 /** 9 rows, then 9 columns, then 9 boxes; each a list of 9 cell indices. */
 export const UNITS: readonly (readonly number[])[] = (() => {
   const units: number[][] = [];
@@ -49,9 +42,6 @@ export const PEERS: readonly (readonly number[])[] = Array.from({ length: CELLS 
   for (const unit of [ROW_UNITS[rowOf(i)], COL_UNITS[colOf(i)], BOX_UNITS[boxOf(i)]]) for (const p of unit) if (p !== i) set.add(p);
   return [...set].sort((a, b) => a - b);
 });
-
-/** Whether two different cells see each other. */
-export const arePeers = (a: number, b: number): boolean => a !== b && (rowOf(a) === rowOf(b) || colOf(a) === colOf(b) || boxOf(a) === boxOf(b));
 
 /** Parses 81 characters ("0" or "." for empty) into numbers, or returns null if the text is not a grid. */
 export function parseGrid(text: unknown): number[] | null {

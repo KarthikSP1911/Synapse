@@ -89,6 +89,4 @@ export function hasMoves(grid: Grid): boolean {
 
 export const highestTileOf = (grid: Grid): number => grid.reduce((max, v) => Math.max(max, v), 0);
 
-export const sumOf = (grid: Grid): number => grid.reduce((total, v) => total + v, 0);
-
 export const isPowerOfTwo = (n: number): boolean => Number.isInteger(n) && n >= 2 && (n & (n - 1)) === 0;
