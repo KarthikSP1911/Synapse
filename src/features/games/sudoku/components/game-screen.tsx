@@ -1,13 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Check, Eye, Lightbulb, Pause, Pencil, Play, Redo2, RotateCcw, Sparkles, Undo2, WandSparkles } from "lucide-react";
+import { ArrowLeft, Ellipsis, Eraser, Lightbulb, Pause, Pencil, Play, Redo2, Undo2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/form/choice-controls";
 import { accentStyle } from "@/components/common/accent-tile";
+import { usePlayFocus } from "@/components/layout/use-play-focus";
 import { Board } from "@/features/games/sudoku/components/board";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
+import { AssistanceSwitches, GameActions } from "@/features/games/sudoku/components/game-actions";
+import { MoreSheet } from "@/features/games/sudoku/components/more-sheet";
 import { NumberPad } from "@/features/games/sudoku/components/number-pad";
 import { ACCENT } from "@/lib/accent";
 import {
@@ -61,7 +63,7 @@ const isTextEntry = (target: EventTarget | null): boolean => {
 };
 
 const toolButton = cn(
-  "flex h-12 flex-col items-center sm:h-14 justify-center gap-1 rounded-lg border border-border bg-card text-[11px] font-medium text-muted-foreground shadow-card transition-[background-color,color,border-color,transform] duration-150 select-none touch-manipulation",
+  "flex h-12 flex-col items-center short:h-11 sm:h-14 justify-center gap-1 rounded-lg border border-border bg-card text-[11px] font-medium text-muted-foreground shadow-card transition-[background-color,color,border-color,transform] duration-150 select-none touch-manipulation",
   "hover:border-input hover:bg-accent hover:text-foreground active:scale-95 disabled:pointer-events-none disabled:opacity-35",
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
 );
@@ -86,6 +88,7 @@ export function GameScreen({ initial, settings, onSettingsChange, onChange, onEn
   const [selected, setSelected] = useState<number | null>(null);
   const [notesMode, setNotesMode] = useState(false);
   const [dialog, setDialog] = useState<Dialog>(null);
+  const [more, setMore] = useState(false);
   const [notice, setNotice] = useState("");
   const [checked, setChecked] = useState<{ cells: CellState[]; result: CheckResult } | null>(null);
   const endedRef = useRef(false);
@@ -93,6 +96,9 @@ export function GameScreen({ initial, settings, onSettingsChange, onChange, onEn
   const playing = game.status === "playing";
   const paused = game.status === "paused";
   const finished = game.status === "completed" || game.status === "revealed";
+
+  // Below `lg` the play screen is exactly one screen tall (and the header and tab bar are out of the way on phones).
+  usePlayFocus(true, "(width < 64rem)");
 
   // ---- Saving, ending, pausing -------------------------------------------
 
@@ -197,7 +203,7 @@ export function GameScreen({ initial, settings, onSettingsChange, onChange, onEn
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (dialog !== null || isTextEntry(event.target)) return;
+      if (dialog !== null || more || isTextEntry(event.target)) return;
       const key = event.key;
       const mod = event.ctrlKey || event.metaKey;
 
@@ -228,7 +234,7 @@ export function GameScreen({ initial, settings, onSettingsChange, onChange, onEn
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [dialog, playing, enter, erase, move, doUndo, doRedo]);
+  }, [dialog, more, playing, enter, erase, move, doUndo, doRedo]);
 
   // ---- What to show -------------------------------------------------------------------
 
@@ -242,28 +248,49 @@ export function GameScreen({ initial, settings, onSettingsChange, onChange, onEn
   const counts = useMemo(() => digitCounts(game.cells), [game.cells]);
   const coveredBoard = paused;
 
+  const actions = {
+    onCheck: check,
+    onAutoNotes: () => setGame((g) => fillCandidates(g, Date.now())),
+    onRestart: () => (hasProgress(game) ? setDialog("restart") : setGame((g) => restartGame(g, Date.now()))),
+    onReveal: () => setDialog("reveal"),
+    onNew: () => (hasProgress(game) ? setDialog("new") : onAbandon(game)),
+  };
+
   return (
-    <div className="container py-4 sm:py-8">
-      <div className="mx-auto grid max-w-xl gap-4 lg:max-w-5xl lg:grid-cols-[minmax(0,34rem)_20rem] lg:justify-center lg:gap-8">
-        <section aria-label="Game" className="min-w-0 space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <Button variant="ghost" size="sm" className="-ml-2" onClick={() => onLeave(game)}>
-              <ArrowLeft /> Back
+    <div className="play-screen play-below-lg sdk-screen py-3 lg:container lg:py-8">
+      <div className="sdk-layout mx-auto flex min-h-0 w-full flex-1 flex-col gap-2 lg:grid lg:max-w-5xl lg:flex-none lg:grid-cols-[minmax(0,34rem)_20rem] lg:justify-center lg:gap-8">
+        <section aria-label="Game" className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 lg:block lg:flex-none lg:space-y-3">
+          <div className="sdk-side flex items-center justify-between gap-2">
+            <Button variant="ghost" size="sm" className="-ml-2 pointer-coarse:h-11" onClick={() => onLeave(game)} aria-label="Back">
+              <ArrowLeft /> <span className="hidden sm:inline short:hidden">Back</span>
             </Button>
-            <h1 className="flex items-baseline gap-2 text-base font-semibold tracking-tight">
+            <h1 className="flex min-w-0 items-baseline gap-2 truncate text-base font-semibold tracking-tight">
               <span className="accent-label" data-active style={accentStyle("sudoku")}>
                 Sudoku
               </span>
-              <span className="text-sm font-medium text-muted-foreground">{DIFFICULTY_LABEL[game.difficulty]}</span>
+              <span className="truncate text-sm font-medium text-muted-foreground">{DIFFICULTY_LABEL[game.difficulty]}</span>
             </h1>
-            <Button variant="outline" size="sm" onClick={() => setGame((g) => (g.status === "paused" ? resumeGame(g, Date.now()) : pauseGame(g, Date.now())))} disabled={finished} aria-label={paused ? "Resume" : "Pause"}>
-              {paused ? <Play /> : <Pause />}
-              <Clock game={game} />
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="pointer-coarse:h-11"
+                onClick={() => setGame((g) => (g.status === "paused" ? resumeGame(g, Date.now()) : pauseGame(g, Date.now())))}
+                disabled={finished}
+                aria-label={paused ? "Resume" : "Pause"}
+              >
+                {paused ? <Play /> : <Pause />}
+                <Clock game={game} />
+              </Button>
+              <Button variant="outline" size="icon" className="lg:hidden" onClick={() => setMore(true)} aria-label="More actions">
+                <Ellipsis />
+              </Button>
+            </div>
           </div>
 
-          <dl className="flex items-center justify-between gap-3 text-sm" aria-label="Game statistics">
-            <div className="flex gap-4">
+          {/* A message ("Hint: ...", "Check: ...") covers the counters for a few seconds instead of costing a row of its own. */}
+          <div className="sdk-side relative min-h-8 text-sm">
+            <dl className="flex h-full items-center gap-4" aria-label="Game statistics">
               {settings.trackMistakes && (
                 <div className="flex items-baseline gap-1.5">
                   <dt className="text-muted-foreground">Mistakes</dt>
@@ -274,29 +301,31 @@ export function GameScreen({ initial, settings, onSettingsChange, onChange, onEn
                 <dt className="text-muted-foreground">Hints</dt>
                 <dd className="font-mono font-semibold tabular-nums">{game.hintsUsed}</dd>
               </div>
-            </div>
-            <p role="status" aria-live="polite" className="min-h-5 truncate text-right text-xs text-muted-foreground">
-              {notice}
+            </dl>
+            <p role="status" aria-live="polite" className={cn("absolute inset-0 flex items-center bg-background text-xs leading-4 text-muted-foreground", !notice && "invisible")}>
+              <span className="line-clamp-2">{notice}</span>
             </p>
-          </dl>
+          </div>
 
-          <div className="relative">
-            <Board cells={game.cells} puzzle={game.puzzle} selected={selected} errors={errors} onSelect={select} covered={coveredBoard} />
-            {paused && (
-              <div className="absolute inset-0 grid place-items-center">
-                <div className="space-y-3 text-center">
-                  <p className="text-xl font-semibold tracking-tight">Paused</p>
-                  <Button size="lg" onClick={() => setGame((g) => resumeGame(g, Date.now()))} autoFocus>
-                    <Play /> Resume
-                  </Button>
+          <div className="sdk-stage">
+            <div className="sdk-square relative">
+              <Board cells={game.cells} puzzle={game.puzzle} selected={selected} errors={errors} onSelect={select} covered={coveredBoard} />
+              {paused && (
+                <div className="absolute inset-0 grid place-items-center">
+                  <div className="space-y-3 text-center">
+                    <p className="text-xl font-semibold tracking-tight">Paused</p>
+                    <Button size="lg" onClick={() => setGame((g) => resumeGame(g, Date.now()))} autoFocus>
+                      <Play /> Resume
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </section>
 
-        <aside aria-label="Controls" className="min-w-0 space-y-3">
-          <div className="grid grid-cols-4 gap-2">
+        <aside aria-label="Controls" className="min-w-0 space-y-2 lg:space-y-3">
+          <div className="sdk-side grid grid-cols-5 gap-2 lg:grid-cols-4">
             <button type="button" className={toolButton} onClick={doUndo} disabled={!playing || game.undoStack.length === 0} aria-label="Undo">
               <Undo2 className="size-5" aria-hidden />
               Undo
@@ -304,6 +333,11 @@ export function GameScreen({ initial, settings, onSettingsChange, onChange, onEn
             <button type="button" className={toolButton} onClick={doRedo} disabled={!playing || game.redoStack.length === 0} aria-label="Redo">
               <Redo2 className="size-5" aria-hidden />
               Redo
+            </button>
+            {/* From `lg` up Erase is a key of the number pad instead. */}
+            <button type="button" className={cn(toolButton, "lg:hidden")} onClick={erase} disabled={!playing} aria-label="Erase">
+              <Eraser className="size-5" aria-hidden />
+              Erase
             </button>
             <button
               type="button"
@@ -323,44 +357,33 @@ export function GameScreen({ initial, settings, onSettingsChange, onChange, onEn
             </button>
           </div>
 
-          <NumberPad counts={counts} notesMode={notesMode} disabled={!playing} onDigit={enter} onErase={erase} />
+          <NumberPad className="sdk-side" counts={counts} notesMode={notesMode} disabled={!playing} onDigit={enter} onErase={erase} />
 
-          <div className="grid grid-cols-2 gap-2">
-            <Button variant="outline" size="sm" onClick={check} disabled={!playing}>
-              <Check /> Check
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setGame((g) => fillCandidates(g, Date.now()))} disabled={!playing}>
-              <WandSparkles /> Auto notes
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => (hasProgress(game) ? setDialog("restart") : setGame((g) => restartGame(g, Date.now())))} disabled={finished}>
-              <RotateCcw /> Restart
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setDialog("reveal")} disabled={finished}>
-              <Eye /> Show solution
-            </Button>
-            <Button variant="secondary" size="sm" className="col-span-2" onClick={() => (hasProgress(game) ? setDialog("new") : onAbandon(game))}>
-              <Sparkles /> New game
-            </Button>
+          {/* On phones these live in the "More" sheet. */}
+          <div className="hidden space-y-3 lg:block">
+            <GameActions playing={playing} finished={finished} {...actions} />
+
+            <details className="rounded-xl border border-border bg-card px-4 py-3 text-sm shadow-card">
+              <summary className="cursor-pointer list-none font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">Assistance settings</summary>
+              <div className="mt-4">
+                <AssistanceSwitches settings={settings} onChange={onSettingsChange} />
+              </div>
+            </details>
+
+            <p className="text-xs text-muted-foreground">Keys: 1–9 enter · Backspace erase · arrows move · N notes · Ctrl+Z undo · Ctrl+Y redo</p>
           </div>
-
-          <details className="rounded-xl border border-border bg-card px-4 py-3 text-sm shadow-card">
-            <summary className="cursor-pointer list-none font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">Assistance settings</summary>
-            <div className="mt-4 space-y-4">
-              <Switch
-                label="Mark wrong entries as I go"
-                hint="Off: duplicates and wrong digits are only shown when you press Check"
-                checked={settings.highlight === "instant"}
-                onChange={(on) => onSettingsChange({ ...settings, highlight: on ? "instant" : "check" })}
-              />
-              <Switch label="Count mistakes" hint="Wrong digits are counted as they are entered" checked={settings.trackMistakes} onChange={(trackMistakes) => onSettingsChange({ ...settings, trackMistakes })} />
-            </div>
-          </details>
-
-          <p className="hidden text-xs text-muted-foreground lg:block">
-            Keys: 1–9 enter · Backspace erase · arrows move · N notes · Ctrl+Z undo · Ctrl+Y redo
-          </p>
         </aside>
       </div>
+
+      {more && (
+        <MoreSheet title="More" onClose={() => setMore(false)}>
+          <GameActions playing={playing} finished={finished} {...actions} onClose={() => setMore(false)} />
+          <div>
+            <h3 className="mb-3 text-sm font-semibold">Assistance</h3>
+            <AssistanceSwitches settings={settings} onChange={onSettingsChange} />
+          </div>
+        </MoreSheet>
+      )}
 
       {dialog === "restart" && (
         <ConfirmDialog
