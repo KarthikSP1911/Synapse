@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { practiceSessions, questionAttempts, questionStats } from "@/db/schema";
-import { and, asc, desc, eq, gt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, like, sql } from "drizzle-orm";
 import { SKILLS, type Skill } from "@/features/skills/lib/types";
 import { MASTERED_MAX_WEAKNESS, MASTERED_MIN_ATTEMPTS, WEAK_MIN_WEAKNESS, overviewOf } from "@/features/progress/lib/progress-shared";
 
@@ -318,7 +318,17 @@ export interface SquareCell {
  * Squares performance per base number n (value, root and missing-value questions for the same n
  * share the concept `square:n`, so they are combined).
  */
-export async function getSquareCells(userId: number): Promise<SquareCell[]> {
+export function getSquareCells(userId: number): Promise<SquareCell[]> {
+  return getPowerCells(userId, "square");
+}
+
+/** Cubes performance per base number n (cube and cube-root questions share the concept `cube:n`). */
+export function getCubeCells(userId: number): Promise<SquareCell[]> {
+  return getPowerCells(userId, "cube");
+}
+
+/** Squares and cubes live in one skill; their concepts (`square:n`, `cube:n`) keep their stats apart. */
+async function getPowerCells(userId: number, kind: "square" | "cube"): Promise<SquareCell[]> {
   const rows = await db
     .select({
       concept: questionStats.concept,
@@ -328,7 +338,7 @@ export async function getSquareCells(userId: number): Promise<SquareCell[]> {
       weakness: sql<string>`AVG(${questionStats.weaknessScore})`,
     })
     .from(questionStats)
-    .where(and(eq(questionStats.userId, userId), eq(questionStats.skill, "square"), attempted))
+    .where(and(eq(questionStats.userId, userId), eq(questionStats.skill, "square"), like(questionStats.concept, `${kind}:%`), attempted))
     .groupBy(questionStats.concept);
 
   const cells: SquareCell[] = [];

@@ -84,6 +84,34 @@ describe("spec examples", () => {
     assert.equal(answerOf("square:missing:base:441"), "21");
   });
 
+  it("cubes", () => {
+    assert.equal(answerOf("square:cube:1"), "1");
+    assert.equal(answerOf("square:cube:7"), "343");
+    assert.equal(answerOf("square:cube:12"), "1728");
+    assert.equal(answerOf("square:cube:20"), "8000");
+    assert.equal(answerOf("square:cube-root:343"), "7");
+    assert.equal(answerOf("square:cube-root:1728"), "12");
+    assert.equal(answerOf("square:cube-root:8000"), "20");
+    assert.equal(q("square:cube:7").prompt, "7³");
+    assert.equal(q("square:cube-root:343").prompt, "∛343");
+    assert.equal(q("square:cube:7").concept, "cube:7");
+    assert.equal(q("square:cube-root:343").concept, "cube:7");
+  });
+
+  it("rejects cube ids that are not canonical or are out of range", () => {
+    for (const id of ["square:cube:0", "square:cube:21", "square:cube:07", "square:cube-root:344", "square:cube-root:9261", "square:cube:7:1"]) {
+      assert.equal(parseQuestionId(id), null, id);
+    }
+    assert.notEqual(parseQuestionId("square:cube-root:1"), null); // 1 = 1³
+  });
+
+  it("cube hints name the right root ending", () => {
+    for (let n = 1; n <= 20; n += 1) {
+      const hint = q(`square:cube-root:${n ** 3}`).hint ?? "";
+      assert.ok(hint.endsWith(`root ending in ${n % 10}.`), `${n}: ${hint}`);
+    }
+  });
+
   it("multiplication keeps its existing semantics", () => {
     assert.equal(answerOf("multiplication:12:8"), "96");
     assert.equal(answerOf("multiplication:8:12"), "96");
@@ -281,7 +309,7 @@ describe("answer validation", () => {
 function sampleConfigs(): PracticeConfig[] {
   const configs: PracticeConfig[] = [
     { skill: "multiplication", exerciseTypes: ["multiply"], left: [2, 3, 12, 20], right: [1, 7, 20] },
-    { skill: "square", exerciseTypes: ["value", "root", "missing"], rangeMin: 1, rangeMax: 100 },
+    { skill: "square", exerciseTypes: ["value", "root", "missing", "cube", "cube-root"], rangeMin: 1, rangeMax: 100 },
   ];
   for (const difficulty of DIFFICULTIES) {
     configs.push({
@@ -344,6 +372,23 @@ describe("practice pools", () => {
     assert.equal(both.length, 40);
     const missing = buildPool({ skill: "square", exerciseTypes: ["missing"], rangeMin: 1, rangeMax: 10 });
     assert.equal(missing.length, 20);
+  });
+
+  it("cubes stop at 20 however wide the range is, and share one concept per number", () => {
+    const cubes = buildPool({ skill: "square", exerciseTypes: ["cube", "cube-root"], rangeMin: 1, rangeMax: 100 });
+    assert.equal(cubes.length, 40);
+    assert.ok(cubes.every((i) => i.concept.startsWith("cube:")));
+    const narrow = buildPool({ skill: "square", exerciseTypes: ["cube"], rangeMin: 5, rangeMax: 7 });
+    assert.deepEqual(narrow.map((i) => i.id), ["square:cube:5", "square:cube:6", "square:cube:7"]);
+    const mixed = buildPool({ skill: "square", exerciseTypes: ["value", "cube"], rangeMin: 1, rangeMax: 30 });
+    assert.equal(mixed.length, 30 + 20);
+  });
+
+  it("refuses cube exercises for a range that starts above 20", () => {
+    const base = { skill: "square", rangeMin: 21, rangeMax: 40 };
+    assert.ok(!parseConfig({ ...base, exerciseTypes: ["cube"] }).ok);
+    assert.ok(!parseConfig({ ...base, exerciseTypes: ["value", "cube-root"] }).ok);
+    assert.ok(parseConfig({ ...base, exerciseTypes: ["value", "root"] }).ok);
   });
 
   it("respects square and percentage ranges", () => {
@@ -423,7 +468,7 @@ describe("config validation", () => {
       { skill: "square", exerciseTypes: ["value"], rangeMin: 0, rangeMax: 20 },
       { skill: "square", exerciseTypes: ["value"], rangeMin: 10, rangeMax: 101 },
       { skill: "square", exerciseTypes: ["value"], rangeMin: 20, rangeMax: 10 },
-      { skill: "square", exerciseTypes: ["value", "cube"], rangeMin: 1, rangeMax: 10 },
+      { skill: "square", exerciseTypes: ["value", "tesseract"], rangeMin: 1, rangeMax: 10 },
       { skill: "percentage", exerciseTypes: ["of"], difficulty: "expert", baseMin: 1, baseMax: 10 },
       { skill: "percentage", exerciseTypes: ["of"], difficulty: "beginner", baseMin: 0, baseMax: 10 },
       { skill: "percentage", exerciseTypes: ["of"], difficulty: "beginner", baseMin: 5, baseMax: 10001 },

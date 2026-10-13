@@ -11,7 +11,7 @@ import {
   type QuestionSpec,
   type Skill,
 } from "./types";
-import { MAX_BASE, fmt, idOfSpec, parseQuestionId } from "./ids";
+import { MAX_BASE, MAX_CUBE, fmt, idOfSpec, parseQuestionId } from "./ids";
 import { buildQuestion } from "./build";
 import { PERCENTS_BY_DIFFICULTY, difficultyOfSpec } from "./tiers";
 import { MAX_OPERAND, MIN_OPERAND } from "@/lib/validation";
@@ -31,6 +31,7 @@ import { gcd, rat, toDecimalString, toFractionString, div, fromNumber, PERCENT }
 
 export { MIN_OPERAND, MAX_OPERAND } from "@/lib/validation";
 export const MAX_SQUARE = 100;
+export { MAX_CUBE };
 
 /** Default operand range for percentage questions at each difficulty. */
 export const DEFAULT_BASE_RANGE: Record<Difficulty, { baseMin: number; baseMax: number }> = {
@@ -242,6 +243,9 @@ function squarePool(type: ExerciseType, rangeMin: number, rangeMax: number): Que
       specs.push({ skill: "square", exerciseType: "missing", variant: "product", n });
       specs.push({ skill: "square", exerciseType: "missing", variant: "base", n });
     }
+    // Cubes stop at MAX_CUBE however wide the range is.
+    if (type === "cube" && n <= MAX_CUBE) specs.push({ skill: "square", exerciseType: "cube", n });
+    if (type === "cube-root" && n <= MAX_CUBE) specs.push({ skill: "square", exerciseType: "cube-root", n });
   }
   return specs;
 }
@@ -524,6 +528,9 @@ export function parseConfig(raw: unknown): ConfigResult {
   if (skill === "square") {
     if (!isInt(c.rangeMin, 1, MAX_SQUARE) || !isInt(c.rangeMax, 1, MAX_SQUARE) || c.rangeMin > c.rangeMax) {
       return fail(`Square range must be within 1-${MAX_SQUARE}`);
+    }
+    if (c.rangeMin > MAX_CUBE && exerciseTypes.some((t) => t === "cube" || t === "cube-root")) {
+      return fail(`Cubes only go up to ${MAX_CUBE}. Start the range at ${MAX_CUBE} or lower, or turn the cube exercises off.`);
     }
     return { ok: true, config: { skill, exerciseTypes: exerciseTypes as never, rangeMin: c.rangeMin, rangeMax: c.rangeMax } };
   }

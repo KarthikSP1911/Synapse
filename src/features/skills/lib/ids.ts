@@ -15,10 +15,13 @@ import { decimalPlaces, gcd, isTerminating, mul, parseDecimal, PERCENT, rat, typ
  *   fraction:of:3/4:80                   fraction:compare:larger:3/4:2/3
  *   fraction:convert:f2d:1/4             square:value:17   square:root:289
  *   square:missing:product:14            square:missing:base:441
+ *   square:cube:7                        square:cube-root:343
  *   exponents:p:mul-law:std:2:5:7        exponents:v:evaluate:std:2:5
  */
 
 export const MAX_BASE = 10000;
+/** Largest number whose cube is asked (20³ = 8000); bigger cubes are not mental-maths facts. */
+export const MAX_CUBE = 20;
 /** Largest operand of an addition, subtraction or division question (four digits). */
 const MAX_OPERAND_VALUE = 9999;
 const MAX_PERCENT = 500;
@@ -119,6 +122,10 @@ export function idOfSpec(spec: QuestionSpec): string {
           return spec.variant === "product"
             ? `square:missing:product:${spec.n}`
             : `square:missing:base:${spec.n * spec.n}`;
+        case "cube":
+          return `square:cube:${spec.n}`;
+        case "cube-root":
+          return `square:cube-root:${spec.n ** 3}`;
       }
     case "exponents":
       return idOfExponentSpec(spec);
@@ -129,6 +136,12 @@ function perfectSquareRoot(s: number | null): number | null {
   if (s === null) return null;
   const root = Math.round(Math.sqrt(s));
   return root >= 1 && root <= 100 && root * root === s ? root : null;
+}
+
+function perfectCubeRoot(c: number | null): number | null {
+  if (c === null) return null;
+  const root = Math.round(Math.cbrt(c));
+  return root >= 1 && root <= MAX_CUBE && root ** 3 === c ? root : null;
 }
 
 function parseSpec(parts: string[]): QuestionSpec | null {
@@ -299,6 +312,14 @@ function parseSpec(parts: string[]): QuestionSpec | null {
             return n !== null ? { skill, exerciseType: "missing", variant, n } : null;
           }
           return null;
+        }
+        case "cube": {
+          const n = parseInt1(rest[0], 1, MAX_CUBE);
+          return n !== null && rest.length === 1 ? { skill, exerciseType: "cube", n } : null;
+        }
+        case "cube-root": {
+          const n = perfectCubeRoot(parseInt1(rest[0], 1, MAX_CUBE ** 3));
+          return n !== null && rest.length === 1 ? { skill, exerciseType: "cube-root", n } : null;
         }
       }
       return null;

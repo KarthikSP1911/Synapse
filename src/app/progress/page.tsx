@@ -55,7 +55,7 @@ function ConceptList({ concepts }: { concepts: ConceptRow[] }) {
   );
 }
 
-/** `percentage:pct:25` -> "25%", `fraction:3/4` -> "3/4", `square:17` -> "17²", `addition:2d+1d` -> "2-digit + 1-digit". */
+/** `percentage:pct:25` -> "25%", `fraction:3/4` -> "3/4", `square:17` -> "17²", `cube:7` -> "7³", `addition:2d+1d` -> "2-digit + 1-digit". */
 function conceptLabel(concept: string): string {
   const [skill, ...rest] = concept.split(":");
   const tail = rest.join(":");
@@ -65,6 +65,7 @@ function conceptLabel(concept: string): string {
   }
   if (skill === "percentage") return tail === "multi" ? "Multi-step changes" : `${tail.replace("pct:", "")}%`;
   if (skill === "square") return `${tail}²`;
+  if (skill === "cube") return `${tail}³`;
   if (skill === "exponents") return exponentConceptLabel(tail);
   if (skill === "fraction") return tail.startsWith("compare:") ? tail.replace("compare:", "").replace("|", " vs ") : tail;
   return concept;

@@ -44,7 +44,8 @@ export const DEFAULT_SETTINGS: Settings = {
   enabledExercises: {
     percentage: [...EXERCISE_TYPES.percentage],
     fraction: [...EXERCISE_TYPES.fraction],
-    square: [...EXERCISE_TYPES.square],
+    // Cubes are opt-in: they stop at 20, so they cannot mix with a range that starts higher.
+    square: ["value", "root", "missing"],
   },
   defaultSession: "20",
   questionTimeLimit: 0,

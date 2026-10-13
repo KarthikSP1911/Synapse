@@ -42,7 +42,7 @@ export const SKILL_META: Record<Skill, SkillMeta> = {
   square: {
     title: "Squares",
     short: "Squares",
-    description: "Recall squares and square roots up to 100.",
+    description: "Recall squares and square roots up to 100, and cubes and cube roots up to 20.",
   },
   exponents: {
     title: "Exponents",
@@ -86,6 +86,8 @@ export const EXERCISE_META: { [S in Skill]: Record<string, ExerciseMeta> } = {
     value: { label: "Find the square", description: "17² = ?" },
     root: { label: "Find the root", description: "√289 = ?" },
     missing: { label: "Missing value", description: "14 × 14 = ?   ?² = 441" },
+    cube: { label: "Find the cube", description: "7³ = ?" },
+    "cube-root": { label: "Find the cube root", description: "∛343 = ?" },
   },
   exponents: {
     evaluate: { label: "Evaluate powers", description: "2^5 = ?" },
