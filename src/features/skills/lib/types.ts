@@ -20,7 +20,7 @@ export const EXERCISE_TYPES = {
   division: ["divide"],
   percentage: ["of", "what", "change", "convert"],
   fraction: ["simplify", "of", "compare", "convert"],
-  square: ["value", "root", "missing"],
+  square: ["value", "root", "missing", "cube", "cube-root"],
   exponents: ["evaluate", "base", "exponent", "mul-law", "div-law", "power-law", "zero-negative", "simplify"],
 } as const satisfies Record<Skill, readonly string[]>;
 
@@ -101,6 +101,10 @@ export type QuestionSpec =
   | { skill: "square"; exerciseType: "root"; n: number }
   /** `product`: n × n = ?   `base`: ?² = n² */
   | { skill: "square"; exerciseType: "missing"; variant: "product" | "base"; n: number }
+  /** Asks for n³. */
+  | { skill: "square"; exerciseType: "cube"; n: number }
+  /** Asks for the cube root of n³. */
+  | { skill: "square"; exerciseType: "cube-root"; n: number }
   /** `variant` picks the shape of the expression and `args` are its integers (the base first, then the exponents); see `exponents.ts`. */
   | { skill: "exponents"; exerciseType: ExerciseTypeOf<"exponents">; mode: ExponentMode; variant: string; args: number[] };
 

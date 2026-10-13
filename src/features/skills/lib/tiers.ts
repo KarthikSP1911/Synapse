@@ -37,6 +37,10 @@ function squareTier(n: number): Difficulty {
   return n <= 20 ? "beginner" : n <= 50 ? "intermediate" : "advanced";
 }
 
+function cubeTier(n: number): Difficulty {
+  return n <= 10 ? "beginner" : n <= 15 ? "intermediate" : "advanced";
+}
+
 /** Tier of an addition, subtraction or division by the size of its biggest number: two digits or fewer is beginner. */
 function digitTier(biggest: number): Difficulty {
   return biggest < 100 ? "beginner" : biggest < 1000 ? "intermediate" : "advanced";
@@ -109,7 +113,7 @@ export function difficultyOfSpec(spec: QuestionSpec): Difficulty {
     case "fraction":
       return fractionSkillTier(spec);
     case "square":
-      return squareTier(spec.n);
+      return spec.exerciseType === "cube" || spec.exerciseType === "cube-root" ? cubeTier(spec.n) : squareTier(spec.n);
     case "exponents":
       return exponentCore(spec)?.difficulty ?? "advanced";
   }

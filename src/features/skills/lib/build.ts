@@ -478,7 +478,37 @@ function squareWorking(n: number): string {
 
 const ROOT_ENDINGS: Record<number, string> = { 0: "0", 1: "1 or 9", 4: "2 or 8", 5: "5", 6: "4 or 6", 9: "3 or 7" };
 
+/** Last digit of a cube -> last digit of its root. Every digit appears once, so the ending alone gives the root's. */
+const CUBE_ROOT_ENDINGS: Record<number, number> = { 0: 0, 1: 1, 8: 2, 7: 3, 4: 4, 5: 5, 6: 6, 3: 7, 2: 8, 9: 9 };
+
+function cubeCore(spec: Extract<QuestionSpec, { skill: "square"; exerciseType: "cube" | "cube-root" }>): Core {
+  const { n } = spec;
+  const cube = n ** 3;
+  const concept = `cube:${n}`;
+  if (spec.exerciseType === "cube") {
+    return {
+      concept,
+      prompt: `${n}³`,
+      answerFormat: { kind: "integer" },
+      answerText: String(cube),
+      expected: rat(cube),
+      hint: n === 1 ? "1 times itself any number of times is 1." : `Square ${n} first, then multiply by ${n} again.`,
+      explanation: `${n}³ = ${n}² × ${n} = ${n * n} × ${n} = ${cube}.`,
+    };
+  }
+  return {
+    concept,
+    prompt: `∛${cube}`,
+    answerFormat: { kind: "integer" },
+    answerText: String(n),
+    expected: rat(n),
+    hint: `A cube ending in ${cube % 10} has a root ending in ${CUBE_ROOT_ENDINGS[cube % 10]}.`,
+    explanation: `${n} × ${n} × ${n} = ${cube}, so ∛${cube} = ${n}.`,
+  };
+}
+
 function squareCore(spec: Extract<QuestionSpec, { skill: "square" }>): Core {
+  if (spec.exerciseType === "cube" || spec.exerciseType === "cube-root") return cubeCore(spec);
   const { n } = spec;
   const sq = n * n;
   const concept = `square:${n}`;

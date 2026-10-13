@@ -356,14 +356,14 @@ export function SquareConfig({
   const activePreset = DIFFICULTIES.find((d) => SQUARE_PRESETS[d].rangeMin === min && SQUARE_PRESETS[d].rangeMax === max);
   return (
     <div className="grid gap-6">
-      <Section title="Exercises" description="Direct recall, reverse recall, or both mixed together.">
+      <Section title="Exercises" description="Squares and cubes, direct recall, reverse recall, or any mix. Cubes only go up to 20.">
         <ExercisePicker
           options={exerciseOptions("square")}
           selected={state.exerciseTypes}
           onChange={(exerciseTypes) => onChange({ ...state, exerciseTypes })}
         />
       </Section>
-      <Section title="Range" description="Which numbers to square. Pick a preset or set your own within 1–100.">
+      <Section title="Range" description="Which numbers to use. Pick a preset or set your own within 1–100; cubes use the part of the range up to 20.">
         <div className="grid grid-cols-3 gap-2" role="group" aria-label="Range presets">
           {DIFFICULTIES.map((d) => (
             <Chip

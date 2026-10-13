@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { getMultiplicationCells, getSquareCells, type MatrixCell, type SquareCell } from "@/features/progress/server/progress-queries";
+import { getCubeCells, getMultiplicationCells, getSquareCells, type MatrixCell, type SquareCell } from "@/features/progress/server/progress-queries";
+import { MAX_CUBE } from "@/features/skills/lib/pools";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Page, PageHeader } from "@/components/layout/page-header";
 import { cn } from "@/lib/utils";
@@ -12,6 +13,7 @@ export const metadata = { title: "Tables" };
 
 const numbers = Array.from({ length: 20 }, (_, i) => i + 1);
 const squareNumbers = Array.from({ length: 100 }, (_, i) => i + 1);
+const cubeNumbers = Array.from({ length: MAX_CUBE }, (_, i) => i + 1);
 
 /** Weakness score: 0 = mastered, 100 = critical. Colour is paired with the number, never used alone. */
 const bands = [
@@ -50,13 +52,18 @@ export default async function TablesPage() {
     );
   }
   const userId = viewer.user.id;
-  const [multiplication, squares] = await Promise.all([getMultiplicationCells(userId), getSquareCells(userId)]);
+  const [multiplication, squares, cubes] = await Promise.all([
+    getMultiplicationCells(userId),
+    getSquareCells(userId),
+    getCubeCells(userId),
+  ]);
 
   const pairMap = new Map<string, MatrixCell>();
   for (const p of multiplication) pairMap.set(`${p.left}x${p.right}`, p);
   const attempted = multiplication.length;
 
   const squareMap = new Map<number, SquareCell>(squares.map((s) => [s.n, s]));
+  const cubeMap = new Map<number, SquareCell>(cubes.map((c) => [c.n, c]));
 
   return (
     <Page>
@@ -160,6 +167,44 @@ export default async function TablesPage() {
                   )}
                 >
                   <span className="font-semibold">{n}²</span>
+                  <span className="text-[10px] opacity-80">{cell ? cell.weaknessScore : "·"}</span>
+                </div>
+              );
+            })}
+          </div>
+          <Legend />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Cubes</CardTitle>
+          <CardDescription>
+            The cubes of 1 to {MAX_CUBE}, scored from every cube and cube-root question about that number. {cubes.length} of {MAX_CUBE} attempted.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-5 gap-[3px] sm:grid-cols-10" role="table" aria-label="Weakness score by number cubed">
+            {cubeNumbers.map((n) => {
+              const cell = cubeMap.get(n);
+              return (
+                <div
+                  key={n}
+                  role="cell"
+                  tabIndex={cell ? 0 : undefined}
+                  title={
+                    cell
+                      ? `${n}³ = ${n ** 3}\nAccuracy: ${cell.accuracy}%\nAvg time: ${(cell.averageResponseTimeMs / 1000).toFixed(1)}s\nScore: ${cell.weaknessScore}`
+                      : `${n}³ = ${n ** 3} · not attempted`
+                  }
+                  className={cn(
+                    "flex h-12 flex-col items-center justify-center rounded-md font-mono text-xs tabular-nums transition-transform",
+                    cell
+                      ? cn(bandFor(cell.weaknessScore).cell, "cursor-default hover:scale-105 hover:ring-1 hover:ring-foreground/30")
+                      : "bg-secondary/60 text-muted-foreground/60"
+                  )}
+                >
+                  <span className="font-semibold">{n}³</span>
                   <span className="text-[10px] opacity-80">{cell ? cell.weaknessScore : "·"}</span>
                 </div>
               );
