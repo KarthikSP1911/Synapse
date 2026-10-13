@@ -342,7 +342,7 @@ export default function Game2048App() {
       style={{ "--g48": ACCENT.game2048 } as React.CSSProperties}
       {...(playing ? swipe : {})}
     >
-      <div className={cn("mx-auto w-full max-w-lg", playing ? "flex min-h-0 flex-1 flex-col gap-3" : "space-y-4")}>
+      <div className={cn("mx-auto w-full max-w-lg", playing ? "play-landscape flex min-h-0 flex-1 flex-col gap-3" : "space-y-4")}>
         <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-3">
           <div className="flex shrink-0 items-center gap-3">
             {/* Once a game is under way the "Back to Games" row below is gone, and on phones the tab bar is hidden while playing. */}
@@ -384,7 +384,7 @@ export default function Game2048App() {
           ))}
         </div>
 
-        <div role="tabpanel" id="g48-panel-play" aria-labelledby="g48-tab-play" hidden={!playing} className={cn(playing && "flex min-h-0 flex-1 flex-col gap-3")}>
+        <div role="tabpanel" id="g48-panel-play" aria-labelledby="g48-tab-play" hidden={!playing} className={cn(playing && "play-panel flex min-h-0 flex-1 flex-col gap-3")}>
           {/* The board takes whatever height is left and is as large a square as fits in it. */}
           <div className="play-stage min-h-0 flex-1">
             <div className="play-square">
@@ -419,8 +419,8 @@ export default function Game2048App() {
           </div>
 
           <p className="shrink-0 text-center text-xs text-muted-foreground">
-            <span className="hidden sm:inline">Arrow keys or W A S D to slide · U or Ctrl+Z to undo · R for a new game · dragging with the mouse works too.</span>
-            <span className="sm:hidden">Swipe anywhere to slide. Undo takes back your last move.</span>
+            <span className="hidden sm:inline pointer-coarse:hidden">Arrow keys or W A S D to slide · U or Ctrl+Z to undo · R for a new game · dragging with the mouse works too.</span>
+            <span className="sm:hidden pointer-coarse:inline">Swipe anywhere to slide. Undo takes back your last move.</span>
           </p>
 
           {/* Before the first move only: once a game is under way nothing here can change it mid-play. */}

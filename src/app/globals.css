@@ -2,6 +2,8 @@
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
+/* A phone held sideways: too short for a stacked layout. */
+@custom-variant short (@media (height < 32rem));
 
 /*
   Design tokens. Every token holds a complete CSS color so Tailwind utilities
@@ -399,6 +401,29 @@ html.play-focus body {
 }
 .play-square {
   width: min(100cqw, 100cqh);
+}
+/*
+  A phone held sideways has room for width, not height: the board takes the left, as tall as the screen allows, and
+  everything else (`.play-panel` is flattened so its children join the grid) stacks in a column on the right.
+*/
+@media (height < 32rem) {
+  .play-landscape {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 18rem);
+    column-gap: 1rem;
+    max-width: none;
+  }
+  .play-landscape > *,
+  .play-landscape > .play-panel > * {
+    grid-column: 2;
+  }
+  .play-landscape > .play-panel {
+    display: contents;
+  }
+  .play-landscape .play-stage {
+    grid-column: 1;
+    grid-row: 1 / span 8;
+  }
 }
 
 /*
