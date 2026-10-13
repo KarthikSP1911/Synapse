@@ -363,7 +363,7 @@ export default function Game2048App() {
         </div>
         {(!playing || !started) && <p className="text-sm text-muted-foreground">Slide the tiles. When two with the same number touch, they merge into one. Reach 2048!</p>}
 
-        <div role="tablist" aria-label="2048" className="grid w-full max-w-xs shrink-0 grid-cols-2 gap-1 rounded-lg bg-secondary p-1">
+        <div role="tablist" aria-label="2048" className="grid w-full shrink-0 grid-cols-2 gap-1 rounded-lg bg-secondary p-1">
           {tabs.map(({ id, label }) => (
             <button
               key={id}
