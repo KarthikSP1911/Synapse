@@ -2,10 +2,10 @@ import { notFound, redirect } from "next/navigation";
 import { and, asc, desc, eq, gt, isNotNull, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { practiceSessions, questionAttempts } from "@/db/schema";
-import { SessionSummary } from "@/components/session-summary";
-import { SKILLS, type Skill } from "@/lib/skills/types";
-import { getViewer } from "@/lib/auth";
-import { summaryHref } from "@/lib/local-store";
+import { SessionSummary } from "@/features/skills/components/session-summary";
+import { SKILLS, type Skill } from "@/features/skills/lib/types";
+import { getViewer } from "@/features/auth/server/auth";
+import { summaryHref } from "@/features/offline/lib/local-store";
 import { parseId } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";

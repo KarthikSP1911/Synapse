@@ -1,5 +1,5 @@
 import { pgTable, serial, integer, timestamp, boolean, varchar, primaryKey, jsonb, text, index, uniqueIndex } from "drizzle-orm/pg-core";
-import type { PracticeConfig } from "@/lib/skills/types";
+import type { PracticeConfig } from "@/features/skills/lib/types";
 
 export const users = pgTable(
   "users",
@@ -7,7 +7,7 @@ export const users = pgTable(
     id: serial("id").primaryKey(),
     /** Stored lower-cased, so the unique index makes sign-ups case-insensitive. */
     email: varchar("email", { length: 254 }).notNull(),
-    /** `scrypt$<salt>$<hash>`; see `src/lib/password.ts`. */
+    /** `scrypt$<salt>$<hash>`; see `src/features/auth/lib/password.ts`. */
     passwordHash: text("password_hash").notNull(),
     /** IANA zone name (e.g. "Asia/Kolkata"), refreshed at each login; decides which day an attempt counts toward. */
     timezone: varchar("timezone", { length: 64 }).default("UTC").notNull(),
@@ -193,7 +193,7 @@ export const tableStatistics = pgTable("table_statistics", {
 
 /**
  * Finished MindSprint sessions of a signed-in user. `rounds` holds each round's settings, the numbers that were
- * flashed and the answer given (see `src/lib/mindsprint/records.ts`); correctness and points are worked out from
+ * flashed and the answer given (see `src/features/games/mindsprint/lib/records.ts`); correctness and points are worked out from
  * it again, so the figures below are only copies kept for listing and aggregating.
  */
 export const mindsprintSessions = pgTable(
@@ -223,7 +223,7 @@ export const mindsprintSessions = pgTable(
 
 /**
  * Finished Number Recall sessions of a signed-in user. `config` and `rounds` hold the settings, each round's
- * sequence (as text, so leading zeros survive) and the answer given (see `src/lib/recall/records.ts`); points are
+ * sequence (as text, so leading zeros survive) and the answer given (see `src/features/games/recall/lib/records.ts`); points are
  * worked out from them again, so the figures below are only copies kept for listing and aggregating. Single-digit
  * and two-digit sessions are told apart by `mode`.
  */
@@ -257,7 +257,7 @@ export const recallSessions = pgTable(
 /**
  * Sudoku games of a signed-in user that ended (solved, revealed or given up), uploaded from the device. `puzzle` is
  * the 81-character start grid, whose solution is unique, so nothing else about the board needs storing; points are
- * worked out from the other fields again (see `src/lib/sudoku/scoring.ts`), so `score` is only a copy kept for
+ * worked out from the other fields again (see `src/features/games/sudoku/lib/scoring.ts`), so `score` is only a copy kept for
  * listing and aggregating.
  */
 export const sudokuSessions = pgTable(
@@ -288,7 +288,7 @@ export const sudokuSessions = pgTable(
 
 /**
  * 2048 games of a signed-in user that ended (no move left) or were given up, uploaded from the device. The moves are
- * not stored, so the figures are checked for plausibility rather than replayed (see `src/lib/game2048/records.ts`).
+ * not stored, so the figures are checked for plausibility rather than replayed (see `src/features/games/game2048/lib/records.ts`).
  */
 export const game2048Sessions = pgTable(
   "game2048_sessions",

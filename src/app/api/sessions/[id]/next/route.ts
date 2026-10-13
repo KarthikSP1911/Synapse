@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { practiceSessions } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
-import { getCurrentUser, unauthorized } from "@/lib/auth";
-import { getNextQuestion } from "@/lib/question-engine";
-import { toPublicQuestion } from "@/lib/skills/build";
+import { getCurrentUser, unauthorized } from "@/features/auth/server/auth";
+import { getNextQuestion } from "@/features/skills/lib/practice/question-engine";
+import { toPublicQuestion } from "@/features/skills/lib/build";
 import { isOperand, isTimedOut, parseId, sessionDeadline } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";

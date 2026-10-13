@@ -1,16 +1,16 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import ProgressCharts from "@/components/progress-charts";
-import RangeChart from "@/components/range-chart";
-import { SkillIcon } from "@/components/skill-icon";
+import ProgressCharts from "@/features/progress/components/progress-charts";
+import RangeChart from "@/features/progress/components/range-chart";
+import { SkillIcon } from "@/components/common/skill-icon";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { buttonVariants } from "@/components/ui/button";
-import { Page, PageHeader, StatTile } from "@/components/page-header";
+import { Page, PageHeader, StatTile } from "@/components/layout/page-header";
 import { cn } from "@/lib/utils";
-import { GuestProgress } from "@/components/guest-progress";
-import { ItemList, SkillFilterNav, accuracyColor, accuracyTone, seconds } from "@/components/progress-parts";
-import { requireViewer } from "@/lib/auth";
+import { GuestProgress } from "@/features/progress/components/guest-progress";
+import { ItemList, SkillFilterNav, accuracyColor, accuracyTone, seconds } from "@/features/progress/components/progress-parts";
+import { requireViewer } from "@/features/auth/server/auth";
 import {
   getExerciseBreakdown,
   getMasteredItems,
@@ -23,11 +23,11 @@ import {
   overviewOf,
   parseSkillFilter,
   type ConceptRow,
-} from "@/lib/progress-queries";
-import { squareRangeBuckets } from "@/lib/square-range";
-import { SKILL_META, SKILL_ORDER, exerciseLabel, exponentConceptLabel, modeLabel, skillTitle } from "@/lib/skills/meta";
-import { skillHref } from "@/lib/skills/routes";
-import type { Skill } from "@/lib/skills/types";
+} from "@/features/progress/server/progress-queries";
+import { squareRangeBuckets } from "@/features/progress/lib/square-range";
+import { SKILL_META, SKILL_ORDER, exerciseLabel, exponentConceptLabel, modeLabel, skillTitle } from "@/features/skills/lib/meta";
+import { skillHref } from "@/features/skills/lib/routes";
+import type { Skill } from "@/features/skills/lib/types";
 
 export const dynamic = "force-dynamic";
 

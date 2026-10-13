@@ -1,16 +1,16 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser, unauthorized } from "@/lib/auth";
-import { readSyncBody } from "@/lib/sync/body";
-import { parseSyncBody, validateSession } from "@/lib/sync/payload";
-import { storeSyncedSession, type SyncedSession } from "@/lib/sync/server";
+import { getCurrentUser, unauthorized } from "@/features/auth/server/auth";
+import { readSyncBody } from "@/features/offline/lib/sync/body";
+import { parseSyncBody, validateSession } from "@/features/offline/lib/sync/payload";
+import { storeSyncedSession, type SyncedSession } from "@/features/offline/lib/sync/server";
 
 /**
  * Body: { sessions: [{ clientId, skill, mode, ..., startedAt, endedAt, pausedMs, attempts: [...] }] }
- * as JSON, optionally gzipped (`Content-Encoding: gzip`); see `src/lib/sync/body.ts`.
+ * as JSON, optionally gzipped (`Content-Encoding: gzip`); see `src/features/offline/lib/sync/body.ts`.
  *
  * Receives practice that was done on the user's device (possibly offline) and stores it under their
  * account. Idempotent per session (`clientId`), so the browser can safely retry. Correctness is decided
- * here again from the raw answers; see `src/lib/sync/payload.ts`.
+ * here again from the raw answers; see `src/features/offline/lib/sync/payload.ts`.
  *
  * Reply: { synced: [{ clientId, id, stored }], rejected: [{ clientId, reason }] }.
  * A rejected session is permanently invalid (retrying cannot help); a server failure is a 5xx instead.

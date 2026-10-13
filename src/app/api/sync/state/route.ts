@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { questionStats } from "@/db/schema";
-import { getCurrentUser, unauthorized } from "@/lib/auth";
+import { getCurrentUser, unauthorized } from "@/features/auth/server/auth";
 
 export const dynamic = "force-dynamic";
 

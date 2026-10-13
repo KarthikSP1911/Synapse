@@ -1,17 +1,11 @@
-import { NextResponse } from "next/server";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { recallSessions } from "@/db/schema";
-import { getCurrentUser, unauthorized } from "@/lib/auth";
-import { MAX_UPLOAD_SESSIONS } from "@/lib/history/sync";
-import { parseSessionData } from "@/lib/recall/records";
-import { scoreSession } from "@/lib/recall/scoring";
-import { readJson } from "@/lib/validation";
+import { createHistoryRoute } from "@/features/games/shared/lib/history/route";
+import { parseSessionData } from "@/features/games/recall/lib/records";
+import { scoreSession } from "@/features/games/recall/lib/scoring";
 
 export const dynamic = "force-dynamic";
-
-/** The most sessions sent back to a device at once. */
-const MAX_PULL = 100;
 
 /**
  * Body: { sessions: [{ clientId, startedAt, endedAt, config, rounds: [{ sequence, answer, responseMs }] }] }
@@ -21,34 +15,20 @@ const MAX_PULL = 100;
  * checked against the settings (items keep their full width, lengths follow the progression rules) and the score
  * is worked out again here from the sequence and the answer.
  *
- * Reply: { synced: [{ clientId }], rejected: [{ clientId, reason }] }. A rejected session is permanently invalid
- * (retrying cannot help); a server failure is a 5xx instead.
+ * GET returns the account's latest sessions, so a device can show history played elsewhere.
+ * See `createHistoryRoute` for the reply shapes.
  */
-export async function POST(request: Request) {
-  const user = await getCurrentUser();
-  if (!user) return unauthorized();
-
-  const body = await readJson(request);
-  if (!body || !Array.isArray(body.sessions)) return NextResponse.json({ error: "Expected { sessions: [...] }" }, { status: 400 });
-  if (body.sessions.length > MAX_UPLOAD_SESSIONS) {
-    return NextResponse.json({ error: `At most ${MAX_UPLOAD_SESSIONS} sessions per request` }, { status: 400 });
-  }
-
-  const synced: { clientId: string }[] = [];
-  const rejected: { clientId: string | null; reason: string }[] = [];
-  try {
-    for (const raw of body.sessions) {
-      const parsed = parseSessionData(raw, Date.now());
-      if (!parsed.ok) {
-        rejected.push({ clientId: parsed.clientId, reason: parsed.reason });
-        continue;
-      }
-      const { data } = parsed;
-      const scored = scoreSession(data.config, data.rounds);
-      await db
+const route = createHistoryRoute({
+  label: "Number Recall sessions",
+  noun: "sessions",
+  parse: (raw) => parseSessionData(raw, Date.now()),
+  insert: (userId, data) => {
+    const scored = scoreSession(data.config, data.rounds);
+    return (
+      db
         .insert(recallSessions)
         .values({
-          userId: user.id,
+          userId,
           clientId: data.clientId,
           mode: data.config.mode,
           config: data.config,
@@ -62,27 +42,14 @@ export async function POST(request: Request) {
           endedAt: new Date(data.endedAt),
         })
         // The same session sent twice (a retry, or two tabs): the first one stays.
-        .onConflictDoNothing();
-      synced.push({ clientId: data.clientId });
-    }
-  } catch (error) {
-    console.error("Failed to sync Number Recall sessions:", error);
-    return NextResponse.json({ error: "Failed to sync", synced, rejected }, { status: 500 });
-  }
-  return NextResponse.json({ synced, rejected });
-}
+        .onConflictDoNothing()
+    );
+  },
+  recent: async (userId, limit) => {
+    const rows = await db.select().from(recallSessions).where(eq(recallSessions.userId, userId)).orderBy(desc(recallSessions.endedAt)).limit(limit);
+    return rows.map((r) => ({ clientId: r.clientId, startedAt: r.startedAt.getTime(), endedAt: r.endedAt.getTime(), config: r.config, rounds: r.rounds }));
+  },
+});
 
-/** The account's latest sessions, so a device can show history played elsewhere. Dates are epoch milliseconds. */
-export async function GET() {
-  const user = await getCurrentUser();
-  if (!user) return unauthorized();
-
-  try {
-    const rows = await db.select().from(recallSessions).where(eq(recallSessions.userId, user.id)).orderBy(desc(recallSessions.endedAt)).limit(MAX_PULL);
-    const sessions = rows.map((r) => ({ clientId: r.clientId, startedAt: r.startedAt.getTime(), endedAt: r.endedAt.getTime(), config: r.config, rounds: r.rounds }));
-    return NextResponse.json({ sessions });
-  } catch (error) {
-    console.error("Failed to load Number Recall sessions:", error);
-    return NextResponse.json({ error: "Failed to load sessions" }, { status: 500 });
-  }
-}
+export const POST = route.POST;
+export const GET = route.GET;

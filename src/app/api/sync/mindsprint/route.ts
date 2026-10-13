@@ -1,17 +1,11 @@
-import { NextResponse } from "next/server";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { mindsprintSessions } from "@/db/schema";
-import { getCurrentUser, unauthorized } from "@/lib/auth";
-import { MAX_UPLOAD_SESSIONS } from "@/lib/history/sync";
-import { parseSessionData } from "@/lib/mindsprint/records";
-import { scoreSession } from "@/lib/mindsprint/scoring";
-import { readJson } from "@/lib/validation";
+import { createHistoryRoute } from "@/features/games/shared/lib/history/route";
+import { parseSessionData } from "@/features/games/mindsprint/lib/records";
+import { scoreSession } from "@/features/games/mindsprint/lib/scoring";
 
 export const dynamic = "force-dynamic";
-
-/** The most sessions sent back to a device at once. */
-const MAX_PULL = 100;
 
 /**
  * Body: { sessions: [{ clientId, startedAt, endedAt, rounds: [{ config, flashes, answer, responseMs }] }] }
@@ -20,34 +14,20 @@ const MAX_PULL = 100;
  * (`clientId`), so the browser can safely retry. Nothing the browser says about correctness is used: every round's
  * sequence is checked against its settings and the score is worked out again here from the sequence and the answer.
  *
- * Reply: { synced: [{ clientId }], rejected: [{ clientId, reason }] }. A rejected session is permanently invalid
- * (retrying cannot help); a server failure is a 5xx instead.
+ * GET returns the account's latest sessions, so a device can show history played elsewhere.
+ * See `createHistoryRoute` for the reply shapes.
  */
-export async function POST(request: Request) {
-  const user = await getCurrentUser();
-  if (!user) return unauthorized();
-
-  const body = await readJson(request);
-  if (!body || !Array.isArray(body.sessions)) return NextResponse.json({ error: "Expected { sessions: [...] }" }, { status: 400 });
-  if (body.sessions.length > MAX_UPLOAD_SESSIONS) {
-    return NextResponse.json({ error: `At most ${MAX_UPLOAD_SESSIONS} sessions per request` }, { status: 400 });
-  }
-
-  const synced: { clientId: string }[] = [];
-  const rejected: { clientId: string | null; reason: string }[] = [];
-  try {
-    for (const raw of body.sessions) {
-      const parsed = parseSessionData(raw, Date.now());
-      if (!parsed.ok) {
-        rejected.push({ clientId: parsed.clientId, reason: parsed.reason });
-        continue;
-      }
-      const { data } = parsed;
-      const scored = scoreSession(data.rounds);
-      await db
+const route = createHistoryRoute({
+  label: "MindSprint sessions",
+  noun: "sessions",
+  parse: (raw) => parseSessionData(raw, Date.now()),
+  insert: (userId, data) => {
+    const scored = scoreSession(data.rounds);
+    return (
+      db
         .insert(mindsprintSessions)
         .values({
-          userId: user.id,
+          userId,
           clientId: data.clientId,
           rounds: data.rounds,
           roundCount: scored.total,
@@ -59,32 +39,14 @@ export async function POST(request: Request) {
           endedAt: new Date(data.endedAt),
         })
         // The same session sent twice (a retry, or two tabs): the first one stays.
-        .onConflictDoNothing();
-      synced.push({ clientId: data.clientId });
-    }
-  } catch (error) {
-    console.error("Failed to sync MindSprint sessions:", error);
-    return NextResponse.json({ error: "Failed to sync", synced, rejected }, { status: 500 });
-  }
-  return NextResponse.json({ synced, rejected });
-}
+        .onConflictDoNothing()
+    );
+  },
+  recent: async (userId, limit) => {
+    const rows = await db.select().from(mindsprintSessions).where(eq(mindsprintSessions.userId, userId)).orderBy(desc(mindsprintSessions.endedAt)).limit(limit);
+    return rows.map((r) => ({ clientId: r.clientId, startedAt: r.startedAt.getTime(), endedAt: r.endedAt.getTime(), rounds: r.rounds }));
+  },
+});
 
-/** The account's latest sessions, so a device can show history played elsewhere. Dates are epoch milliseconds. */
-export async function GET() {
-  const user = await getCurrentUser();
-  if (!user) return unauthorized();
-
-  try {
-    const rows = await db
-      .select()
-      .from(mindsprintSessions)
-      .where(eq(mindsprintSessions.userId, user.id))
-      .orderBy(desc(mindsprintSessions.endedAt))
-      .limit(MAX_PULL);
-    const sessions = rows.map((r) => ({ clientId: r.clientId, startedAt: r.startedAt.getTime(), endedAt: r.endedAt.getTime(), rounds: r.rounds }));
-    return NextResponse.json({ sessions });
-  } catch (error) {
-    console.error("Failed to load MindSprint sessions:", error);
-    return NextResponse.json({ error: "Failed to load sessions" }, { status: 500 });
-  }
-}
+export const POST = route.POST;
+export const GET = route.GET;

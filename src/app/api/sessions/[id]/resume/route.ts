@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { practiceSessions } from "@/db/schema";
 import { and, eq, isNotNull } from "drizzle-orm";
-import { getCurrentUser, unauthorized } from "@/lib/auth";
+import { getCurrentUser, unauthorized } from "@/features/auth/server/auth";
 import { parseId } from "@/lib/validation";
 
 /**

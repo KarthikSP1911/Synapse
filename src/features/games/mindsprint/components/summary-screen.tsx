@@ -1,0 +1,89 @@
+"use client";
+
+import { ChevronDown } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Page, PageHeader, StatTile } from "@/components/layout/page-header";
+import { RecordBanner, ResultActions, SaveStatus, type SaveState } from "@/features/games/shared/components/result-parts";
+import { formatSeconds } from "@/features/games/shared/lib/format";
+import { LevelBadge } from "@/features/games/mindsprint/components/round-editor";
+import { RoundResult, VerdictLabel, shownAnswer } from "@/features/games/mindsprint/components/round-result";
+import { displayNumber } from "@/features/games/mindsprint/lib/arithmetic";
+import { scoreSession } from "@/features/games/mindsprint/lib/scoring";
+import type { SessionData } from "@/features/games/mindsprint/lib/types";
+
+/** The end-of-session screen: totals, then every round with its working. */
+export function SummaryScreen({
+  data,
+  previousBest,
+  saveState,
+  onReplay,
+  onNewSetup,
+}: {
+  data: SessionData;
+  /** The best score before this session, to say when it is beaten. */
+  previousBest: number;
+  saveState: SaveState;
+  onReplay: () => void;
+  onNewSetup: () => void;
+}) {
+  const scored = scoreSession(data.rounds);
+  const newBest = scored.score > 0 && scored.score > previousBest;
+
+  return (
+    <Page narrow>
+      <PageHeader
+        eyebrow="Session complete"
+        title={`${scored.score.toLocaleString()} points`}
+        description={`${scored.correct} of ${scored.total} ${scored.total === 1 ? "round" : "rounds"} correct.`}
+        actions={<ResultActions onChange={onNewSetup} onReplay={onReplay} />}
+      />
+
+      {newBest && (
+        <RecordBanner>New best score{previousBest > 0 ? `, up from ${previousBest.toLocaleString()}` : ""}.</RecordBanner>
+      )}
+
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        <StatTile label="Score" value={scored.score.toLocaleString()} hint={`out of ${scored.maxScore.toLocaleString()}`} />
+        <StatTile label="Correct" value={`${scored.correct}/${scored.total}`} />
+        <StatTile label="Accuracy" value={`${scored.accuracy}%`} tone={scored.accuracy >= 85 ? "success" : scored.accuracy >= 60 ? "warning" : "danger"} />
+        <StatTile label="Avg response" value={scored.averageResponseMs === 0 ? "—" : formatSeconds(scored.averageResponseMs)} hint="to type an answer" />
+      </div>
+
+      <section aria-labelledby="ms-rounds-heading" className="space-y-3">
+        <h2 id="ms-rounds-heading" className="text-lg font-semibold tracking-tight">
+          Round by round
+        </h2>
+        <ul className="space-y-2">
+          {data.rounds.map((round, index) => {
+            const outcome = scored.rounds[index];
+            return (
+              <li key={index} className="rounded-xl border border-border bg-card shadow-card">
+                <details className="group">
+                  <summary className="flex cursor-pointer list-none items-center gap-3 rounded-xl px-4 py-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
+                    <span className="grid size-7 shrink-0 place-items-center rounded-md bg-secondary font-mono text-xs font-semibold tabular-nums">{index + 1}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                        <VerdictLabel outcome={outcome} />
+                        <LevelBadge config={round.config} />
+                      </span>
+                      <span className="mt-0.5 block truncate font-mono text-xs tabular-nums text-muted-foreground">
+                        You: {shownAnswer(round, outcome)} · Answer: {displayNumber(outcome.correctAnswer)}
+                      </span>
+                    </span>
+                    <span className={cn("font-mono text-sm font-semibold tabular-nums", outcome.correct ? "text-success" : "text-muted-foreground")}>+{outcome.points}</span>
+                    <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform duration-150 group-open:rotate-180" aria-hidden />
+                  </summary>
+                  <div className="border-t border-border p-4">
+                    <RoundResult round={round} outcome={outcome} />
+                  </div>
+                </details>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+
+      <SaveStatus state={saveState} noun="session" className="text-center" />
+    </Page>
+  );
+}

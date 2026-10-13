@@ -1,4 +1,4 @@
-import { LocalPractice } from "@/components/local-practice";
+import { LocalPractice } from "@/features/skills/components/local-practice";
 
 export const metadata = { title: "Practice" };
 

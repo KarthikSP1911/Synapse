@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { GUEST_COOKIE, SESSION_COOKIE } from "@/lib/auth-constants";
+import { GUEST_COOKIE, SESSION_COOKIE } from "@/features/auth/lib/auth-constants";
 
 /**
  * Optimistic gate: a request with no session cookie never reaches a page or API route. This only
