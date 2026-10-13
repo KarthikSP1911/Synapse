@@ -427,6 +427,63 @@ html.play-focus body {
 }
 
 /*
+  Sudoku play screen. Below `lg` it is a full-screen play screen: board in the middle taking whatever height is left,
+  the tools and number pad under it. From `lg` up it is the ordinary scrolling two-column page (`.play-below-lg`
+  switches the shared height off there). Held sideways on a phone the board takes the left and the rest stacks on the
+  right: `section` and `aside` are flattened so their children (`.sdk-side`) join one grid.
+*/
+@media (width >= 64rem) {
+  .play-screen.play-below-lg {
+    height: auto;
+    user-select: auto;
+    -webkit-user-select: auto;
+    -webkit-touch-callout: default;
+  }
+}
+@media (width < 64rem) {
+  .sdk-screen {
+    display: flex;
+    flex-direction: column;
+    max-width: 40rem;
+    margin-inline: auto;
+    padding-left: max(0.75rem, env(safe-area-inset-left));
+    padding-right: max(0.75rem, env(safe-area-inset-right));
+    touch-action: manipulation;
+  }
+  .sdk-stage {
+    flex: 1;
+    min-height: 0;
+    container-type: size;
+    display: grid;
+    place-items: center;
+  }
+  .sdk-square {
+    width: min(100cqw, 100cqh);
+  }
+}
+@media (height < 32rem) and (width < 64rem) {
+  .sdk-screen {
+    max-width: none;
+  }
+  .sdk-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 19rem);
+    column-gap: 1rem;
+  }
+  .sdk-layout > section,
+  .sdk-layout > aside {
+    display: contents;
+  }
+  .sdk-layout .sdk-side {
+    grid-column: 2;
+  }
+  .sdk-layout .sdk-stage {
+    grid-column: 1;
+    grid-row: 1 / span 8;
+  }
+}
+
+/*
   Sudoku board. `--sdk` (the game's teal) is set inline from lib/skills/accent.ts. Sizes are in cqw, i.e. a share of
   the board's own width, so digits and pencil marks scale with the board from a 360px phone to a desktop.
   Nine boxes of 3x3 cells: 1px lines between cells, 2px between boxes.
@@ -514,7 +571,7 @@ html.play-focus body {
   grid-template-rows: repeat(3, 1fr);
   place-items: center;
   padding: 5%;
-  font-size: 2.6cqw;
+  font-size: 3cqw;
   font-weight: 500;
   color: var(--muted-foreground);
   pointer-events: none;
