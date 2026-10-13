@@ -6,6 +6,7 @@ import { ArrowLeft, Plus, RotateCcw, Undo2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AccentTile, accentStyle } from "@/components/common/accent-tile";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
+import { usePlayFocus } from "@/components/layout/use-play-focus";
 import { Board } from "@/features/games/game2048/components/board";
 import { formatDuration } from "@/features/games/game2048/components/format";
 import { StatsPanel } from "@/features/games/game2048/components/stats-panel";
@@ -333,22 +334,23 @@ export default function Game2048App() {
   const swipe = useSwipe(play, playing && dialog === null);
 
   // While playing, the page is exactly one screen tall and cannot scroll, so a swipe can only ever move tiles.
-  useEffect(() => {
-    if (!playing) return;
-    const root = document.documentElement;
-    root.classList.add("g48-lock");
-    return () => root.classList.remove("g48-lock");
-  }, [playing]);
+  usePlayFocus(playing);
 
   return (
     <div
-      className={cn("container", playing ? "g48-screen flex flex-col py-3 sm:py-4" : "py-5 sm:py-8")}
+      className={cn("container", playing ? "play-screen touch-none flex flex-col py-3 sm:py-4" : "py-5 sm:py-8")}
       style={{ "--g48": ACCENT.game2048 } as React.CSSProperties}
       {...(playing ? swipe : {})}
     >
-      <div className={cn("mx-auto w-full max-w-lg", playing ? "flex min-h-0 flex-1 flex-col gap-3" : "space-y-4")}>
+      <div className={cn("mx-auto w-full max-w-lg", playing ? "play-landscape flex min-h-0 flex-1 flex-col gap-3" : "space-y-4")}>
         <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-3">
           <div className="flex shrink-0 items-center gap-3">
+            {/* Once a game is under way the "Back to Games" row below is gone, and on phones the tab bar is hidden while playing. */}
+            {playing && started && (
+              <Link href="/#games" aria-label="Back to Games" className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "-ml-2 pointer-coarse:size-11")}>
+                <ArrowLeft />
+              </Link>
+            )}
             <AccentTile id="game2048" active />
             <h1 className="accent-label text-3xl font-semibold tracking-tight sm:text-4xl" data-active style={accentStyle("game2048")}>
               2048
@@ -382,10 +384,10 @@ export default function Game2048App() {
           ))}
         </div>
 
-        <div role="tabpanel" id="g48-panel-play" aria-labelledby="g48-tab-play" hidden={!playing} className={cn(playing && "flex min-h-0 flex-1 flex-col gap-3")}>
+        <div role="tabpanel" id="g48-panel-play" aria-labelledby="g48-tab-play" hidden={!playing} className={cn(playing && "play-panel flex min-h-0 flex-1 flex-col gap-3")}>
           {/* The board takes whatever height is left and is as large a square as fits in it. */}
-          <div className="g48-stage min-h-0 flex-1">
-            <div className="g48-square">
+          <div className="play-stage min-h-0 flex-1">
+            <div className="play-square">
               <Board tiles={tiles} overlay={overlay || undefined} description={game ? describeGrid(game.grid) : "2048 board"} />
             </div>
           </div>
@@ -417,8 +419,8 @@ export default function Game2048App() {
           </div>
 
           <p className="shrink-0 text-center text-xs text-muted-foreground">
-            <span className="hidden sm:inline">Arrow keys or W A S D to slide · U or Ctrl+Z to undo · R for a new game · dragging with the mouse works too.</span>
-            <span className="sm:hidden">Swipe anywhere to slide. Undo takes back your last move.</span>
+            <span className="hidden sm:inline pointer-coarse:hidden">Arrow keys or W A S D to slide · U or Ctrl+Z to undo · R for a new game · dragging with the mouse works too.</span>
+            <span className="sm:hidden pointer-coarse:inline">Swipe anywhere to slide. Undo takes back your last move.</span>
           </p>
 
           {/* Before the first move only: once a game is under way nothing here can change it mid-play. */}
