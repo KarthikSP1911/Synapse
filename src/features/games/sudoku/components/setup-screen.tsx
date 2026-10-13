@@ -3,7 +3,7 @@
 import { ArrowRight, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/form/game-controls";
+import { Switch } from "@/components/form/choice-controls";
 import { ACCENT } from "@/lib/accent";
 import { elapsedAt } from "@/features/games/sudoku/lib/game";
 import { formatTime } from "@/features/games/sudoku/lib/scoring";

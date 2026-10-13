@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { StatTile } from "@/components/layout/page-header";
-import { Chip } from "@/components/form/setup-controls";
+import { Chip } from "@/components/form/choice-controls";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { formatSeconds } from "@/features/games/shared/lib/format";

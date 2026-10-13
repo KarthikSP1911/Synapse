@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Check, Eye, Lightbulb, Pause, Pencil, Play, Redo2, RotateCcw, Sparkles, Undo2, WandSparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/form/game-controls";
+import { Switch } from "@/components/form/choice-controls";
 import { accentStyle } from "@/components/common/accent-tile";
 import { Board } from "@/features/games/sudoku/components/board";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";

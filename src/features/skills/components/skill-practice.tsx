@@ -17,7 +17,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import ReviewButton from "@/features/skills/components/review-button";
 import { StartCountdown } from "@/features/skills/components/start-countdown";
 import { usePracticeSound } from "@/features/skills/components/use-practice-sound";
-import { Chip } from "@/components/form/setup-controls";
+import { Chip } from "@/components/form/choice-controls";
 import { ExponentsConfig } from "@/features/skills/components/setup/exponents-config";
 import {
   AdditionConfig,

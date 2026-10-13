@@ -2,7 +2,8 @@
 
 import { useId } from "react";
 import { cn } from "@/lib/utils";
-import { Stepper, Slider, Switch } from "@/components/form/game-controls";
+import { Stepper, Slider } from "@/components/form/number-controls";
+import { Switch } from "@/components/form/choice-controls";
 import { difficultyLevel, difficultyMultiplier } from "@/features/games/mindsprint/lib/config";
 import { pointsFor } from "@/features/games/mindsprint/lib/scoring";
 import { LIMITS, OPERATIONS, OPERATION_LABEL, OPERATION_SYMBOL, type Operation, type RoundConfig } from "@/features/games/mindsprint/lib/types";

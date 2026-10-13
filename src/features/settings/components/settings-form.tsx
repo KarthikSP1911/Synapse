@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Chip, ExercisePicker } from "@/components/form/setup-controls";
+import { Chip, ExercisePicker } from "@/components/form/choice-controls";
 import {
   CONFIGURABLE_SKILLS,
   DEFAULT_SETTINGS,

@@ -5,7 +5,9 @@ import { EXERCISE_TYPES, EXPONENT_LEVELS, EXPONENT_MODES } from "@/features/skil
 import { EXPONENT_BASE_MAX, EXPONENT_BASE_MIN, EXPONENT_LIMIT, EXPONENT_RESULT_CHOICES } from "@/features/skills/lib/exponents";
 import { typeBlockReason } from "@/features/skills/lib/exponents-pool";
 import { chooseExponentsLevel, chooseExponentsMode, editExponents, type ExponentsSetup } from "@/features/skills/lib/practice/setup-state";
-import { Chip, ExercisePicker, NumberField, Section } from "@/components/form/setup-controls";
+import { Chip, ExercisePicker } from "@/components/form/choice-controls";
+import { NumberField } from "@/components/form/number-controls";
+import { Section } from "@/components/layout/section";
 
 const KINDS = [
   { key: "allowPositive", label: "Positive", example: "2^3" },

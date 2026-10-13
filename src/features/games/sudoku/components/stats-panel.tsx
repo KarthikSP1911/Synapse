@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { StatTile } from "@/components/layout/page-header";
-import { Chip } from "@/components/form/setup-controls";
+import { Chip } from "@/components/form/choice-controls";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatTime, scoreGame } from "@/features/games/sudoku/lib/scoring";
 import type { SudokuStats } from "@/features/games/sudoku/lib/stats";

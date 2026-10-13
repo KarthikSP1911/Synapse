@@ -97,37 +97,47 @@ export function Slider({
   );
 }
 
-/** An on/off switch with a label. */
-export function Switch({ label, hint, checked, onChange }: { label: string; hint?: string; checked: boolean; onChange: (next: boolean) => void }) {
-  const id = useId();
+export function NumberField({
+  id,
+  label,
+  value,
+  onChange,
+  min,
+  max,
+  invalid,
+  signed,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (next: string) => void;
+  min: number;
+  max: number;
+  invalid?: boolean;
+  /** Allows a leading minus (for ranges that can go below zero). */
+  signed?: boolean;
+}) {
   return (
-    <div className="flex items-center justify-between gap-4">
-      <div className="min-w-0">
-        <p id={id} className="text-sm font-medium">
-          {label}
-        </p>
-        {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
-      </div>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        aria-labelledby={id}
-        onClick={() => onChange(!checked)}
+    <label htmlFor={id} className="flex flex-col gap-1.5 text-sm">
+      <span className="text-muted-foreground">{label}</span>
+      <input
+        id={id}
+        type="text"
+        // Numeric keypads have no minus key on every platform, so a signed field uses the text keyboard.
+        inputMode={signed ? "text" : "numeric"}
+        value={value}
+        aria-invalid={invalid || undefined}
+        aria-label={`${label} (${min} to ${max})`}
+        onChange={(e) => {
+          const digits = e.target.value.replace(/\D/g, "");
+          onChange(signed ? `${/^[-−]/.test(e.target.value) ? "-" : ""}${digits.slice(0, 3)}` : digits.slice(0, 5));
+        }}
         className={cn(
-          "relative h-6 w-11 shrink-0 rounded-full border transition-colors duration-150 pointer-coarse:h-7 pointer-coarse:w-12",
-          "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-          checked ? "border-foreground bg-foreground" : "border-input bg-secondary"
+          "h-9 w-full rounded-md border bg-background px-3 text-base font-mono tabular-nums md:text-sm pointer-coarse:h-11 outline-none transition-colors",
+          "focus:border-foreground focus:ring-4 focus:ring-ring/20",
+          invalid ? "border-destructive" : "border-input"
         )}
-      >
-        <span
-          aria-hidden
-          className={cn(
-            "absolute left-0.5 top-1/2 size-4.5 -translate-y-1/2 rounded-full transition-transform duration-150 pointer-coarse:size-5.5",
-            checked ? "translate-x-5 bg-background pointer-coarse:translate-x-5" : "translate-x-0 bg-muted-foreground"
-          )}
-        />
-      </button>
-    </div>
+      />
+    </label>
   );
 }

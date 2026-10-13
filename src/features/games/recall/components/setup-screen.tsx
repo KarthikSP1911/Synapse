@@ -3,8 +3,9 @@
 import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Slider, Stepper, Switch } from "@/components/form/game-controls";
-import { Chip } from "@/components/form/setup-controls";
+import { Slider, Stepper } from "@/components/form/number-controls";
+import { Switch } from "@/components/form/choice-controls";
+import { Chip } from "@/components/form/choice-controls";
 import { configFor, difficultyOf } from "@/features/games/recall/lib/config";
 import { COUNT_STEP_MS, GO_MS } from "@/lib/timeline";
 import { formatApproxDuration } from "@/features/games/shared/lib/format";

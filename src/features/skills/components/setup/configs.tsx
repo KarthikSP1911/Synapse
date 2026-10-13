@@ -6,7 +6,9 @@ import { DIFFICULTY_META, EXERCISE_META } from "@/features/skills/lib/meta";
 import { EXERCISE_TYPES, DIFFICULTIES, MAX_DIGITS, MAX_DIVISOR_DIGITS, type Difficulty } from "@/features/skills/lib/types";
 import { MAX_BASE } from "@/features/skills/lib/ids";
 import type { SetupState } from "@/features/skills/lib/practice/setup-state";
-import { Chip, ExercisePicker, NumberField, Section } from "@/components/form/setup-controls";
+import { Chip, ExercisePicker } from "@/components/form/choice-controls";
+import { NumberField } from "@/components/form/number-controls";
+import { Section } from "@/components/layout/section";
 
 const numbers = Array.from({ length: 20 }, (_, i) => i + 1);
 const presets = [
