@@ -35,7 +35,8 @@ import {
 } from "./game";
 import { generatePuzzle } from "./generator";
 import { deliverHint, giveHint, wrongPatches } from "./hints";
-import { cascadeSteps, cellsPath, outlinePath } from "./outline";
+import { boundaryLoops, cascadeSteps, cellsPath, labelSpot, outlinePath, patchShapePath } from "./outline";
+import { PALETTE_SIZE } from "./colors";
 import { isConnected } from "./shapes";
 import { parsePuzzle } from "./puzzle-format";
 import { MIN_MS_PER_CLUE, parseSessionData } from "./records";
@@ -465,6 +466,37 @@ describe("the drawing gesture", () => {
     }
   });
 
+  it("traces the outline of a patch as corners, merging straight runs, with a second loop for a hole", () => {
+    assert.deepEqual(boundaryLoops([0, 1, 3, 4], 3), [[[0, 0], [2, 0], [2, 2], [0, 2]]], "a 2 x 2 patch has four corners");
+    assert.deepEqual(boundaryLoops([0, 1, 4], 3), [[[0, 0], [2, 0], [2, 2], [1, 2], [1, 1], [0, 1]]], "an L has six");
+    const ring = boundaryLoops([0, 1, 2, 3, 5, 6, 7, 8], 3);
+    assert.equal(ring.length, 2, "a ring has an outer loop and an inner one");
+    assert.equal(boundaryLoops([0, 4], 3).length, 2, "cells that touch only at a corner stay separate");
+  });
+
+  it("draws a patch as a rounded shape pulled in from the cell lines so neighbours keep a gap", () => {
+    const left = patchShapePath([0, 4], 4, 0.06, 0.14);
+    const right = patchShapePath([1, 5], 4, 0.06, 0.14);
+    const numbers = (d: string) => [...d.matchAll(/-?\d+(?:\.\d+)?/g)].map((m) => Number(m[0]));
+    const xs = numbers(left).filter((_, i) => i % 2 === 0);
+    assert.ok(Math.min(...xs) >= 0.06 - 1e-9 && Math.max(...xs) <= 1 - 0.06 + 1e-9, "the left patch stays inside its own column");
+    const rx = numbers(right).filter((_, i) => i % 2 === 0);
+    assert.ok(Math.min(...rx) - Math.max(...xs) >= 0.12 - 1e-6, "two patches that touch are 0.12 of a cell apart");
+    assert.equal((left.match(/Q/g) ?? []).length, 4, "four rounded corners");
+    assert.ok(left.startsWith("M") && left.endsWith("Z"));
+    assert.equal((patchShapePath([0, 1, 2, 3, 5, 6, 7, 8], 3).match(/Z/g) ?? []).length, 2, "a hole is a second closed path in the same string");
+  });
+
+  it("puts a patch's size label in the middle of it, clear of its clue", () => {
+    assert.deepEqual(labelSpot([0, 1, 3, 4], 0, 3), { x: 1, y: 1 }, "the middle of a 2 x 2 patch is where the cells meet");
+    assert.deepEqual(labelSpot([0, 1, 2], 0, 3), { x: 1.5, y: 0.5 });
+    const under = labelSpot([0, 1, 2], 1, 3);
+    assert.equal(under.x, 1.5);
+    assert.ok(under.y > 0.5, "moved down when the clue is in the middle");
+    const bent = labelSpot([0, 1, 4], 0, 3);
+    assert.ok(bent.x >= 0 && bent.x <= 2 && bent.y >= 0 && bent.y <= 2, "a bent shape's label is inside it");
+  });
+
   it("draws outlines on the cell edges and fills cells in outwards from the clue", () => {
     assert.equal(outlinePath([0, 1, 3, 4], 3).split("M").length - 1, 8, "a 2 x 2 patch has eight unit sides");
     assert.equal(outlinePath([4], 3), "M1 1h1M2 1v1M1 2h1M1 1v1");
@@ -486,7 +518,17 @@ describe("motion", () => {
   });
 
   it("keeps the win wave, the sweep and the pop on their own selectors so a missing class is noticed", () => {
-    for (const name of ["pt-fill-in", "pt-pop", "pt-sweep", "pt-win", "pt-shake", "pt-hint"]) assert.ok(section.includes(`@keyframes ${name}`), name);
+    for (const name of ["pt-patch-in", "pt-pop", "pt-sweep", "pt-win", "pt-shake", "pt-hint"]) assert.ok(section.includes(`@keyframes ${name}`), name);
+  });
+
+  it("has a badge colour, a hue and a rule for every colour a clue can have, in both themes", () => {
+    for (let i = 0; i < PALETTE_SIZE; i++) {
+      assert.ok(section.includes(`--pt-s${i}:`), `badge colour ${i}`);
+      assert.ok(section.includes(`--pt-h${i}:`), `hue ${i}`);
+      assert.ok(section.includes(`.pt-patch[data-c="${i}"]`), `rule ${i}`);
+    }
+    const dark = section.slice(section.indexOf(".dark .pt-board {"));
+    for (let i = 0; i < PALETTE_SIZE; i++) assert.ok(dark.slice(0, dark.indexOf("}")).includes(`--pt-h${i}:`), `dark hue ${i}`);
   });
 });
 

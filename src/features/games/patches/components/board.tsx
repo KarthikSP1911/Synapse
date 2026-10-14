@@ -5,16 +5,13 @@ import { ACCENT } from "@/lib/accent";
 import { cellsAlong, pointToCell, type BoardRect } from "@/features/games/shared/lib/board-geometry";
 import { ClueMark } from "@/features/games/patches/components/clue-mark";
 import { beginDraft, draftCells, extendDraft, grabPatch, type Draft } from "@/features/games/patches/lib/draw";
-import { cascadeSteps, cellsPath, outlinePath } from "@/features/games/patches/lib/outline";
+import { cellsPath, labelSpot, outlinePath, patchShapePath } from "@/features/games/patches/lib/outline";
 import { describeClue, placeName } from "@/features/games/patches/lib/puzzle-format";
 import { checkDraft, clueAt, overlappedClues, ownerMap, ownerWithout, type DraftCheck } from "@/features/games/patches/lib/rules";
 import type { Conflicts } from "@/features/games/patches/lib/game";
 import type { Clue, Hint, Patch, PatchesPuzzle } from "@/features/games/patches/lib/types";
 
-/** Time between neighbouring cells of a patch as it fills in, and the longest the whole cascade may take. */
-const CASCADE_MS = 30;
-const CASCADE_MAX_MS = 360;
-/** How long a refused patch stays on the board (flashing red) and a removed patch's outline lingers. */
+/** How long a refused patch stays on the board (flashing red) and a removed patch lingers while it fades. */
 const REJECT_MS = 520;
 const LEAVE_MS = 240;
 /** A finger or mouse that moved less than this (px) between pressing and letting go has tapped. */
@@ -23,32 +20,20 @@ const TAP_SLOP = 10;
 export const WIN_WAVE_MS = 700;
 
 interface CellProps {
-  color: number;
-  /** Delay (ms) before the cell fills in, or null when it is not arriving. */
-  enter: number | null;
   clue: Clue | null;
   /** The clue's own colour. */
   clueColor: number;
   placed: boolean;
-  /** The placed patch is not the size or shape its clue asks for. */
-  mismatch: boolean;
   /** The clue has no room left (or, for a plain cell, nothing could cover it). */
   dead: boolean;
   hinted: boolean;
   cursor: boolean;
-  draft: "valid" | "neutral" | null;
-  /** The colour a draft is filled with: that of the clue inside it, or -1 while it has none. */
-  draftColor: number;
-  /** The cell belongs to a patch that the draft would replace. */
-  dim: boolean;
-  /** A label for the cell holding the end of a draft ("3/6"). */
-  count: string | null;
   clueEnter: number | null;
   /** Delay (ms) in the completion wave, or null. */
   wave: number | null;
 }
 
-const Cell = memo(function Cell({ color, enter, clue, clueColor, placed, mismatch, dead, hinted, cursor, draft, draftColor, dim, count, clueEnter, wave }: CellProps) {
+const Cell = memo(function Cell({ clue, clueColor, placed, dead, hinted, cursor, clueEnter, wave }: CellProps) {
   return (
     <div
       className="pt-cell"
@@ -57,10 +42,7 @@ const Cell = memo(function Cell({ color, enter, clue, clueColor, placed, mismatc
       data-cursor={cursor ? "true" : undefined}
       style={wave !== null ? ({ "--wd": `${wave}ms` } as CSSProperties) : undefined}
     >
-      <i className="pt-fill" data-c={color >= 0 ? color : undefined} data-dim={dim ? "true" : undefined} data-enter={enter !== null ? "" : undefined} style={enter !== null ? ({ "--d": `${enter}ms` } as CSSProperties) : undefined} />
-      {draft && <i className="pt-draft" data-state={draft} data-c={draftColor >= 0 ? draftColor : undefined} />}
-      {clue && <ClueMark clue={clue} color={clueColor} placed={placed} mismatch={mismatch} conflict={dead} hinted={hinted} entering={clueEnter} celebrate={wave !== null} />}
-      {count && <b className="pt-count">{count}</b>}
+      {clue && <ClueMark clue={clue} color={clueColor} placed={placed} conflict={dead} hinted={hinted} entering={clueEnter} celebrate={wave !== null} />}
     </div>
   );
 });
@@ -88,6 +70,10 @@ const sameCells = (a: readonly number[], b: readonly number[]): boolean => a.len
  * Nothing reaches the game until the pointer is released, a refused patch changes nothing (a patch you were holding
  * stays as it was), and a cancelled pointer (a call, a scroll takeover, the page hiding) throws the draft away. The
  * keyboard does the same with the arrow keys, Enter and Delete.
+ *
+ * A patch is drawn as in the paper puzzle: a rounded shape in the colour of its clue, tinted, with a coloured border pulled in a
+ * little from the cell lines so touching patches keep a gap, and a small label with its size in the middle. The draft shows the
+ * same, and its size, while it is being drawn.
  *
  * The draft, the patch in hand, the cursor and every animation live here, in the component: the committed patches
  * come from the game and are never changed by how long an animation takes. `touch-action: none` is on the board only.
@@ -202,22 +188,8 @@ export function Board({
   /** The board without the patch in hand. */
   const base = useMemo(() => (lifted === null ? owner : ownerWithout(owner, [lifted])), [owner, lifted]);
 
-  const enterDelay = useMemo(() => {
-    const delays = new Map<number, number>();
-    const clueDelays = new Map<number, number>();
-    for (const patch of arriving) {
-      const steps = soft ? patch.cells.map(() => 0) : cascadeSteps(patch.cells, puzzle.clues[patch.clue].cell, cols);
-      patch.cells.forEach((cell, i) => delays.set(cell, Math.min(CASCADE_MAX_MS, steps[i] * CASCADE_MS)));
-      clueDelays.set(patch.clue, 0);
-    }
-    return { cells: delays, clues: clueDelays };
-  }, [arriving, soft, puzzle, cols]);
-
-  const lastStep = useMemo(() => {
-    let longest = 0;
-    for (const delay of enterDelay.cells.values()) longest = Math.max(longest, delay);
-    return longest;
-  }, [enterDelay]);
+  /** The patches that just arrived settle in from their clue; the same clues pop. */
+  const entering = useMemo(() => new Set(arriving.map((p) => p.clue)), [arriving]);
 
   const shownDraft = covered ? null : draft;
   const cells = useMemo(() => (shownDraft ? draftCells(shownDraft, cols) : []), [shownDraft, cols]);
@@ -226,13 +198,19 @@ export function Board({
   const check = useMemo(() => (shownDraft ? checkDraft(puzzle, ownerWithout(base, replaced), cells) : null), [shownDraft, puzzle, base, replaced, cells]);
   const draftState: "valid" | "neutral" = check?.ok ? "valid" : "neutral";
   const draftColor = check?.clue != null ? colors[check.clue] : -1;
-  const draftSet = useMemo(() => new Set(cells), [cells]);
   const dimmed = useMemo(() => new Set(replaced), [replaced]);
-  const countLabel = useMemo(() => {
-    if (!shownDraft || !check) return null;
-    const clue = check.clue !== null ? puzzle.clues[check.clue] : null;
-    return clue?.area != null ? `${cells.length}/${clue.area}` : String(cells.length);
-  }, [shownDraft, check, cells, puzzle]);
+  const draftShape = useMemo(() => (cells.length > 0 ? patchShapePath(cells, cols) : ""), [cells, cols]);
+  /** The cell count shown in the middle of the draft, and of every placed patch, as in the paper puzzle. */
+  const draftLabel = useMemo(() => {
+    if (!shownDraft || cells.length === 0) return null;
+    const clueCell = check?.clue != null ? puzzle.clues[check.clue].cell : cells[0];
+    return { ...labelSpot(cells, clueCell, cols), text: String(cells.length), color: draftColor };
+  }, [shownDraft, cells, check, puzzle, cols, draftColor]);
+  /** The shape of every placed patch, worked out once per change of the board. */
+  const shapes = useMemo(
+    () => patches.map((p) => ({ patch: p, d: patchShapePath(p.cells, cols), label: labelSpot(p.cells, puzzle.clues[p.clue].cell, cols) })),
+    [patches, puzzle, cols]
+  );
 
   const hintCells = useMemo(() => new Set(hint?.cells ?? []), [hint]);
   const deadClues = useMemo(() => new Set(dead?.clues ?? []), [dead]);
@@ -428,12 +406,17 @@ export function Board({
 
   const style = useMemo(() => ({ "--pt": ACCENT.patches, "--ptn": cols, gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))` }) as CSSProperties, [cols, rows]);
   const left = n - patches.reduce((total, p) => total + p.cells.length, 0);
-  const lineDelay = lastStep + CASCADE_MS;
+  /** The dashed lines between cells, drawn once in the board's SVG. */
+  const gridLines = useMemo(() => {
+    let d = "";
+    for (let c = 1; c < cols; c++) d += `M${c} 0V${rows}`;
+    for (let r = 1; r < rows; r++) d += `M0 ${r}H${cols}`;
+    return d;
+  }, [rows, cols]);
   const spoken =
     cursor === null
       ? ""
       : `${placeName(cursor, cols)}. ${at[cursor] >= 0 ? `Clue: ${describeClue(puzzle.clues[at[cursor]])}.` : owner[cursor] >= 0 ? "In a patch. Enter erases it." : "Empty."}${shownDraft ? ` Drawing, ${cells.length} ${cells.length === 1 ? "cell" : "cells"}.` : ""}`;
-  const head = shownDraft ? shownDraft.head : -1;
 
   return (
     <div className="pt-board" data-covered={covered ? "true" : undefined} data-won={won ? "true" : undefined} data-soft={soft ? "true" : undefined} data-holding={lifted !== null ? "true" : undefined} style={style}>
@@ -458,24 +441,16 @@ export function Board({
       >
         {Array.from({ length: n }, (_, i) => {
           const clueIndex = at[i];
-          const owned = base[i];
           return (
             <Cell
               key={i}
-              color={owned >= 0 ? colors[owned] : -1}
-              enter={enterDelay.cells.has(i) ? enterDelay.cells.get(i)! : null}
               clue={clueIndex >= 0 ? puzzle.clues[clueIndex] : null}
               clueColor={clueIndex >= 0 ? colors[clueIndex] : -1}
               placed={clueIndex >= 0 && patchOf.has(clueIndex) && clueIndex !== lifted}
-              mismatch={clueIndex >= 0 && mismatched.has(clueIndex)}
               dead={clueIndex >= 0 ? deadClues.has(clueIndex) : deadCells.has(i)}
               hinted={hintCells.has(i)}
               cursor={cursor === i}
-              draft={shownDraft && draftSet.has(i) ? draftState : null}
-              draftColor={draftColor}
-              dim={shownDraft !== null && owned >= 0 && dimmed.has(owned)}
-              count={i === head ? countLabel : null}
-              clueEnter={clueIndex >= 0 && enterDelay.clues.has(clueIndex) ? enterDelay.clues.get(clueIndex)! : null}
+              clueEnter={clueIndex >= 0 && entering.has(clueIndex) ? 0 : null}
               wave={won ? ((Math.floor(i / cols) + (i % cols)) * WIN_WAVE_MS) / (rows + cols) : null}
             />
           );
@@ -488,16 +463,31 @@ export function Board({
               <rect width="0.09" height="0.28" className="pt-stripe" />
             </pattern>
           </defs>
+          <path className="pt-gridlines" d={gridLines} />
           {(dead?.cells ?? []).length > 0 && <path d={cellsPath(dead!.cells, cols)} fill={`url(#${patternId}-dead)`} className="pt-dead" />}
-          {patches
-            .filter((p) => p.clue !== lifted)
-            .map((p) => (
-              <path key={`${p.clue}:${p.cells[0]}`} className="pt-line" d={outlinePath(p.cells, cols)} data-mismatch={mismatched.has(p.clue) ? "true" : undefined} data-enter={enterDelay.clues.has(p.clue) ? "" : undefined} style={{ "--ld": `${lineDelay}ms` } as CSSProperties} />
-            ))}
+          {shapes
+            .filter(({ patch }) => patch.clue !== lifted)
+            .map(({ patch, d }) => {
+              const clue = puzzle.clues[patch.clue];
+              const cx = (clue.cell % cols) + 0.5;
+              const cy = Math.floor(clue.cell / cols) + 0.5;
+              return (
+                <path
+                  key={`${patch.clue}:${patch.cells[0]}`}
+                  className="pt-patch"
+                  d={d}
+                  data-c={colors[patch.clue]}
+                  data-mismatch={mismatched.has(patch.clue) ? "true" : undefined}
+                  data-dim={shownDraft !== null && dimmed.has(patch.clue) ? "true" : undefined}
+                  data-enter={entering.has(patch.clue) ? "" : undefined}
+                  style={{ transformOrigin: `${cx}px ${cy}px`, "--wd": `${((Math.floor(clue.cell / cols) + (clue.cell % cols)) * WIN_WAVE_MS) / (rows + cols)}ms` } as CSSProperties}
+                />
+              );
+            })}
           {leaving.map((p) => (
-            <path key={`gone:${p.clue}:${p.cells[0]}`} className="pt-line" data-leaving="" d={outlinePath(p.cells, cols)} />
+            <path key={`gone:${p.clue}:${p.cells[0]}`} className="pt-patch" data-leaving="" data-c={colors[p.clue]} d={patchShapePath(p.cells, cols)} />
           ))}
-          {shownDraft && cells.length > 0 && <path className="pt-draft-line" data-state={draftState} data-c={draftColor >= 0 ? draftColor : undefined} d={outlinePath(cells, cols)} />}
+          {shownDraft && draftShape && <path className="pt-patch" data-draft="" data-state={draftState} data-c={draftColor >= 0 ? draftColor : undefined} d={draftShape} />}
           {reject && (
             <g key={reject.key} className="pt-reject">
               <path className="pt-reject-fill" d={cellsPath(reject.cells, cols)} />
@@ -505,6 +495,18 @@ export function Board({
             </g>
           )}
         </svg>
+        {shapes
+          .filter(({ patch }) => patch.clue !== lifted)
+          .map(({ patch, label }) => (
+            <b key={`size:${patch.clue}`} className="pt-size" data-c={colors[patch.clue]} style={{ left: `${(label.x / cols) * 100}%`, top: `${(label.y / rows) * 100}%` }} aria-hidden>
+              {patch.cells.length}
+            </b>
+          ))}
+        {draftLabel && (
+          <b className="pt-size" data-draft="" data-c={draftLabel.color >= 0 ? draftLabel.color : undefined} style={{ left: `${(draftLabel.x / cols) * 100}%`, top: `${(draftLabel.y / rows) * 100}%` }} aria-hidden>
+            {draftLabel.text}
+          </b>
+        )}
         {won && <span className="pt-sweep" aria-hidden />}
       </div>
       <p className="sr-only" role="status" aria-live="polite">

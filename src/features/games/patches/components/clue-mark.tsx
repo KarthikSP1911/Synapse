@@ -1,54 +1,50 @@
 import { memo } from "react";
 import { describeClue } from "@/features/games/patches/lib/puzzle-format";
-import type { Clue, Shape } from "@/features/games/patches/lib/types";
+import type { Clue } from "@/features/games/patches/lib/types";
 
-/** The symbol of a shape category, drawn from plain outlines (nothing borrowed): a square, a wide and a tall rectangle, and a bent freeform shape. */
-export function ShapeGlyph({ shape, className }: { shape: Shape; className?: string }) {
+/** The small bent-shape symbol on a freeform clue, drawn from plain outlines (nothing borrowed). */
+function FreeGlyph({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 12 12" className={className} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinejoin="round" aria-hidden>
-      {shape === "square" && <rect x="2.2" y="2.2" width="7.6" height="7.6" rx="1.2" />}
-      {shape === "wide" && <rect x="0.9" y="3.4" width="10.2" height="5.2" rx="1.2" />}
-      {shape === "tall" && <rect x="3.4" y="0.9" width="5.2" height="10.2" rx="1.2" />}
-      {shape === "free" && <path d="M2 1.8h4.4v3.4H10v5H5.6V7H2z" />}
+    <svg viewBox="0 0 12 12" className={className} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinejoin="round" aria-hidden>
+      <path d="M2 1.8h4.4v3.4H10v5H5.6V7H2z" />
     </svg>
   );
 }
 
 /**
- * What a clue cell shows: its area as a number, its shape as a symbol, both, or (for a clue that says neither) a
- * plain dot, all in the clue's own colour. The state is told by the outline and fill as well as by colour: a placed
- * clue is solid, one with no room left is dashed and marked.
+ * What a clue cell shows, as in the paper puzzle: a solid badge in the clue's own colour whose outline is the shape it
+ * asks for (a square, a wide rectangle, a tall rectangle), with the area as a white number inside when it gives one. A clue
+ * that says no shape and no area is a hatched square: any rectangle. Until its patch is drawn the badge sits in a dashed,
+ * tinted halo of the same colour; once it is drawn the halo gives way to the patch. The state is never told by colour
+ * alone: the shape, the number, the dashes and the "!" mark all say it too.
  */
 export const ClueMark = memo(function ClueMark({
   clue,
   color,
   placed,
-  mismatch,
   conflict,
   hinted,
   entering,
   celebrate,
 }: {
   clue: Clue;
-  /** The clue's own colour (0 to 7): its symbol is drawn in it, and the patch drawn for it is filled with it. */
+  /** The clue's own colour (0 to 9). */
   color: number;
   placed: boolean;
-  /** Its patch is placed but is not the size or shape the clue asks for: told by a dashed outline, quietly. */
-  mismatch: boolean;
+  /** No patch can serve this clue any more. */
   conflict: boolean;
   hinted: boolean;
   /** Delay (ms) before the clue pops as its patch settles, or null when it does not. */
   entering: number | null;
   celebrate: boolean;
 }) {
-  const kind = clue.area !== null && clue.shape !== null ? "both" : clue.area !== null ? "area" : clue.shape !== null ? "shape" : "none";
+  // A clue with only an area is a patch of that many cells in any rectangle: the badge is a plain square.
+  const badge = clue.shape === "wide" || clue.shape === "tall" || clue.shape === "free" ? clue.shape : clue.area === null && clue.shape === null ? "any" : "square";
   return (
     <span
       className="pt-clue"
-      data-kind={kind}
       data-c={color >= 0 ? color : undefined}
       data-placed={placed ? "true" : undefined}
-      data-mismatch={mismatch && placed ? "true" : undefined}
       data-conflict={conflict ? "true" : undefined}
       data-hint={hinted ? "true" : undefined}
       data-enter={entering !== null ? "" : undefined}
@@ -57,9 +53,11 @@ export const ClueMark = memo(function ClueMark({
       role="img"
       aria-label={`Clue: ${describeClue(clue)}${placed ? ", placed" : ""}${conflict ? ", no room left" : ""}`}
     >
-      {clue.area !== null && <span className="pt-num">{clue.area}</span>}
-      {clue.shape !== null && <ShapeGlyph shape={clue.shape} className="pt-glyph" />}
-      {kind === "none" && <span className="pt-dot" />}
+      <span className="pt-halo" />
+      <span className="pt-badge" data-badge={badge}>
+        {clue.shape === "free" && <FreeGlyph className="pt-glyph" />}
+        {clue.area !== null && <span className="pt-num">{clue.area}</span>}
+      </span>
     </span>
   );
 });
