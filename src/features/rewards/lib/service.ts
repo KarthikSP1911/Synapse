@@ -1,5 +1,5 @@
 import type { LocalStore } from "@/features/offline/lib/guest/api";
-import { buyShield, chargeHint, cooldownLeft, creditAll, useShield, type PostOptions } from "@/features/rewards/lib/ledger";
+import { buyShield, chargeHint, cooldownLeft, creditAll, spendShield, type PostOptions } from "@/features/rewards/lib/ledger";
 import { ECONOMY, type Economy } from "@/features/rewards/lib/economy";
 import { planProtection } from "@/features/rewards/lib/protection";
 import { loadWallet, updateWallet, type WalletEvent } from "@/features/rewards/lib/wallet-store";
@@ -98,7 +98,7 @@ export function protectStreakLocally(store: LocalStore, activeDays: ReadonlySet<
     const protectedNow: string[] = [];
     for (const { date, shieldKey } of plan.assignments) {
       // Use exactly the shield the plan chose, so the day-by-day matching holds.
-      const result = useShield(next, { date, shieldKey }, postOptions(store, now), economy);
+      const result = spendShield(next, { date, shieldKey }, postOptions(store, now), economy);
       if (!result.ok || result.duplicate) continue;
       next = result.wallet;
       protectedNow.push(date);

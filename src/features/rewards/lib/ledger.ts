@@ -119,7 +119,7 @@ export function creditAll(wallet: Wallet, grants: readonly Grant[], options: Pos
 // ---------------------------------------------------------------------------
 
 export const purchaseKey = (id: string): string => `shield:buy:${id}`;
-export const useKey = (date: string): string => `shield:use:${date}`;
+export const shieldUseKey = (date: string): string => `shield:use:${date}`;
 
 /**
  * Buys one Streak Shield: takes the price and adds the shield in the same entry. Refused when the user cannot pay or
@@ -143,8 +143,8 @@ export function buyShield(wallet: Wallet, request: { id: string; today: string }
  * date. Picks the shield bought longest ago that was already owned on `date` (or the one named by `shieldKey`, when the
  * planner has matched days to shields): a shield bought after a day is over cannot rescue that day.
  */
-export function useShield(wallet: Wallet, request: { date: string; shieldKey?: string }, options: PostOptions, economy: Economy = ECONOMY): OperationResult<{ wallet: Wallet; entry: LedgerEntry }> {
-  const key = useKey(request.date);
+export function spendShield(wallet: Wallet, request: { date: string; shieldKey?: string }, options: PostOptions, economy: Economy = ECONOMY): OperationResult<{ wallet: Wallet; entry: LedgerEntry }> {
+  const key = shieldUseKey(request.date);
   const existing = findEntry(wallet, key);
   if (existing || wallet.uses.some((u) => u.date === request.date)) {
     return existing ? { ok: true, duplicate: true, wallet, entry: existing } : fail("invalid", "That day is already protected.");

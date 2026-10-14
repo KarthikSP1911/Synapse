@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { queensSessions } from "@/db/schema";
 import { createHistoryRoute } from "@/features/games/shared/lib/history/route";
 import { parseSessionData } from "@/features/games/queens/lib/records";
+import { sessionGrants } from "@/features/games/queens/lib/rewards";
 import { scoreGame } from "@/features/games/queens/lib/scoring";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +22,7 @@ const route = createHistoryRoute({
   label: "Queens games",
   noun: "games",
   parse: (raw) => parseSessionData(raw, { now: Date.now(), verify: true }),
+  grants: sessionGrants,
   insert: (userId, data) =>
     db
       .insert(queensSessions)

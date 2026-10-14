@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser, unauthorized } from "@/features/auth/server/auth";
 import type { Parsed } from "@/lib/records";
+import type { Grant } from "@/features/rewards/lib/types";
+import { dbRun } from "@/features/rewards/server/db-run";
+import { creditGrants } from "@/features/rewards/server/wallet";
 import { readJson } from "@/lib/validation";
 import { MAX_PULL, loadRecent, storeUploaded, type UploadReply } from "./upload";
 
@@ -13,6 +16,11 @@ export interface HistoryRouteOptions<Data> {
   parse: (raw: unknown) => Parsed<Data>;
   /** Stores one record for the user, ignoring a client id the account already has (retries, two tabs). */
   insert: (userId: number, data: Data) => Promise<unknown>;
+  /**
+   * The coins the record earns, worked out from the record the server just validated (see `src/features/rewards`). Credited after
+   * it is stored and keyed by the record, so the same record arriving twice pays once.
+   */
+  grants?: (data: Data) => Grant[];
   /** The account's latest records, newest first, shaped as a device reads them back (dates in epoch ms). */
   recent: (userId: number, limit: number) => Promise<unknown[]>;
 }
@@ -26,12 +34,21 @@ const reply = ({ status, body }: UploadReply) => NextResponse.json(body, { statu
  * POST body: `{ sessions: [...] }`. Reply: `{ synced: [{ clientId }], rejected: [{ clientId, reason }] }`. A rejected
  * record is permanently invalid (retrying cannot help); a server failure is a 5xx instead.
  */
-export function createHistoryRoute<Data extends { clientId: string }>({ label, noun, parse, insert, recent }: HistoryRouteOptions<Data>) {
+export function createHistoryRoute<Data extends { clientId: string }>({ label, noun, parse, insert, grants, recent }: HistoryRouteOptions<Data>) {
   return {
     async POST(request: Request) {
       const user = await getCurrentUser();
       if (!user) return unauthorized();
-      return reply(await storeUploaded(await readJson(request), { label, parse, insert: (data) => insert(user.id, data) }));
+      return reply(
+        await storeUploaded(await readJson(request), {
+          label,
+          parse,
+          insert: async (data) => {
+            await insert(user.id, data);
+            if (grants) await creditGrants(dbRun, user.id, grants(data));
+          },
+        })
+      );
     },
 
     async GET() {

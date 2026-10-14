@@ -11,6 +11,8 @@ import { pendingCountFor as queensPendingFor, syncQueens } from "@/features/game
 import { pendingCountFor as zipPendingFor, syncZip } from "@/features/games/zip/lib/sync";
 import { pendingCountFor, syncUser } from "@/features/offline/lib/sync/client";
 import { setSyncStatus } from "@/features/offline/lib/sync/status";
+import { onWalletEvent } from "@/features/rewards/lib/wallet-store";
+import { syncWallet, walletSyncDue } from "@/features/rewards/lib/sync";
 import { postToServiceWorker, warmOfflineCache } from "@/features/offline/lib/sw-client";
 
 const IDENTITY_KEY = "mathz:identity";
@@ -143,6 +145,8 @@ export function SyncManager() {
         const game2048 = game2048PendingFor(userId) > 0 ? await syncGame2048(userId) : null;
         const queens = queensPendingFor(userId) > 0 ? await syncQueens(userId) : null;
         const zip = zipPendingFor(userId) > 0 ? await syncZip(userId) : null;
+        // Last, so the coins the uploads above earned are already on the account when the wallet is settled.
+        const wallet = walletSyncDue(userId) ? await syncWallet(userId) : null;
         running = false;
         if (cancelled) return;
         const result = !practice.ok
@@ -159,7 +163,9 @@ export function SyncManager() {
                     ? queens
                     : zip && !zip.ok
                       ? zip
-                      : practice;
+                      : wallet && !wallet.ok
+                        ? wallet
+                        : practice;
         failures = result.ok ? 0 : failures + 1;
         setSyncStatus({ syncing: false, failed: !result.ok && result.reason !== "signed-out", pending: countPending() });
         clearTimeout(retryTimer);
@@ -182,6 +188,13 @@ export function SyncManager() {
     const poll = setInterval(() => {
       if (document.visibilityState === "visible") run();
     }, POLL_MS);
+    // A hint charged on the device is confirmed by the account soon after, not only at the next poll.
+    let walletTimer: ReturnType<typeof setTimeout> | undefined;
+    const offWallet = onWalletEvent((event) => {
+      if (event.kind !== "hint" || !event.charged) return;
+      clearTimeout(walletTimer);
+      walletTimer = setTimeout(run, 3000);
+    });
     window.addEventListener("online", run);
     window.addEventListener("storage", onStorage);
     document.addEventListener("visibilitychange", onVisible);
@@ -190,6 +203,8 @@ export function SyncManager() {
       requestSync.current = null;
       clearInterval(poll);
       clearTimeout(retryTimer);
+      clearTimeout(walletTimer);
+      offWallet();
       window.removeEventListener("online", run);
       window.removeEventListener("storage", onStorage);
       document.removeEventListener("visibilitychange", onVisible);

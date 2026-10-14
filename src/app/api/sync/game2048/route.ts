@@ -2,6 +2,7 @@ import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { game2048Sessions } from "@/db/schema";
 import { parseSessionData } from "@/features/games/game2048/lib/records";
+import { sessionGrants } from "@/features/games/game2048/lib/rewards";
 import { createHistoryRoute } from "@/features/games/shared/lib/history/route";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +21,7 @@ const route = createHistoryRoute({
   label: "2048 games",
   noun: "games",
   parse: (raw) => parseSessionData(raw, Date.now()),
+  grants: sessionGrants,
   insert: (userId, data) =>
     db
       .insert(game2048Sessions)

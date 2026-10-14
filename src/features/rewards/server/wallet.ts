@@ -1,6 +1,6 @@
 import { sql, type SQL } from "drizzle-orm";
 import { ECONOMY, type Economy } from "@/features/rewards/lib/economy";
-import { hintKey, isValidKey, purchaseKey, useKey } from "@/features/rewards/lib/ledger";
+import { hintKey, isValidKey, purchaseKey, shieldUseKey } from "@/features/rewards/lib/ledger";
 import { planProtection } from "@/features/rewards/lib/protection";
 import type { FailureReason, Grant, LedgerEntry, OwnedShield, ShieldUse, TransactionType } from "@/features/rewards/lib/types";
 
@@ -279,7 +279,7 @@ export async function protectStreak(run: Run, userId: number, input: { activeDay
   const protectedNow: string[] = [];
   for (const { date, shieldKey } of plan.assignments) {
     try {
-      const outcome = await post(run, userId, { key: useKey(date), type: "shield_use", amount: 0, shields: -1, reason: `Streak Shield protected ${date}`, ref: date, link: shieldKey, at: now }, economy);
+      const outcome = await post(run, userId, { key: shieldUseKey(date), type: "shield_use", amount: 0, shields: -1, reason: `Streak Shield protected ${date}`, ref: date, link: shieldKey, at: now }, economy);
       if (outcome.status === "posted") protectedNow.push(date);
     } catch (error) {
       // Another request used this very shield for another day first: the unique link index refused it. Nothing to undo.

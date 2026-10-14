@@ -9,6 +9,7 @@ import { InstallPrompt } from "@/features/offline/components/install-prompt";
 import { ServiceWorkerRegister } from "@/features/offline/components/service-worker-register";
 import { ViewerProvider } from "@/features/auth/components/viewer-provider";
 import { SyncManager } from "@/features/offline/components/sync-manager";
+import { WalletManager } from "@/features/rewards/components/wallet-manager";
 import { getViewer } from "@/features/auth/server/auth";
 import type { ViewerInfo } from "@/features/offline/lib/local-store";
 
@@ -85,6 +86,7 @@ export default async function RootLayout({
             <InstallPrompt />
             <ServiceWorkerRegister />
             <SyncManager />
+            <WalletManager />
           </ViewerProvider>
         </ThemeProvider>
       </body>

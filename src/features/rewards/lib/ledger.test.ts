@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { ECONOMY, type Economy } from "./economy";
-import { balanceOf, buyShield, chargeHint, cooldownLeft, credit, creditAll, emptyWallet, hintKey, shieldsOwned, trimEntries, useShield, type PostOptions } from "./ledger";
+import { balanceOf, buyShield, chargeHint, cooldownLeft, credit, creditAll, emptyWallet, hintKey, shieldsOwned, trimEntries, spendShield, type PostOptions } from "./ledger";
 import type { Grant, Wallet } from "./types";
 
 const opts = (now: number, pending = false): PostOptions => ({ now, pending });
@@ -147,7 +147,7 @@ describe("buyShield", () => {
   });
 });
 
-describe("useShield", () => {
+describe("spendShield", () => {
   function owning(boughtOn: string, id = "s"): Wallet {
     const r = buyShield(funded(300), { id, today: boughtOn }, opts(0));
     assert.ok(r.ok);
@@ -156,7 +156,7 @@ describe("useShield", () => {
 
   it("spends no coins and removes the shield, recording the protected date", () => {
     const wallet = owning("2026-10-10");
-    const r = useShield(wallet, { date: "2026-10-12" }, opts(50));
+    const r = spendShield(wallet, { date: "2026-10-12" }, opts(50));
     assert.ok(r.ok && !r.duplicate);
     assert.equal(shieldsOwned(r.wallet), 0);
     assert.equal(balanceOf(r.wallet), balanceOf(wallet));
@@ -170,35 +170,35 @@ describe("useShield", () => {
     const second = buyShield(wallet, { id: "b", today: "2026-10-01" }, opts(1));
     assert.ok(second.ok);
     wallet = second.wallet;
-    const first = useShield(wallet, { date: "2026-10-05" }, opts(2));
+    const first = spendShield(wallet, { date: "2026-10-05" }, opts(2));
     assert.ok(first.ok);
-    const again = useShield(first.wallet, { date: "2026-10-05" }, opts(3));
+    const again = spendShield(first.wallet, { date: "2026-10-05" }, opts(3));
     assert.ok(again.ok && again.duplicate);
     assert.equal(shieldsOwned(again.wallet), 1, "the second shield is untouched");
   });
 
   it("cannot rescue a day from before the shield was bought", () => {
     const wallet = owning("2026-10-10");
-    const r = useShield(wallet, { date: "2026-10-09" }, opts(0));
+    const r = spendShield(wallet, { date: "2026-10-09" }, opts(0));
     assert.equal(!r.ok && r.reason, "no_shield");
     assert.equal(shieldsOwned(wallet), 1);
   });
 
   it("allows the day it was bought, which was still ahead of the buyer", () => {
-    assert.ok(useShield(owning("2026-10-10"), { date: "2026-10-10" }, opts(0)).ok);
+    assert.ok(spendShield(owning("2026-10-10"), { date: "2026-10-10" }, opts(0)).ok);
   });
 
   it("uses the shield bought longest ago first", () => {
     const a = owning("2026-10-01", "old");
     const b = buyShield(a, { id: "new", today: "2026-10-08" }, opts(1));
     assert.ok(b.ok);
-    const r = useShield(b.wallet, { date: "2026-10-09" }, opts(2));
+    const r = spendShield(b.wallet, { date: "2026-10-09" }, opts(2));
     assert.ok(r.ok);
     assert.deepEqual(r.wallet.shields.map((s) => s.key), ["shield:buy:new"]);
   });
 
   it("fails with nothing in the inventory", () => {
-    const r = useShield(emptyWallet("guest"), { date: "2026-10-12" }, opts(0));
+    const r = spendShield(emptyWallet("guest"), { date: "2026-10-12" }, opts(0));
     assert.equal(!r.ok && r.reason, "no_shield");
   });
 });
