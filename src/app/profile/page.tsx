@@ -6,6 +6,9 @@ import { SkillIcon } from "@/components/common/skill-icon";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { StreakTiles } from "@/features/progress/components/streak-tiles";
+import { ShieldPanel } from "@/features/rewards/components/shield-panel";
+import { dbRun } from "@/features/rewards/server/db-run";
+import { getSnapshot } from "@/features/rewards/server/wallet";
 import { buildHeatmap, dayKey, streaks } from "@/features/progress/lib/activity";
 import { requireViewer } from "@/features/auth/server/auth";
 import { logoutAction } from "@/features/auth/server/auth-actions";
@@ -39,6 +42,8 @@ function GuestProfile() {
         <StreakTiles />
       </div>
 
+      <ShieldPanel />
+
       <Card>
         <CardHeader>
           <CardTitle>Keep your streak across devices</CardTitle>
@@ -66,11 +71,19 @@ export default async function ProfilePage() {
   const user = viewer.user;
   const today = dayKey(new Date(), user.timezone);
 
-  const [counts, activityDays, summaries, totalAnswered] = await Promise.all([
+  const [counts, activityDays, summaries, totalAnswered, protectedDays] = await Promise.all([
     getActivityByDay(user.id, user.timezone, WEEKS * 7),
     getActivityDays(user.id, user.timezone),
     getSkillSummaries(user.id),
     getTotalAnswered(user.id),
+    // The days shields protected. If the wallet tables are not there yet (the migration has not been run), the profile still opens.
+    getSnapshot(dbRun, user.id).then(
+      (snapshot) => snapshot.uses.map((use) => use.date),
+      (error) => {
+        console.error("Could not read the wallet for the profile:", error);
+        return [] as string[];
+      }
+    ),
   ]);
 
   const heatmap = buildHeatmap(counts, today, WEEKS);
@@ -103,9 +116,11 @@ export default async function ProfilePage() {
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <StreakTiles serverDays={activityDays} timeZone={user.timezone} initialToday={today} />
+        <StreakTiles serverDays={activityDays} serverProtectedDays={protectedDays} timeZone={user.timezone} initialToday={today} />
         <StatTile label="Questions answered" value={totalAnswered.toLocaleString()} hint="all time" />
       </div>
+
+      <ShieldPanel />
 
       <Card>
         <CardHeader>

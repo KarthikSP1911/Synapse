@@ -8,6 +8,7 @@ import { isNavActive } from "@/lib/nav";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { LogoMark } from "@/components/layout/logo-mark";
 import { ConnectionBadge } from "@/features/offline/components/connection-badge";
+import { CoinBadge } from "@/features/rewards/components/coin-badge";
 import { buttonVariants } from "@/components/ui/button";
 
 const links = [
@@ -80,6 +81,7 @@ export function SiteHeader({ viewer }: { viewer: "user" | "guest" | null }) {
           {showNav && <NavLinks pathname={pathname} className="hidden h-14 items-stretch sm:flex" linkClassName="px-3" />}
           <ConnectionBadge />
           <ThemeToggle />
+          {viewer !== null && !onAuthScreen && <CoinBadge />}
           {viewer === "guest" && !onAuthScreen && (
             <>
               <Link

@@ -7,6 +7,9 @@ import { cn } from "@/lib/utils";
 import { AnswerKeypad, useTouchKeypad } from "@/components/common/answer-keypad";
 import { Button } from "@/components/ui/button";
 import { usePracticeSound } from "@/features/skills/components/use-practice-sound";
+import { coinsLabel } from "@/features/rewards/components/coin-icon";
+import { HintFeedback } from "@/features/rewards/components/hint-controls";
+import { usePaidHint } from "@/features/rewards/components/use-paid-hint";
 import type { LocalStore } from "@/features/offline/lib/guest/api";
 import { localFetchFor, summaryHref as summaryUrl } from "@/features/offline/lib/local-store";
 import { DEFAULT_SETTINGS, loadSettings, type Settings } from "@/features/settings/lib/settings";
@@ -90,6 +93,8 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
   const [awaitingContinue, setAwaitingContinue] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hintShown, setHintShown] = useState(false);
+  /** What a hint is charged against (this question) and what shares its cooldown (this session); set when a question loads. */
+  const [hintScope, setHintScope] = useState<{ charge: string; cooldown: string } | null>(null);
   const [questionNumber, setQuestionNumber] = useState(1);
   const [stats, setStats] = useState({ total: 0, correct: 0, streak: 0 });
   const [deadline, setDeadline] = useState<number | null>(null);
@@ -177,6 +182,9 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
         setFeedback(null);
         setAwaitingContinue(false);
         setHintShown(false);
+        // The count of questions already answered is stored with the session, so a reload mid-question keeps the same hint scope.
+        const cooldown = `practice:${sessionId}:${new Date(data.startedAt).getTime()}`;
+        setHintScope({ cooldown, charge: `${cooldown}:q${(data.answeredCount ?? 0) + 1}` });
         startTimeRef.current = Date.now();
         timeoutSentRef.current = false;
         later(() => inputRef.current?.focus(), 30);
@@ -342,9 +350,17 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
     if (canSubmit) submitAttempt("answered", answer.trim());
   };
 
+  const paid = usePaidHint({ chargeScope: hintScope?.charge ?? null, cooldownScope: hintScope?.cooldown ?? null });
+  const requestPaid = paid.request;
+
+  /**
+   * The hint is shown only after the price has been taken and the cooldown started (both in the wallet, which also refuses a
+   * second hint during the cooldown, whatever key or tap asks). A question's hint is charged once: asking again after a reload is not charged again.
+   */
   const revealHint = useCallback(() => {
-    if (canAsk && showHint) setHintShown(true);
-  }, [canAsk, showHint]);
+    if (!canAsk || !showHint || hintShown) return;
+    if (requestPaid(1).ok) setHintShown(true);
+  }, [canAsk, showHint, hintShown, requestPaid]);
 
   // Keyboard: Esc pauses/resumes, ? or Alt+H shows the hint, Alt+S skips, Enter continues after a miss,
   // and 1-3 (or < = >) answer multiple-choice questions.
@@ -641,12 +657,35 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
 
           {!showKeypad && actionButton}
 
+          {!awaitingContinue && showHint && <HintFeedback hint={paid} className="text-center" />}
+
           {!awaitingContinue && (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-center gap-2">
               {showHint && (
-                <Button type="button" variant="ghost" size="sm" onClick={revealHint} disabled={!canAsk || hintShown}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={revealHint}
+                  disabled={!canAsk || hintShown}
+                  aria-disabled={paid.coolingDown || undefined}
+                  className={cn(paid.coolingDown && "opacity-60")}
+                  aria-label={paid.coolingDown ? `Hint available in ${paid.cooldownSeconds}s` : `Hint, ${coinsLabel(paid.cost)}`}
+                >
                   <Lightbulb />
-                  Hint <span className="kbd">?</span>
+                  {paid.coolingDown ? (
+                    <span className="tabular-nums">
+                      <span className="hidden sm:inline">Hint available in </span>
+                      <span className="sm:hidden">Hint </span>
+                      {paid.cooldownSeconds}s
+                    </span>
+                  ) : (
+                    <span>
+                      Hint · {paid.cost}
+                      <span className="hidden sm:inline"> coins</span>
+                    </span>
+                  )}{" "}
+                  <span className="kbd">?</span>
                 </Button>
               )}
               <Button type="button" variant="ghost" size="sm" onClick={() => submitAttempt("skipped")} disabled={!canAsk}>

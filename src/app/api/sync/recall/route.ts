@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { recallSessions } from "@/db/schema";
 import { createHistoryRoute } from "@/features/games/shared/lib/history/route";
 import { parseSessionData } from "@/features/games/recall/lib/records";
+import { sessionGrants } from "@/features/games/recall/lib/rewards";
 import { scoreSession } from "@/features/games/recall/lib/scoring";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +23,7 @@ const route = createHistoryRoute({
   label: "Number Recall sessions",
   noun: "sessions",
   parse: (raw) => parseSessionData(raw, Date.now()),
+  grants: sessionGrants,
   insert: (userId, data) => {
     const scored = scoreSession(data.config, data.rounds);
     return (

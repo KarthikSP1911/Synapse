@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Ellipsis, Eraser, Lightbulb, Pause, Pencil, Play, Redo2, Undo2 } from "lucide-react";
+import { ArrowLeft, Ellipsis, Eraser, Pause, Pencil, Play, Redo2, Undo2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { accentStyle } from "@/components/common/accent-tile";
@@ -12,6 +12,9 @@ import { AssistanceSwitches, GameActions } from "@/features/games/sudoku/compone
 import { MoreSheet } from "@/features/games/sudoku/components/more-sheet";
 import { NumberPad } from "@/features/games/sudoku/components/number-pad";
 import { ACCENT } from "@/lib/accent";
+import { HintToolButton } from "@/features/games/shared/components/hint-button";
+import { HintStatusLine } from "@/features/rewards/components/hint-controls";
+import { puzzleHintScope, usePaidHint } from "@/features/rewards/components/use-paid-hint";
 import {
   checkBoard,
   clearCell,
@@ -92,6 +95,13 @@ export function GameScreen({ initial, settings, onSettingsChange, onChange, onEn
   const [notice, setNotice] = useState("");
   const [checked, setChecked] = useState<{ cells: CellState[]; result: CheckResult } | null>(null);
   const endedRef = useRef(false);
+  // The latest state, readable at once: a hint is worked out from it and charged before the state changes.
+  const latest = useRef(initial);
+  useEffect(() => {
+    latest.current = game;
+  }, [game]);
+  const scope = puzzleHintScope("sudoku", game);
+  const paid = usePaidHint({ chargeScope: scope, cooldownScope: scope });
 
   const playing = game.status === "playing";
   const paused = game.status === "paused";
@@ -164,13 +174,21 @@ export function GameScreen({ initial, settings, onSettingsChange, onChange, onEn
   const doUndo = useCallback(() => setGame((g) => undo(g)), []);
   const doRedo = useCallback(() => setGame((g) => redo(g)), []);
 
+  const requestPaid = paid.request;
+  /**
+   * The hint is worked out first without changing anything; if there is none to give (nothing wrong or empty left to reveal),
+   * nothing is charged and no cooldown starts. Only then is the price taken, and the digit is revealed only if that succeeded.
+   * The wallet also enforces the cooldown, so a second press, key or tap during it is refused.
+   */
   const hint = useCallback(() => {
-    const result = giveHint(game, selected, Date.now());
+    const result = giveHint(latest.current, selected, Date.now());
     if (result.index === null) return;
+    if (!requestPaid(result.state.hintsUsed).ok) return;
+    latest.current = result.state;
     setGame(result.state);
     setSelected(result.index);
     setNotice(`Hint: row ${rowOf(result.index) + 1}, column ${colOf(result.index) + 1} is ${result.state.cells[result.index].value}.`);
-  }, [game, selected]);
+  }, [selected, requestPaid]);
 
   const check = useCallback(() => {
     const result = checkBoard(game);
@@ -351,11 +369,10 @@ export function GameScreen({ initial, settings, onSettingsChange, onChange, onEn
               <Pencil className="size-5" aria-hidden />
               Notes {notesMode ? "on" : "off"}
             </button>
-            <button type="button" className={toolButton} onClick={hint} disabled={!playing} aria-label="Hint">
-              <Lightbulb className="size-5" aria-hidden />
-              Hint
-            </button>
+            <HintToolButton hint={paid} onClick={hint} disabled={!playing} />
           </div>
+
+          <HintStatusLine hint={paid} className="sdk-side" />
 
           <NumberPad className="sdk-side" counts={counts} notesMode={notesMode} disabled={!playing} onDigit={enter} onErase={erase} />
 

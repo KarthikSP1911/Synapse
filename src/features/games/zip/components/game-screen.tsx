@@ -1,13 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Ellipsis, Eraser, Lightbulb, Pause, Play, Redo2, RotateCcw, Sparkles, Undo2 } from "lucide-react";
+import { ArrowLeft, Ellipsis, Eraser, Pause, Play, Redo2, RotateCcw, Sparkles, Undo2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/form/choice-controls";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { accentStyle } from "@/components/common/accent-tile";
 import { usePlayFocus } from "@/components/layout/use-play-focus";
+import { HintToolButton } from "@/features/games/shared/components/hint-button";
+import { HintStatusLine } from "@/features/rewards/components/hint-controls";
+import { puzzleHintScope, usePaidHint } from "@/features/rewards/components/use-paid-hint";
 import { Clock, isTextEntry } from "@/features/games/shared/components/game-clock";
 import { MoreSheet } from "@/features/games/shared/components/more-sheet";
 import type { PlayScreenProps } from "@/features/games/shared/components/puzzle-kit";
@@ -67,6 +70,8 @@ export function GameScreen({ initial, settings, onSettingsChange, onChange, onEn
   const endedRef = useRef(false);
   // The latest state, updated as soon as a change is made: a drag can deliver several moves before React renders.
   const latest = useRef(initial);
+  const scope = puzzleHintScope("zip", game);
+  const paid = usePaidHint({ chargeScope: scope, cooldownScope: scope });
 
   const playing = game.status === "playing";
   const paused = game.status === "paused";
@@ -140,7 +145,19 @@ export function GameScreen({ initial, settings, onSettingsChange, onChange, onEn
   const release = useCallback(() => update((g) => endStroke(g)), [update]);
   const doUndo = useCallback(() => update((g) => undo(g)), [update]);
   const doRedo = useCallback(() => update((g) => redo(g)), [update]);
-  const hint = useCallback(() => update((g) => giveHint(g, Date.now())), [update]);
+  const requestPaid = paid.request;
+  /**
+   * The hint is worked out first without changing anything; if there is none to give, nothing is charged and no cooldown
+   * starts. Only then is the price taken, and the hint is shown only if that succeeded. The wallet also enforces the cooldown.
+   */
+  const hint = useCallback(() => {
+    const current = latest.current;
+    const next = giveHint(current, Date.now());
+    if (next.hintsUsed === current.hintsUsed) return;
+    if (!requestPaid(next.hintsUsed).ok) return;
+    latest.current = next;
+    setGame(next);
+  }, [requestPaid]);
 
   // ---- Keyboard ------------------------------------------------------------------
 
@@ -275,15 +292,14 @@ export function GameScreen({ initial, settings, onSettingsChange, onChange, onEn
               <Redo2 className="size-5" aria-hidden />
               Redo
             </button>
-            <button type="button" className={toolButton} onClick={hint} disabled={!playing} aria-label="Hint">
-              <Lightbulb className="size-5" aria-hidden />
-              Hint
-            </button>
+            <HintToolButton hint={paid} onClick={hint} disabled={!playing} />
             <button type="button" className={toolButton} onClick={() => update((g) => clearPath(g))} disabled={!playing || game.path.length === 0} aria-label="Clear path">
               <Eraser className="size-5" aria-hidden />
               Clear
             </button>
           </div>
+
+          <HintStatusLine hint={paid} className="sdk-side" />
 
           {/* On phones these live in the "More" sheet. */}
           <div className="hidden space-y-3 lg:block">

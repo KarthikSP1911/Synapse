@@ -6,6 +6,7 @@ import { isIntInRange } from "@/lib/validation";
 import { MAX_HISTORY, isComplete } from "./game";
 import { isSolved, parseGrid } from "./grid";
 import { parseSessionData } from "./records";
+import { sessionGrants } from "./rewards";
 import { isDifficulty } from "./scoring";
 import { CELLS, DEFAULT_SETTINGS, type CellState, type Difficulty, type GameState, type Move, type SessionData, type SudokuSettings } from "./types";
 
@@ -20,6 +21,7 @@ export const sudokuHistory = createLocalHistory<SessionData>({
   suffix: "sudoku",
   parse: dataOrNull(parseSessionData),
   countsAsActivity: sudokuCounts,
+  grants: sessionGrants,
 });
 
 export const loadHistory = sudokuHistory.load;

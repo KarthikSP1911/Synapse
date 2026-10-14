@@ -5,6 +5,7 @@ import { dataOrNull, isClientId, isObject } from "@/lib/records";
 import { isIntInRange } from "@/lib/validation";
 import { hasMoves, highestTileOf, isPowerOfTwo } from "./engine";
 import { parseSessionData, MAX_SCORE } from "./records";
+import { sessionGrants } from "./rewards";
 import { CELLS, MAX_TILE, WIN_TILE, type GameState, type Grid, type SessionData, type Snapshot } from "./types";
 
 /**
@@ -18,6 +19,7 @@ export const game2048History = createLocalHistory<SessionData>({
   suffix: "game2048",
   parse: dataOrNull(parseSessionData),
   countsAsActivity: game2048Counts,
+  grants: sessionGrants,
 });
 
 export const loadHistory = game2048History.load;

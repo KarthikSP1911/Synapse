@@ -51,6 +51,7 @@ const PAGE_PATHS = new Set([
   "/tables",
   "/settings",
   "/profile",
+  "/rewards",
 ]);
 /** Same page for every session (the id is in the query string), so one stored copy serves them all. */
 const SHARED_SHELLS = new Set(["/play", "/play/summary"]);

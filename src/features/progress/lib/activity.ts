@@ -53,22 +53,31 @@ interface StreakStats {
   activeDays: number;
 }
 
-export function streaks(counts: DayCounts, today: string): StreakStats {
+const NO_DAYS: ReadonlySet<string> = new Set();
+
+/**
+ * Streaks from the days with activity. `bridged` are days a Streak Shield protects: they keep a run from breaking but
+ * are not activity, so they add nothing to a streak's length or to `activeDays` (a streak of Mon, Tue (shield), Wed is 2).
+ */
+export function streaks(counts: DayCounts, today: string, bridged: ReadonlySet<string> = NO_DAYS): StreakStats {
+  const isActive = (day: string) => (counts.get(day) ?? 0) > 0;
   const active = [...counts].filter(([, n]) => n > 0).map(([day]) => day).sort();
+  const timeline = bridged.size === 0 ? active : [...new Set([...active, ...bridged])].sort();
 
   let longest = 0;
   let run = 0;
   let previous: string | null = null;
-  for (const day of active) {
-    run = previous !== null && addDays(previous, 1) === day ? run + 1 : 1;
+  for (const day of timeline) {
+    if (previous === null || addDays(previous, 1) !== day) run = 0;
+    if (isActive(day)) run += 1;
     longest = Math.max(longest, run);
     previous = day;
   }
 
   let current = 0;
-  let cursor = (counts.get(today) ?? 0) > 0 ? today : addDays(today, -1);
-  while ((counts.get(cursor) ?? 0) > 0) {
-    current += 1;
+  let cursor = isActive(today) ? today : addDays(today, -1);
+  while (isActive(cursor) || bridged.has(cursor)) {
+    if (isActive(cursor)) current += 1;
     cursor = addDays(cursor, -1);
   }
   return { current, longest, activeDays: active.length };

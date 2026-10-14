@@ -8,6 +8,7 @@ import { MAX_HISTORY, isComplete, rulesFor } from "./game";
 import { validatePath } from "./draw";
 import { cellCount, parsePuzzle } from "./puzzle-format";
 import { parseSessionData } from "./records";
+import { sessionGrants } from "./rewards";
 import { solvePuzzle } from "./solver";
 import { DEFAULT_SETTINGS, type GameState, type SessionData, type ZipSettings } from "./types";
 
@@ -22,6 +23,7 @@ export const zipHistory = createLocalHistory<SessionData>({
   suffix: "zip",
   parse: dataOrNull(parseSessionData),
   countsAsActivity: zipCounts,
+  grants: sessionGrants,
 });
 
 export const loadHistory = zipHistory.load;

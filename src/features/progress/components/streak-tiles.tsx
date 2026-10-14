@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { CalendarDays, Flame, Trophy } from "lucide-react";
 import { StatTile } from "@/components/layout/page-header";
 import { useLocalStore } from "@/features/auth/components/viewer-provider";
-import { dayKey } from "@/features/progress/lib/activity";
+import { addDays, dayKey } from "@/features/progress/lib/activity";
+import { useWallet } from "@/features/rewards/components/use-wallet";
 import { guestActivityDays, localActivityDays } from "@/features/progress/lib/local-activity";
 import { browserTimeZone, summarizeStreaks } from "@/features/progress/lib/streak";
 import { cn } from "@/lib/utils";
@@ -19,9 +20,23 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
  * those straight away and then add what this device holds that the server may not have yet (days played offline).
  * The page may also be an old cached copy, so "today" is worked out here, in the same zone, not taken from the server.
  * A guest passes neither: their days live in this browser and appear once it has read them.
+ *
+ * Days a Streak Shield protected (`serverProtectedDays` from the account, plus those in this device's wallet) keep a streak alive
+ * but are not activity, so they are not counted as active days.
  */
-export function StreakTiles({ serverDays, timeZone, initialToday }: { serverDays?: readonly string[]; timeZone?: string; initialToday?: string }) {
+export function StreakTiles({
+  serverDays,
+  serverProtectedDays,
+  timeZone,
+  initialToday,
+}: {
+  serverDays?: readonly string[];
+  serverProtectedDays?: readonly string[];
+  timeZone?: string;
+  initialToday?: string;
+}) {
   const store = useLocalStore();
+  const { wallet } = useWallet();
   const [local, setLocal] = useState<{ days: readonly string[]; today: string } | null>(null);
 
   const refresh = useCallback(() => {
@@ -45,8 +60,10 @@ export function StreakTiles({ serverDays, timeZone, initialToday }: { serverDays
 
   const today = local?.today ?? initialToday;
   const known = today !== undefined && (serverDays !== undefined || local !== null);
-  const summary = known ? summarizeStreaks([...(serverDays ?? []), ...(local?.days ?? [])], today) : null;
+  const protectedDays = [...(serverProtectedDays ?? []), ...wallet.uses.map((u) => u.date)];
+  const summary = known ? summarizeStreaks([...(serverDays ?? []), ...(local?.days ?? [])], today, protectedDays) : null;
   const current = summary?.current ?? 0;
+  const shieldedYesterday = known && protectedDays.includes(addDays(today, -1));
 
   return (
     <>
@@ -55,7 +72,17 @@ export function StreakTiles({ serverDays, timeZone, initialToday }: { serverDays
         value={summary ? plural(current, "day") : "—"}
         tone={current > 0 ? "success" : undefined}
         icon={<Flame className={cn("size-5", current > 0 ? "text-warning" : "text-muted-foreground")} aria-hidden />}
-        hint={!summary ? undefined : summary.todayDone ? "extended today" : current > 0 ? "keep it going today" : "finish an activity to start one"}
+        hint={
+          !summary
+            ? undefined
+            : summary.todayDone
+              ? "extended today"
+              : current > 0
+                ? shieldedYesterday
+                  ? "a Streak Shield covered yesterday"
+                  : "keep it going today"
+                : "finish an activity to start one"
+        }
       />
       <StatTile
         label="Longest streak"

@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { sudokuSessions } from "@/db/schema";
 import { createHistoryRoute } from "@/features/games/shared/lib/history/route";
 import { parseSessionData } from "@/features/games/sudoku/lib/records";
+import { sessionGrants } from "@/features/games/sudoku/lib/rewards";
 import { scoreGame } from "@/features/games/sudoku/lib/scoring";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +22,7 @@ const route = createHistoryRoute({
   label: "Sudoku games",
   noun: "games",
   parse: (raw) => parseSessionData(raw, { now: Date.now(), verify: true }),
+  grants: sessionGrants,
   insert: (userId, data) =>
     db
       .insert(sudokuSessions)

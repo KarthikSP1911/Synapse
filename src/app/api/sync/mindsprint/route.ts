@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { mindsprintSessions } from "@/db/schema";
 import { createHistoryRoute } from "@/features/games/shared/lib/history/route";
 import { parseSessionData } from "@/features/games/mindsprint/lib/records";
+import { sessionGrants } from "@/features/games/mindsprint/lib/rewards";
 import { scoreSession } from "@/features/games/mindsprint/lib/scoring";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +22,7 @@ const route = createHistoryRoute({
   label: "MindSprint sessions",
   noun: "sessions",
   parse: (raw) => parseSessionData(raw, Date.now()),
+  grants: sessionGrants,
   insert: (userId, data) => {
     const scored = scoreSession(data.rounds);
     return (
