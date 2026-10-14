@@ -140,7 +140,7 @@ export function InstallPrompt() {
   }, [deferred, snooze]);
 
   // The live practice screen is a focus view: nothing may cover the question or the answer box.
-  if (!visible || !mode || /^\/(practice\/\d+|play|games\/(2048|sudoku|queens|zip))$/.test(pathname)) return null;
+  if (!visible || !mode || /^\/(practice\/\d+|play|games\/(2048|sudoku|queens|zip|patches))$/.test(pathname)) return null;
 
   return (
     <section

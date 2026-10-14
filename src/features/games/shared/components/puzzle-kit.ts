@@ -6,7 +6,7 @@ import type { PuzzleRecord, PuzzleStats } from "@/features/games/shared/lib/puzz
 import type { AccentId } from "@/lib/accent";
 
 /**
- * What a puzzle game (Queens, Zip) hands to the shared app shell (`puzzle-app.tsx`): its pure game functions, its
+ * What a puzzle game (Queens, Zip, Patches) hands to the shared app shell (`puzzle-app.tsx`): its pure game functions, its
  * storage, and the screens that are specific to it. The shell owns everything the games have in common: setup,
  * resuming an unfinished game, saving and uploading finished ones, the results screen and the stats tab.
  */
@@ -35,7 +35,7 @@ export interface PlayScreenProps<G extends PuzzleGame, S> {
 }
 
 export interface PuzzleKit<G extends PuzzleGame, S, D extends PuzzleRecord> {
-  accent: Extract<AccentId, "queens" | "zip">;
+  accent: Extract<AccentId, "queens" | "zip" | "patches">;
   /** "Queens". */
   name: string;
   /** What one game is called: "puzzle". */
@@ -45,10 +45,10 @@ export interface PuzzleKit<G extends PuzzleGame, S, D extends PuzzleRecord> {
   idPrefix: string;
   defaultSettings: S;
   difficultyDescription: Record<Difficulty, string>;
-  /** The board of each difficulty, for the start card ("6 × 6"). */
-  boardLabel: Record<Difficulty, string>;
-  /** Builds a game of this difficulty; throws when no puzzle could be built within the budget. */
-  newGame: (difficulty: Difficulty, clientId: string, now: number) => G;
+  /** The board of each difficulty, for the start card ("6 × 6"); a function when the settings change the size. */
+  boardLabel: Record<Difficulty, string> | ((settings: S) => Record<Difficulty, string>);
+  /** Builds a game of this difficulty with the player's current settings; throws when no puzzle could be built within the budget. */
+  newGame: (difficulty: Difficulty, clientId: string, now: number, settings: S) => G;
   freeze: (game: G, now: number) => G;
   resume: (game: G, now: number) => G;
   hasProgress: (game: G) => boolean;

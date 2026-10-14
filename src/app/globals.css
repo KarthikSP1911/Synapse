@@ -1253,3 +1253,352 @@ html.play-focus body {
   .qn-board[data-won="true"] .qn-grid,
   .zp-board[data-won="true"] .zp-grid { animation: none; }
 }
+
+/*
+  Patches board. `--pt` (the game's lime) is set inline from lib/accent.ts and `--ptn` is the number of columns, which
+  sizes clue text and lines from the board's width (cqw), so the board scales from a 320px phone to a desktop. Each
+  patch is filled with one of eight colours (`data-c`) and always has an outline and a clue as well, so colour is never
+  the only thing that tells patches apart. The outlines, the draft and the refusal flash are drawn in one SVG laid over
+  the cells (one unit per cell); the clues sit above it. The board is the only thing with `touch-action: none`.
+*/
+.pt-board {
+  --pt-ink: #1c1c22;
+  --pt-line: #1c1c22;
+  --pt-c0: #f6a6a6;
+  --pt-c1: #fbc18a;
+  --pt-c2: #f3df7a;
+  --pt-c3: #a6dfa0;
+  --pt-c4: #8adbd0;
+  --pt-c5: #9bbff2;
+  --pt-c6: #c1aef2;
+  --pt-c7: #f2aed4;
+  --pt-sel: color-mix(in oklab, var(--pt) 55%, #000);
+  container-type: inline-size;
+}
+.dark .pt-board {
+  --pt-ink: #f4f4f6;
+  --pt-line: #f4f4f6;
+  --pt-c0: #8a3535;
+  --pt-c1: #8a5320;
+  --pt-c2: #766a1c;
+  --pt-c3: #2f7440;
+  --pt-c4: #1f716c;
+  --pt-c5: #2b5a9e;
+  --pt-c6: #5845a0;
+  --pt-c7: #8a3a6c;
+  --pt-sel: var(--pt);
+}
+.pt-board[data-covered="true"] .pt-grid {
+  filter: blur(14px);
+  pointer-events: none;
+}
+.pt-grid {
+  position: relative;
+  display: grid;
+  aspect-ratio: 1 / 1;
+  border: max(2px, 0.9cqw) solid var(--foreground);
+  border-radius: 0.625rem;
+  overflow: hidden;
+  background: var(--card);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  overscroll-behavior: contain;
+  cursor: crosshair;
+}
+.pt-grid:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+.pt-cell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  border-top: max(1px, 0.2cqw) solid var(--border);
+  border-left: max(1px, 0.2cqw) solid var(--border);
+}
+.pt-cell[data-cursor="true"] {
+  outline: max(2px, 0.6cqw) solid var(--ring);
+  outline-offset: calc(-1 * max(2px, 0.6cqw));
+  z-index: 3;
+}
+.pt-fill,
+.pt-draft {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.pt-fill {
+  background: transparent;
+  opacity: 0;
+  transform: scale(0.6);
+  transition: background-color 180ms ease, opacity 180ms ease, transform 180ms ease;
+}
+.pt-fill[data-c] {
+  opacity: 1;
+  transform: none;
+}
+.pt-fill[data-c="0"] { background: var(--pt-c0); }
+.pt-fill[data-c="1"] { background: var(--pt-c1); }
+.pt-fill[data-c="2"] { background: var(--pt-c2); }
+.pt-fill[data-c="3"] { background: var(--pt-c3); }
+.pt-fill[data-c="4"] { background: var(--pt-c4); }
+.pt-fill[data-c="5"] { background: var(--pt-c5); }
+.pt-fill[data-c="6"] { background: var(--pt-c6); }
+.pt-fill[data-c="7"] { background: var(--pt-c7); }
+/* A patch settles into place: its cells fill in outwards from the clue (`--d`), then its outline draws in. */
+.pt-fill[data-enter] {
+  animation: pt-fill-in 300ms cubic-bezier(0.2, 0.8, 0.2, 1) var(--d, 0ms) backwards;
+}
+.pt-board[data-soft="true"] .pt-fill[data-enter] {
+  animation-duration: 160ms;
+}
+@keyframes pt-fill-in {
+  from { opacity: 0; transform: scale(0.5); }
+  65% { opacity: 1; transform: scale(1.07); }
+}
+/* The patch being drawn: a translucent fill that follows the pointer. */
+.pt-draft {
+  animation: pt-draft-in 90ms ease-out both;
+}
+.pt-draft[data-state="valid"] { background: color-mix(in oklab, var(--pt) 42%, transparent); }
+.pt-draft[data-state="neutral"] { background: color-mix(in oklab, var(--foreground) 16%, transparent); }
+.pt-draft[data-state="blocked"] { background: color-mix(in oklab, var(--destructive) 30%, transparent); }
+@keyframes pt-draft-in {
+  from { opacity: 0; transform: scale(0.8); }
+}
+.pt-count {
+  position: absolute;
+  right: 6%;
+  top: 6%;
+  z-index: 4;
+  padding: 0.1em 0.4em;
+  border-radius: 999px;
+  background: var(--foreground);
+  color: var(--background);
+  font-size: calc(26cqw / var(--ptn));
+  font-weight: 700;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+/* A cell nothing can cover any more: striped, so it is told apart without colour. */
+.pt-cell[data-dead="true"] {
+  outline: max(1.5px, 0.35cqw) dashed var(--destructive);
+  outline-offset: calc(-1 * max(1.5px, 0.35cqw));
+}
+.pt-stripe {
+  fill: var(--destructive);
+  opacity: 0.55;
+}
+.pt-dead {
+  pointer-events: none;
+}
+/* A hint rings its cells and fades to a quieter ring that stays until the board changes. */
+.pt-cell[data-hint="true"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  border: max(2px, 0.55cqw) solid var(--pt);
+  box-shadow: 0 0 0 max(1px, 0.2cqw) var(--foreground), inset 0 0 1.2cqw var(--pt);
+  opacity: 0.55;
+  animation: pt-hint 2.4s ease-out both;
+}
+@keyframes pt-hint {
+  0% { opacity: 1; transform: scale(1.12); background: color-mix(in oklab, var(--pt) 55%, transparent); }
+  35% { transform: scale(1); }
+  100% { opacity: 0.55; background: transparent; }
+}
+.pt-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+.pt-line {
+  fill: none;
+  stroke: var(--pt-line);
+  stroke-width: 0.075;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.pt-line[data-enter] {
+  animation: pt-line-in 260ms ease-out var(--ld, 0ms) backwards;
+}
+.pt-line[data-leaving] {
+  animation: pt-line-out 220ms ease-in both;
+}
+@keyframes pt-line-in {
+  from { opacity: 0; }
+}
+@keyframes pt-line-out {
+  to { opacity: 0; }
+}
+.pt-selected {
+  fill: none;
+  stroke: var(--pt-sel);
+  stroke-width: 0.15;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 0.32 0.16;
+}
+.pt-draft-line {
+  fill: none;
+  stroke-width: 0.1;
+  stroke-linecap: round;
+  stroke-dasharray: 0.22 0.14;
+  transition: stroke 120ms ease;
+}
+.pt-draft-line[data-state="valid"] { stroke: var(--pt-sel); }
+.pt-draft-line[data-state="neutral"] { stroke: var(--muted-foreground); }
+.pt-draft-line[data-state="blocked"] { stroke: var(--destructive); }
+/* A refused patch flashes red, shakes a little and is gone, leaving the board as it was. */
+.pt-reject {
+  animation: pt-shake 380ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+.pt-reject-fill {
+  fill: var(--destructive);
+  opacity: 0.3;
+  animation: pt-reject-fade 520ms ease-out both;
+}
+.pt-reject-line {
+  fill: none;
+  stroke: var(--destructive);
+  stroke-width: 0.12;
+  stroke-linecap: round;
+  animation: pt-reject-fade 520ms ease-out both;
+}
+@keyframes pt-shake {
+  15%, 85% { transform: translateX(-0.03px); }
+  30%, 70% { transform: translateX(0.06px); }
+  45%, 55% { transform: translateX(-0.06px); }
+}
+@keyframes pt-reject-fade {
+  0%, 40% { opacity: 1; }
+  100% { opacity: 0; }
+}
+/* Clues: a badge that stays readable on any patch colour. Placed: solid. No room left: dashed and marked. */
+.pt-clue {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(2.4cqw / var(--ptn));
+  width: 78%;
+  height: 78%;
+  border-radius: 22%;
+  border: max(1.5px, calc(4cqw / var(--ptn))) solid var(--pt-ink);
+  background: var(--card);
+  color: var(--pt-ink);
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+.pt-clue[data-placed="true"] {
+  background: var(--pt-ink);
+  color: var(--card);
+}
+.pt-clue[data-conflict="true"] {
+  border-style: dashed;
+  border-color: var(--destructive);
+}
+.pt-clue[data-conflict="true"]::after {
+  content: "!";
+  position: absolute;
+  right: -12%;
+  top: -16%;
+  display: grid;
+  place-items: center;
+  width: 38%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--destructive);
+  color: #fff;
+  font-size: calc(22cqw / var(--ptn));
+}
+.pt-num {
+  font-size: calc(40cqw / var(--ptn));
+}
+.pt-clue[data-kind="both"] .pt-num {
+  font-size: calc(32cqw / var(--ptn));
+}
+.pt-glyph {
+  width: calc(26cqw / var(--ptn));
+  height: calc(26cqw / var(--ptn));
+}
+.pt-clue[data-kind="shape"] .pt-glyph {
+  width: calc(42cqw / var(--ptn));
+  height: calc(42cqw / var(--ptn));
+}
+.pt-dot {
+  width: 24%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: currentColor;
+}
+.pt-clue[data-enter] {
+  animation: pt-pop 420ms ease-out var(--cd, 0ms) both;
+}
+@keyframes pt-pop {
+  0%, 100% { transform: scale(1); }
+  40% { transform: scale(1.22); }
+}
+/* Solved: a wave of colour crosses the board, the clues pop and the outlines pulse, then a highlight sweeps over it. */
+.pt-board[data-won="true"] .pt-fill[data-c] {
+  animation: pt-win 520ms ease-in-out var(--wd, 0ms) both;
+}
+.pt-board[data-won="true"] .pt-clue {
+  animation: pt-pop 560ms ease-in-out var(--wd, 0ms) both;
+}
+.pt-board[data-won="true"] .pt-line {
+  animation: pt-line-pulse 900ms ease-in-out 200ms 2 alternate both;
+}
+@keyframes pt-win {
+  0%, 100% { transform: scale(1); filter: none; }
+  45% { transform: scale(1.1); filter: saturate(1.5) brightness(1.15); }
+}
+@keyframes pt-line-pulse {
+  to { stroke-width: 0.13; }
+}
+.pt-sweep {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 35%, color-mix(in oklab, var(--pt) 55%, #fff) 50%, transparent 65%);
+  mix-blend-mode: soft-light;
+  animation: pt-sweep 950ms ease-in-out 250ms both;
+}
+@keyframes pt-sweep {
+  from { transform: translateX(-110%); }
+  to { transform: translateX(110%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pt-fill,
+  .pt-clue,
+  .pt-draft-line { transition: none; }
+  .pt-fill[data-enter],
+  .pt-draft,
+  .pt-line[data-enter],
+  .pt-reject,
+  .pt-reject-fill,
+  .pt-reject-line,
+  .pt-clue[data-enter],
+  .pt-cell[data-hint="true"]::after,
+  .pt-board[data-won="true"] .pt-fill[data-c],
+  .pt-board[data-won="true"] .pt-clue,
+  .pt-board[data-won="true"] .pt-line { animation: none; }
+  .pt-line[data-leaving],
+  .pt-sweep { display: none; }
+}

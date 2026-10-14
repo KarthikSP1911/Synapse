@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { Brain, Crown, Grid3x3, LayoutGrid, Route, Zap, type LucideIcon } from "lucide-react";
+import { Brain, Crown, Grid3x3, LayoutGrid, LayoutTemplate, Route, Zap, type LucideIcon } from "lucide-react";
 import { SKILL_ICONS } from "@/components/common/skill-icon";
 import { cn } from "@/lib/utils";
 import { ACCENT, type AccentId } from "@/lib/accent";
@@ -13,6 +13,7 @@ const ICONS: Record<AccentId, LucideIcon> = {
   game2048: LayoutGrid,
   queens: Crown,
   zip: Route,
+  patches: LayoutTemplate,
 };
 
 /** Puts an item's accent on an element, so `AccentTile` and `.accent-label` inside it can read `--accent`. */
