@@ -1256,63 +1256,59 @@ html.play-focus body {
 
 /*
   Patches board. `--pt` (the game's lime) is set inline from lib/accent.ts and `--ptn` is the number of columns, which
-  sizes clue text and lines from the board's width (cqw), so the board scales from a 320px phone to a desktop. Each
-  patch is filled with one of eight colours (`data-c`) and always has an outline and a clue as well, so colour is never
-  the only thing that tells patches apart. The outlines, the draft and the refusal flash are drawn in one SVG laid over
-  the cells (one unit per cell); the clues sit above it. The board is the only thing with `touch-action: none`.
+  sizes badges and labels from the board's width (cqw), so the board scales from a 320px phone to a desktop.
+
+  The look follows the paper puzzle: a light board with dashed lines between the cells; every clue is a solid badge in
+  its own colour (`--pt-sN`, white ink) shaped like what it asks for, sitting in a dashed tinted halo (`--pt-hN`) until
+  its patch is drawn; a patch is a rounded, tinted shape with a 2px border in its clue's colour, pulled in a little from
+  the cell lines so patches that touch keep a gap, with a small label of its size in the middle. Colour is never the only
+  thing that tells things apart: badges differ in shape and number, an unfinished patch has a dashed border, and
+  marks such as "!" and the hatching say it in words or pattern as well. The patches, the draft and the refusal flash are
+  drawn in one SVG laid over the cells (one unit per cell); the clues sit above it. The board is the only thing with
+  `touch-action: none`.
 */
 .pt-board {
-  --pt-ink: #1c1c22;
-  --pt-line: #1c1c22;
-  /* Every clue has its own colour: a strong one for its symbol and solid badge (`--pt-sN`, with the ink that reads on it
-     `--pt-iN`), and a softer fill of the same hue for its patch (`--pt-cN`). */
-  --pt-s0: #d32f2f; --pt-i0: #fff;
-  --pt-s1: #e65100; --pt-i1: #fff;
-  --pt-s2: #f9a825; --pt-i2: #1c1c22;
-  --pt-s3: #2e7d32; --pt-i3: #fff;
-  --pt-s4: #00838f; --pt-i4: #fff;
-  --pt-s5: #1565c0; --pt-i5: #fff;
-  --pt-s6: #7b1fa2; --pt-i6: #fff;
-  --pt-s7: #c2185b; --pt-i7: #fff;
-  --pt-fill-mix: 46%;
+  /* Badge colour (white ink on it) and the lighter hue of the same colour for borders, halos and fills. */
+  --pt-s0: #d32f2f; --pt-h0: #e53935;
+  --pt-s1: #e65100; --pt-h1: #f4511e;
+  --pt-s2: #a85f00; --pt-h2: #d99100;
+  --pt-s3: #2e7d32; --pt-h3: #2eb85c;
+  --pt-s4: #00796b; --pt-h4: #00a3a3;
+  --pt-s5: #0277bd; --pt-h5: #1aa7ec;
+  --pt-s6: #6d28d9; --pt-h6: #8b5cf6;
+  --pt-s7: #c2185b; --pt-h7: #ec4f8c;
+  --pt-s8: #8d5524; --pt-h8: #b0742f;
+  --pt-s9: #558b2f; --pt-h9: #7cb342;
+  --pt-fill: 26%;
+  --pt-grid: color-mix(in oklab, var(--foreground) 22%, transparent);
   container-type: inline-size;
 }
 .dark .pt-board {
-  --pt-ink: #f4f4f6;
-  --pt-line: #f4f4f6;
-  --pt-s0: #ff6b6b; --pt-i0: #14141a;
-  --pt-s1: #ffa14a; --pt-i1: #14141a;
-  --pt-s2: #ffd54a; --pt-i2: #14141a;
-  --pt-s3: #6bd36f; --pt-i3: #14141a;
-  --pt-s4: #3dd6e0; --pt-i4: #14141a;
-  --pt-s5: #64b5f6; --pt-i5: #14141a;
-  --pt-s6: #c58cff; --pt-i6: #14141a;
-  --pt-s7: #ff7eb6; --pt-i7: #14141a;
-  --pt-fill-mix: 52%;
-}
-.pt-board {
-  --pt-c0: color-mix(in oklab, var(--pt-s0) var(--pt-fill-mix), var(--card));
-  --pt-c1: color-mix(in oklab, var(--pt-s1) var(--pt-fill-mix), var(--card));
-  --pt-c2: color-mix(in oklab, var(--pt-s2) var(--pt-fill-mix), var(--card));
-  --pt-c3: color-mix(in oklab, var(--pt-s3) var(--pt-fill-mix), var(--card));
-  --pt-c4: color-mix(in oklab, var(--pt-s4) var(--pt-fill-mix), var(--card));
-  --pt-c5: color-mix(in oklab, var(--pt-s5) var(--pt-fill-mix), var(--card));
-  --pt-c6: color-mix(in oklab, var(--pt-s6) var(--pt-fill-mix), var(--card));
-  --pt-c7: color-mix(in oklab, var(--pt-s7) var(--pt-fill-mix), var(--card));
-}
-.pt-board[data-holding="true"] .pt-grid {
-  cursor: grabbing;
+  --pt-h0: #ff6b6b;
+  --pt-h1: #ff8a50;
+  --pt-h2: #ffc233;
+  --pt-h3: #5fd98a;
+  --pt-h4: #3dd6d6;
+  --pt-h5: #4cc2ff;
+  --pt-h6: #a78bfa;
+  --pt-h7: #ff7eb6;
+  --pt-h8: #d9a05b;
+  --pt-h9: #9ccc65;
+  --pt-fill: 32%;
 }
 .pt-board[data-covered="true"] .pt-grid {
   filter: blur(14px);
   pointer-events: none;
 }
+.pt-board[data-holding="true"] .pt-grid {
+  cursor: grabbing;
+}
 .pt-grid {
   position: relative;
   display: grid;
   aspect-ratio: 1 / 1;
-  border: max(2px, 0.9cqw) solid var(--foreground);
-  border-radius: 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
   overflow: hidden;
   background: var(--card);
   touch-action: none;
@@ -1332,86 +1328,175 @@ html.play-focus body {
   place-items: center;
   min-width: 0;
   min-height: 0;
-  border-top: max(1px, 0.2cqw) solid var(--border);
-  border-left: max(1px, 0.2cqw) solid var(--border);
 }
 .pt-cell[data-cursor="true"] {
   outline: max(2px, 0.6cqw) solid var(--ring);
   outline-offset: calc(-1 * max(2px, 0.6cqw));
+  border-radius: 8px;
   z-index: 3;
 }
-.pt-fill,
-.pt-draft {
+.pt-svg {
   position: absolute;
   inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
   pointer-events: none;
 }
-.pt-fill {
-  background: transparent;
-  opacity: 0;
-  transform: scale(0.6);
-  transition: background-color 180ms ease, opacity 180ms ease, transform 180ms ease;
+.pt-gridlines {
+  fill: none;
+  stroke: var(--pt-grid);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+  vector-effect: non-scaling-stroke;
 }
-.pt-fill[data-c] {
-  opacity: 1;
-  transform: none;
+
+/* A patch, and the draft being drawn: tinted, with a border in the clue's colour. */
+.pt-patch {
+  --hc: var(--muted-foreground);
+  fill: color-mix(in oklab, var(--hc) var(--pt-fill), transparent);
+  stroke: var(--hc);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  fill-rule: evenodd;
+  vector-effect: non-scaling-stroke;
+  transition: opacity 160ms ease;
 }
-.pt-fill[data-c="0"] { background: var(--pt-c0); }
-.pt-fill[data-c="1"] { background: var(--pt-c1); }
-.pt-fill[data-c="2"] { background: var(--pt-c2); }
-.pt-fill[data-c="3"] { background: var(--pt-c3); }
-.pt-fill[data-c="4"] { background: var(--pt-c4); }
-.pt-fill[data-c="5"] { background: var(--pt-c5); }
-.pt-fill[data-c="6"] { background: var(--pt-c6); }
-.pt-fill[data-c="7"] { background: var(--pt-c7); }
-/* A patch the draft would replace is dimmed, and marked by its hatching so it is not told by colour alone. */
-.pt-fill[data-c][data-dim="true"] {
-  opacity: 0.35;
-  background-image: repeating-linear-gradient(135deg, transparent 0 0.35em, color-mix(in oklab, var(--pt-line) 35%, transparent) 0.35em 0.5em);
+.pt-patch[data-c="0"], .pt-size[data-c="0"], .pt-clue[data-c="0"] { --hc: var(--pt-h0); --cc: var(--pt-s0); }
+.pt-patch[data-c="1"], .pt-size[data-c="1"], .pt-clue[data-c="1"] { --hc: var(--pt-h1); --cc: var(--pt-s1); }
+.pt-patch[data-c="2"], .pt-size[data-c="2"], .pt-clue[data-c="2"] { --hc: var(--pt-h2); --cc: var(--pt-s2); }
+.pt-patch[data-c="3"], .pt-size[data-c="3"], .pt-clue[data-c="3"] { --hc: var(--pt-h3); --cc: var(--pt-s3); }
+.pt-patch[data-c="4"], .pt-size[data-c="4"], .pt-clue[data-c="4"] { --hc: var(--pt-h4); --cc: var(--pt-s4); }
+.pt-patch[data-c="5"], .pt-size[data-c="5"], .pt-clue[data-c="5"] { --hc: var(--pt-h5); --cc: var(--pt-s5); }
+.pt-patch[data-c="6"], .pt-size[data-c="6"], .pt-clue[data-c="6"] { --hc: var(--pt-h6); --cc: var(--pt-s6); }
+.pt-patch[data-c="7"], .pt-size[data-c="7"], .pt-clue[data-c="7"] { --hc: var(--pt-h7); --cc: var(--pt-s7); }
+.pt-patch[data-c="8"], .pt-size[data-c="8"], .pt-clue[data-c="8"] { --hc: var(--pt-h8); --cc: var(--pt-s8); }
+.pt-patch[data-c="9"], .pt-size[data-c="9"], .pt-clue[data-c="9"] { --hc: var(--pt-h9); --cc: var(--pt-s9); }
+/* Not the size or shape its clue asks for yet: a dashed border. */
+.pt-patch[data-mismatch="true"] {
+  stroke-dasharray: 6 4;
 }
-/* A patch settles into place: its cells fill in outwards from the clue (`--d`), then its outline draws in. */
-.pt-fill[data-enter] {
-  animation: pt-fill-in 300ms cubic-bezier(0.2, 0.8, 0.2, 1) var(--d, 0ms) backwards;
+/* A patch the draft would replace is dimmed. */
+.pt-patch[data-dim="true"] {
+  opacity: 0.3;
 }
-.pt-board[data-soft="true"] .pt-fill[data-enter] {
+.pt-patch[data-draft] {
+  fill: color-mix(in oklab, var(--hc) calc(var(--pt-fill) + 8%), transparent);
+}
+.pt-patch[data-draft][data-state="neutral"] {
+  stroke-dasharray: 6 4;
+}
+/* A patch settles into place from its clue. */
+.pt-patch[data-enter] {
+  animation: pt-patch-in 340ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+.pt-board[data-soft="true"] .pt-patch[data-enter] {
   animation-duration: 160ms;
 }
-@keyframes pt-fill-in {
-  from { opacity: 0; transform: scale(0.5); }
-  65% { opacity: 1; transform: scale(1.07); }
+.pt-patch[data-leaving] {
+  animation: pt-patch-out 200ms ease-in both;
 }
-/* The patch being drawn: a translucent fill that follows the pointer. */
-.pt-draft {
-  animation: pt-draft-in 90ms ease-out both;
+@keyframes pt-patch-in {
+  from { opacity: 0; transform: scale(0.6); }
+  60% { transform: scale(1.04); }
 }
-.pt-draft[data-c="0"], .pt-draft-line[data-c="0"] { --dc: var(--pt-s0); }
-.pt-draft[data-c="1"], .pt-draft-line[data-c="1"] { --dc: var(--pt-s1); }
-.pt-draft[data-c="2"], .pt-draft-line[data-c="2"] { --dc: var(--pt-s2); }
-.pt-draft[data-c="3"], .pt-draft-line[data-c="3"] { --dc: var(--pt-s3); }
-.pt-draft[data-c="4"], .pt-draft-line[data-c="4"] { --dc: var(--pt-s4); }
-.pt-draft[data-c="5"], .pt-draft-line[data-c="5"] { --dc: var(--pt-s5); }
-.pt-draft[data-c="6"], .pt-draft-line[data-c="6"] { --dc: var(--pt-s6); }
-.pt-draft[data-c="7"], .pt-draft-line[data-c="7"] { --dc: var(--pt-s7); }
-/* Solid when the patch would be accepted, lighter while it is not right yet (or has no clue in it). */
-.pt-draft[data-state="valid"] { background: color-mix(in oklab, var(--dc, var(--pt)) 62%, transparent); }
-.pt-draft[data-state="neutral"] { background: color-mix(in oklab, var(--dc, var(--foreground)) 26%, transparent); }
-@keyframes pt-draft-in {
-  from { opacity: 0; transform: scale(0.8); }
+@keyframes pt-patch-out {
+  to { opacity: 0; }
 }
-.pt-count {
+
+/* The size of a patch (and of the one being drawn) in its middle, in a small outlined box. */
+.pt-size {
   position: absolute;
-  right: 6%;
-  top: 6%;
   z-index: 4;
-  padding: 0.1em 0.4em;
-  border-radius: 999px;
-  background: var(--foreground);
-  color: var(--background);
-  font-size: calc(26cqw / var(--ptn));
+  transform: translate(-50%, -50%);
+  padding: 0.1em 0.42em;
+  border: max(1.5px, 0.35cqw) solid var(--hc, var(--muted-foreground));
+  border-radius: 0.45em;
+  background: var(--card);
+  color: var(--hc, var(--muted-foreground));
+  font-size: calc(20cqw / var(--ptn));
   font-weight: 700;
-  line-height: 1.15;
+  line-height: 1.1;
   font-variant-numeric: tabular-nums;
   pointer-events: none;
+}
+
+/* Clues: a solid badge in the clue's colour, shaped like what it asks for, in a dashed tinted halo until its patch is drawn. */
+.pt-clue {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.pt-halo {
+  position: absolute;
+  inset: 8%;
+  border-radius: 24%;
+  border: max(1.5px, 0.35cqw) dashed var(--hc, var(--muted-foreground));
+  background: color-mix(in oklab, var(--hc, var(--muted-foreground)) 20%, transparent);
+}
+.pt-clue[data-placed="true"] .pt-halo {
+  display: none;
+}
+.pt-badge {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 50%;
+  height: 50%;
+  border-radius: 18%;
+  background: var(--cc, #555);
+  color: #fff;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.pt-badge[data-badge="wide"] { width: 72%; height: 42%; }
+.pt-badge[data-badge="tall"] { width: 42%; height: 72%; }
+.pt-badge[data-badge="free"] { width: 58%; height: 58%; gap: calc(2cqw / var(--ptn)); }
+/* No shape and no area: any rectangle. */
+.pt-badge[data-badge="any"] {
+  background: repeating-linear-gradient(45deg, var(--cc, #555) 0 calc(4cqw / var(--ptn)), color-mix(in oklab, var(--cc, #555) 45%, #fff) calc(4cqw / var(--ptn)) calc(8cqw / var(--ptn)));
+}
+.pt-num {
+  font-size: calc(32cqw / var(--ptn));
+}
+.pt-glyph {
+  width: calc(18cqw / var(--ptn));
+  height: calc(18cqw / var(--ptn));
+}
+.pt-clue[data-enter] .pt-badge {
+  animation: pt-pop 420ms ease-out var(--cd, 0ms) both;
+}
+@keyframes pt-pop {
+  0%, 100% { transform: scale(1); }
+  40% { transform: scale(1.22); }
+}
+
+/* No patch can serve this clue (Auto-check, or Check): a dashed amber ring and a "!". */
+.pt-clue[data-conflict="true"] .pt-badge {
+  outline: max(2px, 0.5cqw) dashed var(--warning);
+  outline-offset: max(2px, 0.5cqw);
+}
+.pt-clue[data-conflict="true"]::after {
+  content: "!";
+  position: absolute;
+  right: 12%;
+  top: 8%;
+  display: grid;
+  place-items: center;
+  width: 28%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--warning);
+  color: #1c1c22;
+  font-size: calc(20cqw / var(--ptn));
+  font-weight: 700;
 }
 /* A cell nothing can cover any more: striped, so it is told apart without colour. */
 .pt-cell[data-dead="true"] {
@@ -1429,9 +1514,10 @@ html.play-focus body {
 .pt-cell[data-hint="true"]::after {
   content: "";
   position: absolute;
-  inset: 0;
-  z-index: 2;
+  inset: 4%;
+  z-index: 3;
   pointer-events: none;
+  border-radius: 14%;
   border: max(2px, 0.55cqw) solid var(--pt);
   box-shadow: 0 0 0 max(1px, 0.2cqw) var(--foreground), inset 0 0 1.2cqw var(--pt);
   opacity: 0.55;
@@ -1442,46 +1528,8 @@ html.play-focus body {
   35% { transform: scale(1); }
   100% { opacity: 0.55; background: transparent; }
 }
-.pt-svg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 1;
-  pointer-events: none;
-}
-.pt-line {
-  fill: none;
-  stroke: var(--pt-line);
-  stroke-width: 0.06;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.pt-line[data-mismatch="true"] {
-  stroke-dasharray: 0.18 0.1;
-}
-.pt-line[data-enter] {
-  animation: pt-line-in 260ms ease-out var(--ld, 0ms) backwards;
-}
-.pt-line[data-leaving] {
-  animation: pt-line-out 220ms ease-in both;
-}
-@keyframes pt-line-in {
-  from { opacity: 0; }
-}
-@keyframes pt-line-out {
-  to { opacity: 0; }
-}
-.pt-draft-line {
-  fill: none;
-  stroke-width: 0.1;
-  stroke-linecap: round;
-  stroke-dasharray: 0.22 0.14;
-  transition: stroke 120ms ease;
-}
-.pt-draft-line[data-state="valid"] { stroke: var(--dc, var(--pt-line)); stroke-width: 0.13; }
-.pt-draft-line[data-state="neutral"] { stroke: var(--dc, var(--muted-foreground)); }
-/* A refused patch flashes red, shakes a little and is gone, leaving the board as it was. */
+
+/* A refused patch (one that is no patch at all) flashes red, shakes a little and is gone, leaving the board as it was. */
 .pt-reject {
   animation: pt-shake 380ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 }
@@ -1506,105 +1554,17 @@ html.play-focus body {
   0%, 40% { opacity: 1; }
   100% { opacity: 0; }
 }
-/* Clues: a badge that stays readable on any patch colour. Placed: solid. No room left: dashed and marked. */
-.pt-clue {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: calc(2.4cqw / var(--ptn));
-  width: 78%;
-  height: 78%;
-  border-radius: 22%;
-  border: max(1.5px, calc(4cqw / var(--ptn))) solid var(--cc, var(--pt-ink));
-  background: var(--card);
-  color: var(--cc, var(--pt-ink));
-  font-weight: 700;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-  pointer-events: none;
-  transition: background-color 160ms ease, color 160ms ease;
-}
-.pt-clue[data-c="0"] { --cc: var(--pt-s0); --ci: var(--pt-i0); }
-.pt-clue[data-c="1"] { --cc: var(--pt-s1); --ci: var(--pt-i1); }
-.pt-clue[data-c="2"] { --cc: var(--pt-s2); --ci: var(--pt-i2); }
-.pt-clue[data-c="3"] { --cc: var(--pt-s3); --ci: var(--pt-i3); }
-.pt-clue[data-c="4"] { --cc: var(--pt-s4); --ci: var(--pt-i4); }
-.pt-clue[data-c="5"] { --cc: var(--pt-s5); --ci: var(--pt-i5); }
-.pt-clue[data-c="6"] { --cc: var(--pt-s6); --ci: var(--pt-i6); }
-.pt-clue[data-c="7"] { --cc: var(--pt-s7); --ci: var(--pt-i7); }
-.pt-clue[data-placed="true"] {
-  background: var(--cc, var(--pt-ink));
-  color: var(--ci, var(--card));
-}
-.pt-clue[data-mismatch="true"] {
-  border-style: dashed;
-}
-.pt-clue[data-conflict="true"] {
-  border-style: dashed;
-  border-color: var(--warning);
-  background: var(--card);
-  color: var(--cc, var(--pt-ink));
-}
-.pt-clue[data-conflict="true"]::after {
-  content: "!";
-  position: absolute;
-  right: -12%;
-  top: -16%;
-  display: grid;
-  place-items: center;
-  width: 38%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: var(--warning);
-  color: #1c1c22;
-  font-size: calc(22cqw / var(--ptn));
-}
-.pt-num {
-  font-size: calc(40cqw / var(--ptn));
-}
-.pt-clue[data-kind="both"] .pt-num {
-  font-size: calc(32cqw / var(--ptn));
-}
-.pt-glyph {
-  width: calc(26cqw / var(--ptn));
-  height: calc(26cqw / var(--ptn));
-}
-.pt-clue[data-kind="shape"] .pt-glyph {
-  width: calc(42cqw / var(--ptn));
-  height: calc(42cqw / var(--ptn));
-}
-.pt-dot {
-  width: 24%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: currentColor;
-}
-.pt-clue[data-enter] {
-  animation: pt-pop 420ms ease-out var(--cd, 0ms) both;
-}
-@keyframes pt-pop {
-  0%, 100% { transform: scale(1); }
-  40% { transform: scale(1.22); }
-}
-/* Solved: a wave of colour crosses the board, the clues pop and the outlines pulse, then a highlight sweeps over it. */
-.pt-board[data-won="true"] .pt-fill[data-c] {
+
+/* Solved: the patches swell in a wave across the board, the badges pop, then a highlight sweeps over it. */
+.pt-board[data-won="true"] .pt-patch {
   animation: pt-win 520ms ease-in-out var(--wd, 0ms) both;
 }
-.pt-board[data-won="true"] .pt-clue {
+.pt-board[data-won="true"] .pt-badge {
   animation: pt-pop 560ms ease-in-out var(--wd, 0ms) both;
-}
-.pt-board[data-won="true"] .pt-line {
-  animation: pt-line-pulse 900ms ease-in-out 200ms 2 alternate both;
 }
 @keyframes pt-win {
   0%, 100% { transform: scale(1); filter: none; }
-  45% { transform: scale(1.1); filter: saturate(1.5) brightness(1.15); }
-}
-@keyframes pt-line-pulse {
-  to { stroke-width: 0.13; }
+  45% { transform: scale(1.035); filter: saturate(1.4) brightness(1.08); }
 }
 .pt-sweep {
   position: absolute;
@@ -1620,20 +1580,16 @@ html.play-focus body {
   to { transform: translateX(110%); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .pt-fill,
-  .pt-clue,
-  .pt-draft-line { transition: none; }
-  .pt-fill[data-enter],
-  .pt-draft,
-  .pt-line[data-enter],
+  .pt-patch,
+  .pt-badge { transition: none; }
+  .pt-patch[data-enter],
   .pt-reject,
   .pt-reject-fill,
   .pt-reject-line,
-  .pt-clue[data-enter],
+  .pt-clue[data-enter] .pt-badge,
   .pt-cell[data-hint="true"]::after,
-  .pt-board[data-won="true"] .pt-fill[data-c],
-  .pt-board[data-won="true"] .pt-clue,
-  .pt-board[data-won="true"] .pt-line { animation: none; }
-  .pt-line[data-leaving],
+  .pt-board[data-won="true"] .pt-patch,
+  .pt-board[data-won="true"] .pt-badge { animation: none; }
+  .pt-patch[data-leaving],
   .pt-sweep { display: none; }
 }
