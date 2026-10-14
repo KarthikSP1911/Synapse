@@ -20,6 +20,7 @@ Mathz is an adaptive mental-maths trainer. It drills four skills — **multiplic
 - **Installable app (PWA)**: a web app manifest, generated icons (including a maskable one) and a service worker. On phones and tablets a non-intrusive "Install Mathz" banner appears when installation is supported (the native prompt on Chromium, Share-sheet steps on iOS Safari); it stays away once installed, running as an app, or dismissed. The service worker is registered in production builds only.
 - **Offline and slow networks**: after one online visit the app opens and practice runs with no connection. Practice always runs in the browser (`src/features/offline/lib/guest/api.ts`), so answers never wait on the network. Signed-in users' sessions are saved on the device and uploaded in the background (`src/features/offline/lib/sync/`, `POST /api/sync`) when the network is back; the server re-checks every answer and ignores repeats, so a retry can never double-count. Screens are served network-first with a 4 s cut-off, then from the last stored copy (`public/sw.js`). First sign-in, sign-up and "Try without an account" still need a connection once. Run `npm run db:migrate` to add the `client_id` column the upload uses.
 - **Coins, Streak Shields and paid hints**: practice and games pay coins, coins buy Streak Shields that protect the streak on a missed day, and every hint costs coins and starts a short cooldown. The wallet is in the header and the shop is at `/rewards`. See [Coins, shields and hints](#coins-streak-shields-and-hints).
+- **Patches** (`/games/patches`): a spatial logic puzzle. Divide the grid into connected patches that each hold one clue and match it: a number is the patch's area, a symbol its shape (square, wide, tall or freeform), a plain dot says nothing (any rectangle). Every puzzle is generated on demand from a valid partition and proved to have exactly one solution. See [Patches](#patches).
 - **Keyboard-first** practice with visible focus rings, light/dark themes, and respect for `prefers-reduced-motion`.
 
 ## Skills and exercises
@@ -105,14 +106,14 @@ Every amount below lives in one file, `src/features/rewards/lib/economy.ts` (`EC
 | Practice session finished (at least 5 answered, at least 50% right) | 5 bonus |
 | Correct MindSprint round / perfectly recalled Number Recall round | 2 each |
 | MindSprint / Number Recall session finished (at least 3 rounds, at least 50% right) | 5 bonus |
-| Solved Sudoku, Queens or Zip: Easy / Medium / Hard / Expert | 10 / 15 / 20 / 30 |
+| Solved Sudoku, Queens, Zip or Patches: Easy / Medium / Hard / Expert | 10 / 15 / 20 / 30 |
 | 2048 run, once, by highest tile: 128 / 256 / 512 / 1024 / 2048 / 4096 / 8192 / 16384+ | 3 / 5 / 8 / 12 / 20 / 30 / 40 / 50 |
 | **Spend**: Streak Shield (up to 5 held) | 100 |
 | **Spend**: a hint that is actually delivered (then 5 s cooldown per game or session) | 5 |
 
 - **What earns nothing**: opening a page, starting a game, refreshing, wrong/skipped/timed-out answers, a revealed Sudoku, an abandoned puzzle or session, a 2048 game left after a few moves, the same answer submitted twice within 400 ms. Each reward has an idempotency key made from the thing it pays for (`practice:<session>:<answer time>`, `queens:<game id>`, ...), so a retry, re-render, re-upload or sync pays once.
 - **Streak Shields** protect one missed calendar day each (the user's own time zone). The next time the app opens or syncs, a missed day with a shield available is covered automatically. A gap is covered whole or not at all (shields are not wasted on a streak that breaks anyway); a shield only covers days on or after the day it was bought, so it cannot revive a streak that already broke; one shield per day, never twice for the same date. A protected day keeps the streak alive but is **not** activity: it adds nothing to streak length or active days, earns no coins, and does not appear on the calendar.
-- **Hints** (Queens, Zip, Sudoku and practice) share one mechanism (`use-paid-hint.ts` over `requestHint` in `service.ts`). The hint is worked out first; if there is none to give, nothing is charged. Then the wallet checks the cooldown and balance and takes the price in one saved step, and only if that succeeded is the hint shown. The cooldown is stored in the wallet (not in React state), so rapid clicks, the `H` key, touch events and reloads cannot skip it.
+- **Hints** (Queens, Zip, Patches, Sudoku and practice) share one mechanism (`use-paid-hint.ts` over `requestHint` in `service.ts`). The hint is worked out first; if there is none to give, nothing is charged. Then the wallet checks the cooldown and balance and takes the price in one saved step, and only if that succeeded is the hint shown. The cooldown is stored in the wallet (not in React state), so rapid clicks, the `H` key, touch events and reloads cannot skip it.
 - **Where the money is**: a guest's wallet lives in this browser only and is not carried to a new account (the same rule as their practice history). A signed-in user's wallet is kept on the server (`wallets`, `wallet_transactions`) and cached on the device so the app still works offline. Earnings are credited by the upload routes from records the server has just re-validated (never from an amount the device sends); hint charges the device made offline are re-charged by the server at its own price when it syncs; shield purchases go to the server and need a connection.
 - **Deploying**: run `npm run db:migrate` (adds `0009_wallet.sql`, additive and idempotent) **before** deploying this code. Until it has run, uploads that earn coins fail with a 500 and the device keeps retrying, so nothing is lost, but nothing syncs.
 
@@ -126,6 +127,15 @@ Every amount below lives in one file, `src/features/rewards/lib/economy.ts` (`EC
 - adds indexes. Nothing is dropped or rewritten, and running it again changes nothing.
 
 `pair_statistics` is **no longer written** after the migration; it is kept so no data is lost and can be dropped later. `table_statistics` is still maintained for multiplication. Run the migration **before** starting the new code: the old code cannot insert attempts once the new NOT NULL columns exist, so any other deployment sharing the database needs to be redeployed at the same time.
+
+### Patches
+
+Standalone game at `/games/patches`, built on the shared puzzle shell like Queens and Zip (Easy to Expert, a larger board per level in the setup, resume, stats, coins, paid hints, streak). Run `npm run db:migrate` to add `patches_sessions` (migration `0010`).
+
+- **Rules**: every cell is in exactly one patch, every patch is connected (edges, not corners) and holds exactly one clue. A clue may give an area, a shape, both, or nothing. Square, wide and tall mean a rectangle; the freeform symbol (always with an area) allows any connected shape; a clue with neither is any rectangle.
+- **Playing**: drag from one corner of a patch to the opposite one (touch, mouse or pen); on a freeform clue, drag across the cells it should take. Nothing is placed until you let go, and a patch that breaks a rule is refused with the reason and leaves the board as it was. Tap a patch to select it, then Remove (or Delete). Undo, Redo, Reset, Restart, Check and Hint are on the play screen; Auto-check marks a clue or cell that no patch can serve any more. Arrow keys, Enter, Esc and Delete work without a pointer.
+- **Hints** point at a clue that is easy to place (or at a wrong patch, with the reason), and a second press on the same clue shows its patch. A hint never places anything. Price, cooldown and order are the shared ones above.
+- **Code**: `src/features/games/patches/lib` is pure TypeScript (format, shape rules, solver, generator, rules, drawing state, game, hints, storage), `components` is the board and play screen. Details are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#patches).
 
 ### MindSprint (flash arithmetic)
 

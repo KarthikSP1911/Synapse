@@ -1,8 +1,8 @@
 /**
- * Benchmarks puzzle generation and verification: `npx tsx scripts/bench-puzzles.ts <queens|zip|batch> [count]`.
- * Reports success rate, attempts per success, time per puzzle and (for Zip) solver nodes at every difficulty, so grid
+ * Benchmarks puzzle generation and verification: `npx tsx scripts/bench-puzzles.ts <queens|zip|patches|batch> [count]`.
+ * Reports success rate, attempts per success, time per puzzle and (for Zip and Patches) solver nodes at every difficulty, so grid
  * sizes and technique thresholds are set from measurements. `batch` times what the server does for one upload of
- * ten Zip and ten Queens records. Not part of `npm test`.
+ * ten Zip, Queens and Patches records. Not part of `npm test`.
  */
 import { seededRng } from "../src/lib/random";
 import { DIFFICULTIES } from "../src/features/games/shared/lib/puzzle-session";
@@ -10,6 +10,8 @@ import { generatePuzzle as generateQueens, GenerationError as QueensError, type 
 import { parseSessionData as parseQueensRecord } from "../src/features/games/queens/lib/records";
 import { generatePuzzle as generateZip, GenerationError as ZipError, type Attempts as ZipAttempts } from "../src/features/games/zip/lib/generator";
 import { parseSessionData as parseZipRecord } from "../src/features/games/zip/lib/records";
+import { generatePuzzle as generatePatches, GenerationError as PatchesError, type Attempts as PatchesAttempts } from "../src/features/games/patches/lib/generator";
+import { parseSessionData as parsePatchesRecord } from "../src/features/games/patches/lib/records";
 
 const [game = "queens", countArg = "30"] = process.argv.slice(2);
 const count = Number(countArg);
@@ -64,12 +66,39 @@ if (game === "zip") {
   }
 }
 
+if (game === "patches") {
+  for (const larger of [false, true]) {
+    for (const difficulty of DIFFICULTIES) {
+      const times: number[] = [];
+      const stats: PatchesAttempts = { attempts: 0, solves: 0, nodes: [], clues: [], free: [], blank: [], byDeduction: 0, rounds: [] };
+      let failed = 0;
+      for (let seed = 1; seed <= count; seed++) {
+        const t0 = performance.now();
+        try {
+          generatePatches(difficulty, seededRng(seed * 7919), undefined, stats, larger);
+          times.push(performance.now() - t0);
+        } catch (e) {
+          if (!(e instanceof PatchesError)) throw e;
+          failed++;
+        }
+      }
+      times.sort((a, b) => a - b);
+      const nodes = [...stats.nodes].sort((a, b) => a - b);
+      const ok = times.length;
+      console.log(
+        `${larger ? "large " : "std   "}${difficulty.padEnd(7)} ok ${ok}/${count}  attempts/puzzle ${(stats.attempts / Math.max(1, ok)).toFixed(1)}  ms mean ${avg(times)} p95 ${ok ? pct(times, 95).toFixed(0) : "-"} max ${ok ? times[ok - 1].toFixed(0) : "-"}  nodes mean ${avg(nodes)} max ${ok ? nodes[ok - 1] : "-"}  clues ${avg(stats.clues)} freeform ${avg(stats.free)} plain ${avg(stats.blank)}  lookahead rounds ${avg(stats.rounds)}  failed ${failed}`
+      );
+    }
+  }
+}
+
 if (game === "batch") {
   // The server verifies up to ten records per upload request: time ten of the most expensive kind.
   const T0 = 1_700_000_000_000;
   for (const [name, make, parse] of [
     ["zip", (d: (typeof DIFFICULTIES)[number], s: number) => generateZip(d, seededRng(s)).puzzle, parseZipRecord],
     ["queens", (d: (typeof DIFFICULTIES)[number], s: number) => generateQueens(d, seededRng(s)).regions, parseQueensRecord],
+    ["patches", (d: (typeof DIFFICULTIES)[number], s: number) => generatePatches(d, seededRng(s), undefined, undefined, true).puzzle, parsePatchesRecord],
   ] as const) {
     for (const difficulty of ["hard", "expert"] as const) {
       const records = Array.from({ length: 10 }, (_, i) => ({
