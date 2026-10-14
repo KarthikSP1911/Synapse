@@ -164,7 +164,7 @@ Two puzzle games that share a shell (`features/games/shared/components/puzzle-ap
 games their setup, results and stats screens are the same apart from text: each game hands the shell a `PuzzleKit`
 (its pure game functions, storage, play screen and rules text). Every game is a freshly generated puzzle (there is no
 daily puzzle); a game is saved to history when it is solved or given up after being touched, and only solved games
-count for the streak. Restarting keeps the game id, so one puzzle can only ever be recorded once.
+count for the streak. Restart gives the current game up (an attempt if it was touched) and builds a different puzzle of the same difficulty, in Sudoku too; each game has its own id, so one puzzle can only ever be recorded once.
 
 - **Queens** (`queens/lib`): N x N board (6 to 9) with N colour regions, one queen per row, column and region, none
   touching. `generator.ts` places queens, grows regions around them, then repairs the layout until the solver finds no

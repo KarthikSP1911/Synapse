@@ -31,7 +31,6 @@ import {
   remaining,
   removePatch,
   resetPatches,
-  restartGame,
   resumeGame,
   undo,
   type Conflicts,
@@ -98,7 +97,7 @@ export function AssistanceSwitches({ settings, onChange }: { settings: PatchesSe
 
 const HELP = "Drag across the board to draw a patch that holds exactly one clue and matches it. A number is the area; a symbol is the shape (square, wide, tall, or freeform: drag across its cells); a plain dot says nothing: any rectangle. Each clue has its own colour, and its patch is filled with it. Drag from the edge of a patch to resize it, draw over a patch to replace it, tap a patch to erase it.";
 
-export function GameScreen({ initial, settings, onSettingsChange, onChange, onEnd, onLeave, onAbandon }: PlayScreenProps<GameState, PatchesSettings>) {
+export function GameScreen({ initial, settings, onSettingsChange, onChange, onEnd, onLeave, onAbandon, onNewPuzzle }: PlayScreenProps<GameState, PatchesSettings>) {
   const [game, setGame] = useState(initial);
   const [dialog, setDialog] = useState<Dialog>(null);
   const [more, setMore] = useState(false);
@@ -246,7 +245,7 @@ export function GameScreen({ initial, settings, onSettingsChange, onChange, onEn
 
   const actions = {
     onReset: doReset,
-    onRestart: () => (hasProgress(game) ? setDialog("restart") : update((g) => restartGame(g, Date.now()))),
+    onRestart: () => (hasProgress(game) ? setDialog("restart") : onNewPuzzle(latest.current)),
     onNew: () => (hasProgress(game) && !finished ? setDialog("new") : onAbandon(game)),
   };
 
@@ -385,14 +384,14 @@ export function GameScreen({ initial, settings, onSettingsChange, onChange, onEn
 
       {dialog === "restart" && (
         <ConfirmDialog
-          title="Restart this puzzle?"
-          message="Your patches and hints are cleared and the timer starts again. The puzzle stays the same."
+          title="Restart with a new puzzle?"
+          message="This puzzle is given up and counts as an attempt. A different puzzle of the same difficulty starts right away."
           confirmLabel="Restart"
           destructive
           onCancel={() => setDialog(null)}
           onConfirm={() => {
-            update((g) => restartGame(g, Date.now()), true);
             setDialog(null);
+            onNewPuzzle(latest.current);
           }}
         />
       )}

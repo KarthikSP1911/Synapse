@@ -30,7 +30,6 @@ import {
   redo,
   refusal,
   remaining,
-  restartGame,
   resumeGame,
   rulesFor,
   stepTo,
@@ -62,7 +61,7 @@ export function AssistanceSwitches({ settings, onChange }: { settings: ZipSettin
   return <Switch label="Show squares left" hint="Count the squares still to fill under the board" checked={settings.showRemaining} onChange={(showRemaining) => onChange({ ...settings, showRemaining })} />;
 }
 
-export function GameScreen({ initial, settings, onSettingsChange, onChange, onEnd, onLeave, onAbandon }: PlayScreenProps<GameState, ZipSettings>) {
+export function GameScreen({ initial, settings, onSettingsChange, onChange, onEnd, onLeave, onAbandon, onNewPuzzle }: PlayScreenProps<GameState, ZipSettings>) {
   const [game, setGame] = useState(initial);
   const [dialog, setDialog] = useState<Dialog>(null);
   const [more, setMore] = useState(false);
@@ -205,7 +204,7 @@ export function GameScreen({ initial, settings, onSettingsChange, onChange, onEn
   const message = finished ? "Solved!" : (game.hint?.text ?? notice) || (open ? `The last number is open. Finish on ${rules.last}.` : "");
 
   const actions = {
-    onRestart: () => (hasProgress(game) ? setDialog("restart") : update((g) => restartGame(g, Date.now()))),
+    onRestart: () => (hasProgress(game) ? setDialog("restart") : onNewPuzzle(latest.current)),
     onNew: () => (hasProgress(game) && !finished ? setDialog("new") : onAbandon(game)),
   };
 
@@ -332,14 +331,14 @@ export function GameScreen({ initial, settings, onSettingsChange, onChange, onEn
 
       {dialog === "restart" && (
         <ConfirmDialog
-          title="Restart this puzzle?"
-          message="Your path and hints are cleared and the timer starts again. The puzzle stays the same."
+          title="Restart with a new puzzle?"
+          message="This puzzle is given up and counts as an attempt. A different puzzle of the same difficulty starts right away."
           confirmLabel="Restart"
           destructive
           onCancel={() => setDialog(null)}
           onConfirm={() => {
-            update((g) => restartGame(g, Date.now()));
             setDialog(null);
+            onNewPuzzle(latest.current);
           }}
         />
       )}
