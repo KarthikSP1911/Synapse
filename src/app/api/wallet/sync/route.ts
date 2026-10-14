@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { serverFailure } from "@/lib/http";
 import { getCurrentUser, unauthorized } from "@/features/auth/server/auth";
 import { dayKey } from "@/features/progress/lib/activity";
 import { getActivityDays } from "@/features/progress/server/progress-queries";
@@ -44,7 +45,6 @@ export async function POST(request: Request) {
     const known = await knownKeys(dbRun, user.id, parsed.request.pendingKeys);
     return NextResponse.json({ snapshot: await getSnapshot(dbRun, user.id), applied, rejected, known, protectedDays });
   } catch (error) {
-    console.error("Failed to sync the wallet:", error);
-    return NextResponse.json({ error: "Failed to sync the wallet" }, { status: 500 });
+    return serverFailure("Failed to sync the wallet", error, { route: "/api/wallet/sync", method: "POST" });
   }
 }

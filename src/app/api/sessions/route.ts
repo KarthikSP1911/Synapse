@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { serverFailure } from "@/lib/http";
 import { db } from "@/db";
 import { practiceSessions } from "@/db/schema";
 import { readJson } from "@/lib/validation";
@@ -67,7 +68,6 @@ export async function POST(request: Request) {
     const [session] = await db.insert(practiceSessions).values({ ...parsed.session, userId: user.id }).returning();
     return NextResponse.json(session, { status: 201 });
   } catch (error) {
-    console.error("Failed to create session:", error);
-    return NextResponse.json({ error: "Failed to create session" }, { status: 500 });
+    return serverFailure("Failed to create session", error, { route: "/api/sessions", method: "POST" });
   }
 }

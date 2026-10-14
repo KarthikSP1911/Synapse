@@ -2,11 +2,23 @@
 
 import { redirect } from "next/navigation";
 import { endSession, normalizeEmail, passwordProblem, registerUser, safeNextPath, startGuest, startSession, verifyLogin } from "@/features/auth/server/auth";
+import { log } from "@/lib/logger";
 
 export interface AuthFormState {
   error?: string;
   /** Echoed back so a failed submit does not clear the email field. */
   email?: string;
+}
+
+/**
+ * A failure inside an action that is not the person's mistake (the database could not be reached, a cookie could not
+ * be set). It is logged with a reference and shown on the form with that reference, instead of throwing to the error
+ * page, so they can try again straight away and, if it keeps happening, quote the reference. Never wrap `redirect()`
+ * in this: it works by throwing.
+ */
+function failed(action: "login" | "signup", error: unknown, email: string): AuthFormState {
+  const reference = log.error(`The ${action} action failed`, error, { action });
+  return { error: `We couldn't reach the server just now. Please try again in a moment. (Reference ${reference})`, email };
 }
 
 const text = (form: FormData, key: string) => {
@@ -20,10 +32,19 @@ export async function loginAction(_previous: AuthFormState, form: FormData): Pro
   const typed = text(form, "email");
   if (!email || !password || password.length > 128) return { error: "Enter your email and password.", email: typed };
 
-  const result = await verifyLogin(email, password, text(form, "timezone"));
-  if (!result.ok) return { error: result.error, email: typed };
-
-  await startSession(result.userId, form.get("remember") === "on");
+  let userId: number;
+  try {
+    const result = await verifyLogin(email, password, text(form, "timezone"));
+    if (!result.ok) {
+      log.warn("Login refused", { reason: result.error });
+      return { error: result.error, email: typed };
+    }
+    userId = result.userId;
+    await startSession(userId, form.get("remember") === "on");
+  } catch (error) {
+    return failed("login", error, typed);
+  }
+  log.info("Signed in", { userId });
   redirect(safeNextPath(text(form, "next")));
 }
 
@@ -36,10 +57,19 @@ export async function signupAction(_previous: AuthFormState, form: FormData): Pr
   if (problem) return { error: problem, email: typed };
   if (password !== text(form, "confirm")) return { error: "The two passwords do not match.", email: typed };
 
-  const result = await registerUser(email, password, text(form, "timezone"));
-  if (!result.ok) return { error: result.error, email: typed };
-
-  await startSession(result.userId, form.get("remember") === "on");
+  let userId: number;
+  try {
+    const result = await registerUser(email, password, text(form, "timezone"));
+    if (!result.ok) {
+      log.warn("Sign-up refused", { reason: result.error });
+      return { error: result.error, email: typed };
+    }
+    userId = result.userId;
+    await startSession(userId, form.get("remember") === "on");
+  } catch (error) {
+    return failed("signup", error, typed);
+  }
+  log.info("Account created", { userId });
   redirect("/");
 }
 

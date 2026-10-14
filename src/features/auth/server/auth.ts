@@ -1,3 +1,4 @@
+import { log } from "@/lib/logger";
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
@@ -168,14 +169,19 @@ export async function registerUser(email: string, password: string, timezone: un
     throw error;
   }
 
-  const [{ total }] = await db.select({ total: count() }).from(users);
-  if (total === 1) {
-    // One batch = one transaction: either all legacy rows are claimed or none are.
-    await db.batch([
-      db.update(practiceSessions).set({ userId }).where(isNull(practiceSessions.userId)),
-      db.update(questionAttempts).set({ userId }).where(isNull(questionAttempts.userId)),
-      db.update(questionStats).set({ userId }).where(isNull(questionStats.userId)),
-    ]);
+  try {
+    const [{ total }] = await db.select({ total: count() }).from(users);
+    if (total === 1) {
+      // One batch = one transaction: either all legacy rows are claimed or none are.
+      await db.batch([
+        db.update(practiceSessions).set({ userId }).where(isNull(practiceSessions.userId)),
+        db.update(questionAttempts).set({ userId }).where(isNull(questionAttempts.userId)),
+        db.update(questionStats).set({ userId }).where(isNull(questionStats.userId)),
+      ]);
+    }
+  } catch (error) {
+    // The account exists, so signing up succeeded; claiming old data is a bonus that can be done another time.
+    log.error("Could not hand the earlier practice data to the first account", error, { userId });
   }
   return { ok: true, userId };
 }
@@ -190,7 +196,12 @@ export async function verifyLogin(email: string, password: string, timezone: unk
 
   const zone = zoneOrUtc(timezone);
   if (zone !== user.timezone && isValidTimeZone(timezone)) {
-    await db.update(users).set({ timezone: zone }).where(eq(users.id, user.id));
+    // Keeping the time zone current is a nicety: a failure to save it must not stop someone logging in.
+    await db
+      .update(users)
+      .set({ timezone: zone })
+      .where(eq(users.id, user.id))
+      .catch((error) => log.warn("Could not update the time zone at login", { userId: user.id }, error));
   }
   return { ok: true, userId: user.id };
 }

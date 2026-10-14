@@ -1415,12 +1415,12 @@ html.play-focus body {
 }
 /* A cell nothing can cover any more: striped, so it is told apart without colour. */
 .pt-cell[data-dead="true"] {
-  outline: max(1.5px, 0.35cqw) dashed var(--destructive);
+  outline: max(1.5px, 0.35cqw) dashed var(--warning);
   outline-offset: calc(-1 * max(1.5px, 0.35cqw));
 }
 .pt-stripe {
-  fill: var(--destructive);
-  opacity: 0.55;
+  fill: var(--warning);
+  opacity: 0.5;
 }
 .pt-dead {
   pointer-events: none;
@@ -1456,6 +1456,9 @@ html.play-focus body {
   stroke-width: 0.06;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+.pt-line[data-mismatch="true"] {
+  stroke-dasharray: 0.18 0.1;
 }
 .pt-line[data-enter] {
   animation: pt-line-in 260ms ease-out var(--ld, 0ms) backwards;
@@ -1536,9 +1539,12 @@ html.play-focus body {
   background: var(--cc, var(--pt-ink));
   color: var(--ci, var(--card));
 }
+.pt-clue[data-mismatch="true"] {
+  border-style: dashed;
+}
 .pt-clue[data-conflict="true"] {
   border-style: dashed;
-  border-color: var(--destructive);
+  border-color: var(--warning);
   background: var(--card);
   color: var(--cc, var(--pt-ink));
 }
@@ -1552,8 +1558,8 @@ html.play-focus body {
   width: 38%;
   aspect-ratio: 1;
   border-radius: 50%;
-  background: var(--destructive);
-  color: #fff;
+  background: var(--warning);
+  color: #1c1c22;
   font-size: calc(22cqw / var(--ptn));
 }
 .pt-num {

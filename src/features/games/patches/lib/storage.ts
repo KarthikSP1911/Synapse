@@ -8,7 +8,7 @@ import { MAX_HISTORY, isComplete } from "./game";
 import { cellCount, parsePuzzle } from "./puzzle-format";
 import { parseSessionData } from "./records";
 import { sessionGrants } from "./rewards";
-import { checkDraft } from "./rules";
+import { canPlace, checkDraft } from "./rules";
 import { solvePuzzle } from "./solver";
 import { DEFAULT_SETTINGS, type GameState, type Patch, type PatchesPuzzle, type PatchesSettings, type SessionData } from "./types";
 
@@ -51,7 +51,7 @@ function parsePatches(raw: unknown, puzzle: PatchesPuzzle): Patch[] | null {
       if (!isIntInRange(cells[i], 0, n - 1) || (i > 0 && cells[i] <= cells[i - 1])) return null;
     }
     const check = checkDraft(puzzle, none, cells as number[]);
-    if (!check.ok || check.clue !== item.clue || used.has(item.clue as number)) return null;
+    if (!canPlace(check) || check.clue !== item.clue || used.has(item.clue as number)) return null;
     for (const cell of cells as number[]) {
       if (taken.has(cell)) return null;
       taken.add(cell);

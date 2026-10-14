@@ -107,11 +107,9 @@ describe("placing patches", () => {
     assert.ok(hasProgress(placed.state) && !hasProgress(g));
   });
 
-  it("refuses an invalid patch with a reason and leaves the very same state", () => {
+  it("refuses what is no patch at all, with a reason, and leaves the very same state", () => {
     const g = fresh();
     const cases: [number[], string][] = [
-      [[0, 1], "shape"], // wide where a square is asked
-      [[2, 5, 8], "area"], // a tall rectangle, but three cells
       [[0, 4], "disconnected"],
       [[1], "no-clue"],
       [[0, 1, 2], "many-clues"],
@@ -123,6 +121,40 @@ describe("placing patches", () => {
       assert.equal(result.refused?.reason, reason, cells.join(","));
       assert.equal(result.state, g, "nothing changes");
     }
+  });
+
+  it("places a patch of the wrong size or shape, as on paper, and lets it be redrawn into the right one", () => {
+    const g = fresh();
+    for (const [cells, reason] of [
+      [[0, 1], "shape"], // wide where a square is asked
+      [[2, 5, 8], "area"], // a tall rectangle, but three cells
+      [[0, 1, 3], "shape"], // bent
+    ] as [number[], string][]) {
+      const result = commitPatch(g, cells, clock);
+      assert.equal(result.refused, null, `${cells.join(",")} is placed (${reason})`);
+      assert.deepEqual(result.state.patches.map((p) => p.cells), [cells]);
+      assert.equal(result.state.status, "playing");
+    }
+    // The tall patch is one cell too long: the board is not solved by it, and it takes the bottom row's room away.
+    let wrong = commitPatch(g, [2, 5, 8], clock).state;
+    wrong = commitPatch(wrong, [0, 1, 3, 4], clock).state;
+    wrong = commitPatch(wrong, [6, 7], clock).state;
+    assert.equal(wrong.patches.length, 3);
+    assert.equal(isComplete(wrong), false, "every cell is covered, but two patches are not what their clues ask");
+    assert.equal(wrong.status, "playing");
+    assert.deepEqual(wrongPatches(wrong).map((p) => p.clue).sort(), [1, 2]);
+    // Adjusting is just drawing again: the new patches replace the old ones, and the board is then solved.
+    let fixed = commitPatch(wrong, [2, 5], clock).state;
+    assert.equal(fixed.status, "playing");
+    fixed = commitPatch(fixed, [6, 7, 8], clock).state;
+    assert.equal(fixed.status, "completed");
+    assert.deepEqual(fixed.patches.map((p) => p.cells).sort(), [[0, 1, 3, 4], [2, 5], [6, 7, 8]]);
+  });
+
+  it("knows a patch drawn at the wrong size leaves its neighbour no room, without calling it an error to draw it", () => {
+    const wrongTall = { puzzle: "3x3;0:4s,2:2t,6:3w", patches: [{ clue: 1, cells: [2, 5, 8] }] };
+    assert.deepEqual(conflicts(wrongTall).clues, [2], "the wide 3 needs cell 8, which the tall patch took");
+    assert.deepEqual(conflicts({ ...wrongTall, patches: [{ clue: 1, cells: [2, 5] }] }), { clues: [], cells: [] });
   });
 
   it("draws over patches by replacing them, never leaving two patches on one cell", () => {
@@ -152,9 +184,9 @@ describe("placing patches", () => {
   it("takes nothing off the board when the patch drawn over it is refused", () => {
     const blank = newGame({ difficulty: "easy", puzzle: "4x4;0,15", solution: new Array(16).fill(0) }, "patches-over-2", clock);
     const g = commitPatch(blank, [8, 9, 10, 11, 12, 13, 14, 15], clock).state;
-    const bent = commitPatch(g, [0, 1, 4], clock);
-    assert.equal(bent.refused?.reason, "shape");
-    assert.equal(bent.state, g, "the patch it ran over is still there");
+    const both = commitPatch(g, Array.from({ length: 16 }, (_, i) => i), clock);
+    assert.equal(both.refused?.reason, "many-clues");
+    assert.equal(both.state, g, "the patch it ran over is still there");
     const noClue = commitPatch(g, [1, 2], clock);
     assert.equal(noClue.refused?.reason, "no-clue");
     assert.equal(noClue.state, g);
@@ -164,10 +196,11 @@ describe("placing patches", () => {
     const blank = newGame({ difficulty: "easy", puzzle: "3x3;0,8", solution: [0, 0, 0, 0, 0, 0, 1, 1, 1] }, "patches-blank", clock);
     assert.equal(commitPatch(blank, [0], clock).refused, null, "one cell");
     assert.equal(commitPatch(blank, [0, 1, 2, 3, 4, 5], clock).refused, null, "two rows");
-    assert.equal(commitPatch(blank, [0, 1, 3], clock).refused?.reason, "shape", "not bent");
+    assert.equal(commitPatch(blank, [0, 1, 3], clock).refused, null, "a bent shape is placed too, as a patch that is not right yet");
     const area = newGame({ difficulty: "easy", puzzle: "3x3;0:4", solution: [0, 0, 0, 0, 0, 0, 0, 0, 0] }, "patches-area", clock);
     assert.equal(commitPatch(area, [0, 1, 3, 4], clock).refused, null);
-    assert.equal(commitPatch(area, [0, 1, 2, 3], clock).refused?.reason, "shape", "four cells, but bent");
+    assert.equal(commitPatch(area, [0, 1, 2, 3], clock).refused, null, "four cells in a row are placed too");
+    assert.equal(isComplete(commitPatch(area, [0, 1, 2, 3], clock).state), false);
   });
 
   it("takes any connected shape for a freeform clue, and only connected ones", () => {
@@ -179,7 +212,7 @@ describe("placing patches", () => {
     const cells = cellsOf(EXPERT, clue);
     // Take away a cell whose loss leaves the rest in one piece: the shape is still joined, but a cell short.
     const spare = cells.find((cell) => cell !== puzzle.clues[clue].cell && isConnected(cells.filter((c) => c !== cell), puzzle.cols))!;
-    assert.equal(commitPatch(g, cells.filter((c) => c !== spare), clock).refused?.reason, "area", "a cell short");
+    assert.equal(commitPatch(g, cells.filter((c) => c !== spare), clock).refused, null, "a cell short is placed as a patch that is not right yet");
     // Take away a cell in the middle of a thin part: what is left is in two pieces.
     const cut = cells.find((cell) => cell !== puzzle.clues[clue].cell && !isConnected(cells.filter((c) => c !== cell), puzzle.cols));
     if (cut !== undefined) assert.equal(commitPatch(g, cells.filter((c) => c !== cut), clock).refused?.reason, "disconnected");
@@ -665,7 +698,8 @@ describe("the unfinished game", () => {
     };
     assert.equal(edit((g) => (g.puzzle = "3x3;0:4s,2:2t,6:2w")), null, "another puzzle");
     assert.equal(edit((g) => (g.solution = [0, 0, 1, 0, 0, 1, 2, 2, 1])), null, "another solution");
-    assert.equal(edit((g) => (g.patches = [{ clue: 0, cells: [0, 1] }])), null, "a patch that breaks its clue");
+    assert.equal(edit((g) => (g.patches = [{ clue: 0, cells: [1] }])), null, "a patch with no clue in it");
+    assert.ok(edit((g) => (g.patches = [{ clue: 0, cells: [0, 1] }])), "a patch of the wrong size is a legal thing to have drawn");
     assert.equal(edit((g) => (g.patches = [{ clue: 0, cells: [0, 1, 3, 4] }, { clue: 1, cells: [4, 5] }])), null, "overlapping patches");
     assert.equal(edit((g) => (g.patches = [{ clue: 0, cells: [4, 3, 1, 0] }])), null, "cells out of order");
     assert.equal(edit((g) => (g.patches = [{ clue: 1, cells: [0, 1, 3, 4] }])), null, "under the wrong clue");

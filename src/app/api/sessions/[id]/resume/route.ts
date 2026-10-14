@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { serverFailure } from "@/lib/http";
 import { db } from "@/db";
 import { practiceSessions } from "@/db/schema";
 import { and, eq, isNotNull } from "drizzle-orm";
@@ -42,7 +43,6 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
       serverNow: Date.now(),
     });
   } catch (error) {
-    console.error("Failed to resume session:", error);
-    return NextResponse.json({ error: "Failed to resume session" }, { status: 500 });
+    return serverFailure("Failed to resume session", error, { route: "/api/sessions/[id]/resume", method: "POST" });
   }
 }

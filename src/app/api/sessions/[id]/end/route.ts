@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { serverFailure } from "@/lib/http";
 import { db } from "@/db";
 import { practiceSessions } from "@/db/schema";
 import { and, eq, isNull } from "drizzle-orm";
@@ -33,7 +34,6 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
 
     return NextResponse.json({ ended: true });
   } catch (error) {
-    console.error("Failed to end session:", error);
-    return NextResponse.json({ error: "Failed to end session" }, { status: 500 });
+    return serverFailure("Failed to end session", error, { route: "/api/sessions/[id]/end", method: "POST" });
   }
 }

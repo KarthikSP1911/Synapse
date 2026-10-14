@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { log } from "@/lib/logger";
 import { ArrowRight, UserRound } from "lucide-react";
 import { ActivityHeatmap } from "@/features/progress/components/activity-heatmap";
 import { Page, StatTile } from "@/components/layout/page-header";
@@ -80,7 +81,7 @@ export default async function ProfilePage() {
     getSnapshot(dbRun, user.id).then(
       (snapshot) => snapshot.uses.map((use) => use.date),
       (error) => {
-        console.error("Could not read the wallet for the profile:", error);
+        log.error("Could not read the wallet for the profile (the profile opens without it)", error, { page: "/profile" });
         return [] as string[];
       }
     ),

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { serverFailure } from "@/lib/http";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { questionStats } from "@/db/schema";
@@ -49,7 +50,6 @@ export async function GET() {
     }));
     return NextResponse.json({ userId: user.id, stats });
   } catch (error) {
-    console.error("Failed to load sync state:", error);
-    return NextResponse.json({ error: "Failed to load sync state" }, { status: 500 });
+    return serverFailure("Failed to load sync state", error, { route: "/api/sync/state", method: "GET" });
   }
 }

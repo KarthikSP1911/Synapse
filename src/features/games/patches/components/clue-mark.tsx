@@ -23,6 +23,7 @@ export const ClueMark = memo(function ClueMark({
   clue,
   color,
   placed,
+  mismatch,
   conflict,
   hinted,
   entering,
@@ -32,6 +33,8 @@ export const ClueMark = memo(function ClueMark({
   /** The clue's own colour (0 to 7): its symbol is drawn in it, and the patch drawn for it is filled with it. */
   color: number;
   placed: boolean;
+  /** Its patch is placed but is not the size or shape the clue asks for: told by a dashed outline, quietly. */
+  mismatch: boolean;
   conflict: boolean;
   hinted: boolean;
   /** Delay (ms) before the clue pops as its patch settles, or null when it does not. */
@@ -45,6 +48,7 @@ export const ClueMark = memo(function ClueMark({
       data-kind={kind}
       data-c={color >= 0 ? color : undefined}
       data-placed={placed ? "true" : undefined}
+      data-mismatch={mismatch && placed ? "true" : undefined}
       data-conflict={conflict ? "true" : undefined}
       data-hint={hinted ? "true" : undefined}
       data-enter={entering !== null ? "" : undefined}

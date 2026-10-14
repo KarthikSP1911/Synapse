@@ -4,6 +4,7 @@ import { dayKey } from "@/features/progress/lib/activity";
 import { dbRun } from "@/features/rewards/server/db-run";
 import { parsePurchaseRequest } from "@/features/rewards/server/requests";
 import { getSnapshot, purchaseShield } from "@/features/rewards/server/wallet";
+import { log } from "@/lib/logger";
 import { readJson } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +28,7 @@ export async function POST(request: Request) {
     const snapshot = await getSnapshot(dbRun, user.id);
     return NextResponse.json({ ...result, snapshot }, { status: result.ok ? 200 : result.reason === "invalid" ? 400 : 409 });
   } catch (error) {
-    console.error("Failed to buy a Streak Shield:", error);
-    return NextResponse.json({ ok: false, reason: "server", message: "Something went wrong. Nothing was bought." }, { status: 500 });
+    const reference = log.error("Failed to buy a Streak Shield", error, { route: "/api/wallet/purchase", method: "POST" });
+    return NextResponse.json({ ok: false, reason: "server", message: "Something went wrong. Nothing was bought.", reference }, { status: 500 });
   }
 }

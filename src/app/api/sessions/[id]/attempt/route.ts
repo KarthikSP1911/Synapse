@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { serverFailure } from "@/lib/http";
 import { db } from "@/db";
 import { practiceSessions } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
@@ -120,7 +121,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       finished,
     });
   } catch (error) {
-    console.error("Failed to process attempt:", error);
-    return NextResponse.json({ error: "Failed to process attempt" }, { status: 500 });
+    return serverFailure("Failed to process attempt", error, { route: "/api/sessions/[id]/attempt", method: "POST" });
   }
 }

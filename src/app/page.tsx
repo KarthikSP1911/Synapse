@@ -3,6 +3,7 @@ import PracticeHub from "@/features/home/components/practice-hub";
 import { getSkillSummaries } from "@/features/progress/server/progress-queries";
 import { legacySkillRedirect } from "@/features/skills/lib/routes";
 import { requireViewer } from "@/features/auth/server/auth";
+import { log } from "@/lib/logger";
 
 // The skill cards show live progress, so the page is rendered per request.
 export const dynamic = "force-dynamic";
@@ -20,7 +21,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ [
     viewer.kind === "guest"
       ? null
       : await getSkillSummaries(viewer.user.id).catch((error) => {
-          console.error("Failed to load skill summaries:", error);
+          log.error("Failed to load skill summaries (the home page shows without them)", error, { page: "/" });
           return null;
         });
 

@@ -1,3 +1,4 @@
+import { log as logger } from "@/lib/logger";
 import type { Parsed } from "@/lib/records";
 
 /** The most sessions one upload carries; the device sends longer lists in batches. */
@@ -17,8 +18,8 @@ interface UploadOptions<Data> {
   parse: (raw: unknown) => Parsed<Data>;
   /** Stores one validated record. The same client id arriving twice must leave the first copy alone. */
   insert: (data: Data) => Promise<unknown>;
-  /** Injected for tests. */
-  log?: (message: string, error: unknown) => void;
+  /** Injected for tests; returns the reference the failure was logged under. */
+  log?: (message: string, error: unknown) => unknown;
 }
 
 /**
@@ -28,7 +29,7 @@ interface UploadOptions<Data> {
  */
 export async function storeUploaded<Data extends { clientId: string }>(
   body: Record<string, unknown> | null,
-  { label, parse, insert, log = console.error }: UploadOptions<Data>
+  { label, parse, insert, log = (message, error) => logger.error(message, error) }: UploadOptions<Data>
 ): Promise<UploadReply> {
   if (!body || !Array.isArray(body.sessions)) return { status: 400, body: { error: "Expected { sessions: [...] }" } };
   if (body.sessions.length > MAX_UPLOAD_SESSIONS) return { status: 400, body: { error: `At most ${MAX_UPLOAD_SESSIONS} sessions per request` } };
@@ -46,8 +47,8 @@ export async function storeUploaded<Data extends { clientId: string }>(
       synced.push({ clientId: parsed.data.clientId });
     }
   } catch (error) {
-    log(`Failed to sync ${label}:`, error);
-    return { status: 500, body: { error: "Failed to sync", synced, rejected } };
+    const reference = log(`Failed to sync ${label}`, error);
+    return { status: 500, body: { error: "Failed to sync", synced, rejected, ...(typeof reference === "string" ? { reference } : {}) } };
   }
   return { status: 200, body: { synced, rejected } };
 }
@@ -56,12 +57,12 @@ export async function storeUploaded<Data extends { clientId: string }>(
 export async function loadRecent(
   { label, noun }: { label: string; noun: "games" | "sessions" },
   recent: () => Promise<unknown[]>,
-  log: (message: string, error: unknown) => void = console.error
+  log: (message: string, error: unknown) => unknown = (message, error) => logger.error(message, error)
 ): Promise<UploadReply> {
   try {
     return { status: 200, body: { sessions: await recent() } };
   } catch (error) {
-    log(`Failed to load ${label}:`, error);
-    return { status: 500, body: { error: `Failed to load ${noun}` } };
+    const reference = log(`Failed to load ${label}`, error);
+    return { status: 500, body: { error: `Failed to load ${noun}`, ...(typeof reference === "string" ? { reference } : {}) } };
   }
 }

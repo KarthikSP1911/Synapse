@@ -1,3 +1,4 @@
+import { log } from "@/lib/logger";
 import { applyAttempt } from "@/features/skills/lib/practice/item-stats";
 import { guestNextQuestion } from "@/features/offline/lib/guest/engine";
 import { recordActivityDay } from "@/features/offline/lib/activity-days";
@@ -129,7 +130,7 @@ async function localRequest(store: LocalStore, url: string, init: RequestInit): 
         return resumeSession(store, data, session);
     }
   } catch (err) {
-    console.error("Guest request failed:", err);
+    log.error("Guest request failed", err, { path: pathname, method });
     return error("Something went wrong in guest mode", 500);
   }
 }

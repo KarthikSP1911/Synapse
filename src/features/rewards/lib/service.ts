@@ -1,3 +1,4 @@
+import { log } from "@/lib/logger";
 import type { LocalStore } from "@/features/offline/lib/guest/api";
 import { buyShield, chargeHint, cooldownLeft, creditAll, spendShield, type PostOptions } from "@/features/rewards/lib/ledger";
 import { ECONOMY, type Economy } from "@/features/rewards/lib/economy";
@@ -30,7 +31,7 @@ export function awardGrants(store: LocalStore | null, grants: readonly Grant[], 
     });
     return outcome.saved ? outcome.result : [];
   } catch (error) {
-    console.error("Could not record coins:", error);
+    log.error("Could not record coins on this device", error);
     return [];
   }
 }
@@ -56,7 +57,7 @@ export function requestHint(store: LocalStore | null, request: { chargeScope: st
     const result = outcome.result;
     return result.ok ? { ok: true, duplicate: result.duplicate, charged: result.charged, entry: result.entry } : result;
   } catch (error) {
-    console.error("Could not charge for the hint:", error);
+    log.error("Could not charge for the hint on this device", error);
     return { ok: false, reason: "storage", message: "Something went wrong, so no hint was used." };
   }
 }

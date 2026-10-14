@@ -1,5 +1,6 @@
 "use client";
 
+import { log } from "@/lib/logger";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -154,7 +155,7 @@ export default function SkillPractice({ skill }: { skill: Skill }) {
       const session = await response.json();
       router.push(playHref(session.id));
     } catch (err) {
-      console.error(err);
+      log.error("Could not start a practice session", err);
       setError(err instanceof Error && err.message !== "Failed to start session" ? err.message : "Could not start the session. Please try again.");
       setPlan(null);
     }

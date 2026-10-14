@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { serverFailure } from "@/lib/http";
 import { db } from "@/db";
 import { practiceSessions } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
@@ -63,7 +64,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       answeredCount: session.actualQuestionCount,
     });
   } catch (error) {
-    console.error("Failed to get next question:", error);
-    return NextResponse.json({ error: "Failed to get next question" }, { status: 500 });
+    return serverFailure("Failed to get next question", error, { route: "/api/sessions/[id]/next", method: "GET" });
   }
 }

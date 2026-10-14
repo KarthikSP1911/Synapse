@@ -90,6 +90,14 @@ export function checkDraft(puzzle: PatchesPuzzle, owner: Int16Array, cells: read
   return { ok: true, clue: index, reason: null, message: `${cells.length} ${cells.length === 1 ? "cell" : "cells"} · fits the clue at ${where} (${what})` };
 }
 
+/**
+ * Whether the game lets the cells be placed as a patch. As in the paper puzzle, a patch may be drawn at any size and
+ * fixed later: what stops it is only what makes it no patch at all (no clue in it, two clues in it, cells that do not
+ * touch). A patch whose area or shape is not what its clue asks is placed and marked, and it is the Check, the hints
+ * and above all the solved board (`validateBoard`, which still needs every patch to be right) that tell it apart.
+ */
+export const canPlace = (check: DraftCheck): boolean => check.clue !== null && (check.ok || check.reason === "shape" || check.reason === "area");
+
 export interface BoardCheck {
   solved: boolean;
   /** Cells no patch covers. */

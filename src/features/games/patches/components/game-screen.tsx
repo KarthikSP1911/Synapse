@@ -66,7 +66,7 @@ function GameActions({ playing, finished, hasPatches, onRestart, onNew, onReset,
 export function DisplaySwitches({ settings, onChange }: { settings: PatchesSettings; onChange: (settings: PatchesSettings) => void }) {
   return (
     <div className="grid gap-4">
-      <Switch label="Auto-check" hint="Mark a clue or cell the moment no patch can serve it any more" checked={settings.autoCheck} onChange={(autoCheck) => onChange({ ...settings, autoCheck })} />
+      <Switch label="Auto-check" hint="Mark a clue or cell the moment no patch can serve it any more (off: draw freely, press Check when you want to know)" checked={settings.autoCheck} onChange={(autoCheck) => onChange({ ...settings, autoCheck })} />
       <Switch label="Show cells left" hint="Count the cells still to cover under the board" checked={settings.showRemaining} onChange={(showRemaining) => onChange({ ...settings, showRemaining })} />
     </div>
   );
@@ -241,7 +241,7 @@ export function GameScreen({ initial, settings, onSettingsChange, onChange, onEn
   }, [checked, game, settings.autoCheck, finished]);
   const shownMarks = marks && (marks.clues.length > 0 || marks.cells.length > 0) ? marks : null;
   const left = remaining(game);
-  const message = finished ? "Solved!" : (game.hint?.text ?? notice) || (shownMarks ? "A clue or cell marked with stripes has no room left. Remove a patch near it." : "");
+  const message = finished ? "Solved!" : (game.hint?.text ?? notice) || (shownMarks ? "Striped cells or a marked clue have no room left. Adjust a patch near them." : "");
 
   const actions = {
     onReset: doReset,
