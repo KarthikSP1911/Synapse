@@ -1,7 +1,7 @@
 import { elapsedAt, freezeClock, pauseClock, resumeClock, stopClock } from "@/features/games/shared/lib/clock";
 import { cellCount, parsePuzzle } from "./puzzle-format";
-import { checkDraft, overlappedClues, ownerMap, ownerWithout, validateBoard, type DraftCheck } from "./rules";
-import { buildModel, emptyState, placePatch, type Model } from "./solver";
+import { canPlace, checkDraft, overlappedClues, ownerMap, ownerWithout, validateBoard, type DraftCheck } from "./rules";
+import { buildModel, loadPatches, type Model } from "./solver";
 import type { GameState, Patch, PatchesPuzzle, Puzzle, SessionData } from "./types";
 
 /**
@@ -99,8 +99,9 @@ export interface Committed {
 }
 
 /**
- * Places the cells as a patch. The rules are checked here again, whatever the screen thought, and a patch that
- * breaks any of them changes nothing: there is never a half-valid patch on the board.
+ * Places the cells as a patch. The rules are checked here again, whatever the screen thought. A patch that is no
+ * patch at all (no clue, two clues, cells that do not touch) changes nothing. One whose area or shape is not what its
+ * clue asks is placed anyway and can be adjusted or redrawn: only a board where every patch is right counts as solved.
  *
  * Drawing over patches that are already there replaces them (that is how a wrong patch is redrawn without
  * removing it first), but only when the new patch is valid: a refused patch takes nothing off the board. The
@@ -112,7 +113,7 @@ export function commitPatch(state: GameState, cells: readonly number[], now: num
   const owner = ownerMap(state.patches, cellCount(puzzle));
   const covered = overlappedClues(owner, cells);
   const check = checkDraft(puzzle, ownerWithout(owner, covered), cells);
-  if (!check.ok || check.clue === null) return { state, refused: check };
+  if (!canPlace(check) || check.clue === null) return { state, refused: check };
   const patch: Patch = { clue: check.clue, cells: [...cells].sort((a, b) => a - b) };
   const same = state.patches.find((p) => p.clue === patch.clue);
   if (same && same.cells.length === patch.cells.length && same.cells.every((cell, i) => cell === patch.cells[i])) return { state, refused: null };
@@ -166,9 +167,7 @@ export interface Conflicts {
  * alone (the hidden solution is not consulted), so it is the same check whether it runs by itself or on request.
  */
 export function conflicts(state: Pick<GameState, "patches" | "puzzle">): Conflicts {
-  const model = modelFor(state.puzzle);
-  const s = emptyState(model);
-  for (const patch of state.patches) placePatch(model, s, patch);
+  const { model, state: s } = loadPatches(modelFor(state.puzzle), state.patches);
 
   const clues: number[] = [];
   const cells: number[] = [];

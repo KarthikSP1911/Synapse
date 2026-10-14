@@ -1,6 +1,6 @@
 import { describeClue, placeName } from "./puzzle-format";
 import { modelFor, puzzleFor } from "./game";
-import { cloneState, emptyState, lookahead, placePatch, propagate, type Model, type State, type Step } from "./solver";
+import { cloneState, loadPatches, lookahead, propagate, type Model, type State, type Step } from "./solver";
 import type { GameState, Hint, Patch } from "./types";
 
 /**
@@ -39,18 +39,16 @@ export function wrongPatches(state: Pick<GameState, "patches" | "solution">): Pa
   });
 }
 
-function stateWith(model: Model, patches: readonly Patch[]): State {
-  const s = emptyState(model);
-  for (const patch of patches) placePatch(model, s, patch);
-  return s;
-}
+/** The patches placed, in a model that also knows the ones drawn at the wrong size. */
+const stateWith = (model: Model, patches: readonly Patch[]): { model: Model; state: State } => loadPatches(model, patches);
 
 /** Why a wrong patch cannot stand, when following the clues from the board shows it. */
 function whyWrong(state: GameState, model: Model, wrong: Patch): string {
   const cols = puzzleFor(state.puzzle).cols;
   const others = wrongPatches(state);
   const right = state.patches.filter((p) => p === wrong || !others.includes(p));
-  const result = propagate(model, stateWith(model, right));
+  const loaded = stateWith(model, right);
+  const result = propagate(loaded.model, loaded.state);
   const clue = puzzleFor(state.puzzle).clues[wrong.clue];
   const head = `The patch around the clue at ${placeName(clue.cell, cols)} is not part of the solution.`;
   if (!result.ok && result.dead) {
@@ -63,9 +61,10 @@ function whyWrong(state: GameState, model: Model, wrong: Patch): string {
 function focusFor(state: GameState, model: Model): { clue: number; cells: number[]; text: string } | null {
   const puzzle = puzzleFor(state.puzzle);
   const { cols } = puzzle;
-  const s = stateWith(model, state.patches);
+  const loaded = stateWith(model, state.patches);
+  const s = loaded.state;
   const steps: Step[] = [];
-  if (!propagate(model, s, steps).ok || (s.left === 0 && steps.length === 0)) return null;
+  if (!propagate(loaded.model, s, steps).ok || (s.left === 0 && steps.length === 0)) return null;
 
   const first = steps[0];
   if (first) {
@@ -82,7 +81,7 @@ function focusFor(state: GameState, model: Model): { clue: number; cells: number
 
   // Nothing follows directly: try each placement and see which ones fail.
   const trial = cloneState(s);
-  if (lookahead(model, trial) < 0) return null;
+  if (lookahead(loaded.model, trial) < 0) return null;
   let target = -1;
   for (let i = 0; i < trial.placed.length; i++) {
     if (trial.placed[i] < 0 && (target < 0 || trial.live[i].length < trial.live[target].length)) target = i;

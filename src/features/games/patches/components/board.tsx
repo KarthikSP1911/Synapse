@@ -30,6 +30,8 @@ interface CellProps {
   /** The clue's own colour. */
   clueColor: number;
   placed: boolean;
+  /** The placed patch is not the size or shape its clue asks for. */
+  mismatch: boolean;
   /** The clue has no room left (or, for a plain cell, nothing could cover it). */
   dead: boolean;
   hinted: boolean;
@@ -46,7 +48,7 @@ interface CellProps {
   wave: number | null;
 }
 
-const Cell = memo(function Cell({ color, enter, clue, clueColor, placed, dead, hinted, cursor, draft, draftColor, dim, count, clueEnter, wave }: CellProps) {
+const Cell = memo(function Cell({ color, enter, clue, clueColor, placed, mismatch, dead, hinted, cursor, draft, draftColor, dim, count, clueEnter, wave }: CellProps) {
   return (
     <div
       className="pt-cell"
@@ -57,7 +59,7 @@ const Cell = memo(function Cell({ color, enter, clue, clueColor, placed, dead, h
     >
       <i className="pt-fill" data-c={color >= 0 ? color : undefined} data-dim={dim ? "true" : undefined} data-enter={enter !== null ? "" : undefined} style={enter !== null ? ({ "--d": `${enter}ms` } as CSSProperties) : undefined} />
       {draft && <i className="pt-draft" data-state={draft} data-c={draftColor >= 0 ? draftColor : undefined} />}
-      {clue && <ClueMark clue={clue} color={clueColor} placed={placed} conflict={dead} hinted={hinted} entering={clueEnter} celebrate={wave !== null} />}
+      {clue && <ClueMark clue={clue} color={clueColor} placed={placed} mismatch={mismatch} conflict={dead} hinted={hinted} entering={clueEnter} celebrate={wave !== null} />}
       {count && <b className="pt-count">{count}</b>}
     </div>
   );
@@ -79,7 +81,10 @@ const sameCells = (a: readonly number[], b: readonly number[]): boolean => a.len
  *   - press a patch and drag: the patch is picked up. A rectangle is held by its nearest corner, so it stretches and
  *     shrinks in your hand; a freeform patch grows where you paint;
  *   - tap a patch (press and let go without moving): it is erased;
- *   - draw over patches: they are shown dimmed and are replaced when a valid patch is let go over them.
+ *   - draw over patches: they are shown dimmed and are replaced when the patch is let go over them.
+ * A patch can be drawn at any size, as on paper: one that is not the size or shape its clue asks for is placed with a
+ * dashed outline instead of being refused, and only the finished board decides. A drag simply stops growing where it
+ * would take in a second clue, rather than showing an error.
  * Nothing reaches the game until the pointer is released, a refused patch changes nothing (a patch you were holding
  * stays as it was), and a cancelled pointer (a call, a scroll takeover, the page hiding) throws the draft away. The
  * keyboard does the same with the arrow keys, Enter and Delete.
@@ -234,6 +239,17 @@ export function Board({
   const deadCells = useMemo(() => new Set(dead?.cells ?? []), [dead]);
   const patchOf = useMemo(() => new Map(patches.map((p) => [p.clue, p])), [patches]);
   const at = clueAt(puzzle);
+  /** The clues whose placed patch is not what the clue asks for. */
+  const mismatched = useMemo(() => new Set(patches.filter((p) => !checkDraft(puzzle, noOwner, p.cells).ok).map((p) => p.clue)), [patches, puzzle, noOwner]);
+
+  /** Grows a draft towards a cell, unless that would take a second clue in: then it stays as it was. */
+  const grow = (from: Draft, cell: number): Draft => {
+    const next = extendDraft(from, noOwner, cell);
+    if (next === from) return from;
+    let clues = 0;
+    for (const c of draftCells(next, cols)) if (at[c] >= 0) clues++;
+    return clues > 1 ? from : next;
+  };
 
   // ---- Pointer ----------------------------------------------------------------
 
@@ -328,9 +344,9 @@ export function Board({
       if (d && (s.kind === "draw" || s.travelled >= TAP_SLOP)) {
         if (d.mode === "rect") {
           const cell = pointToCell(r, point[0], point[1], 1);
-          if (cell !== null) d = extendDraft(d, noOwner, cell);
+          if (cell !== null) d = grow(d, cell);
         } else {
-          for (const cell of cellsAlong(r, s.last, point)) d = extendDraft(d, noOwner, cell);
+          for (const cell of cellsAlong(r, s.last, point)) d = grow(d, cell);
         }
         if (d !== draftRef.current) updateDraft(d);
       }
@@ -375,7 +391,7 @@ export function Board({
       const next = r * cols + c;
       setCursor(next);
       const d = draftRef.current;
-      if (d) updateDraft(extendDraft(d, noOwner, next));
+      if (d) updateDraft(grow(d, next));
       return;
     }
     if (key === "Enter" || key === " ") {
@@ -451,6 +467,7 @@ export function Board({
               clue={clueIndex >= 0 ? puzzle.clues[clueIndex] : null}
               clueColor={clueIndex >= 0 ? colors[clueIndex] : -1}
               placed={clueIndex >= 0 && patchOf.has(clueIndex) && clueIndex !== lifted}
+              mismatch={clueIndex >= 0 && mismatched.has(clueIndex)}
               dead={clueIndex >= 0 ? deadClues.has(clueIndex) : deadCells.has(i)}
               hinted={hintCells.has(i)}
               cursor={cursor === i}
@@ -475,7 +492,7 @@ export function Board({
           {patches
             .filter((p) => p.clue !== lifted)
             .map((p) => (
-              <path key={`${p.clue}:${p.cells[0]}`} className="pt-line" d={outlinePath(p.cells, cols)} data-enter={enterDelay.clues.has(p.clue) ? "" : undefined} style={{ "--ld": `${lineDelay}ms` } as CSSProperties} />
+              <path key={`${p.clue}:${p.cells[0]}`} className="pt-line" d={outlinePath(p.cells, cols)} data-mismatch={mismatched.has(p.clue) ? "true" : undefined} data-enter={enterDelay.clues.has(p.clue) ? "" : undefined} style={{ "--ld": `${lineDelay}ms` } as CSSProperties} />
             ))}
           {leaving.map((p) => (
             <path key={`gone:${p.clue}:${p.cells[0]}`} className="pt-line" data-leaving="" d={outlinePath(p.cells, cols)} />

@@ -42,7 +42,7 @@ export interface Model {
 
 const wordsFor = (n: number): number => (n + 31) >>> 5;
 
-function maskOf(cells: readonly number[], words: number): Int32Array {
+export function maskOf(cells: readonly number[], words: number): Int32Array {
   const mask = new Int32Array(words);
   for (const cell of cells) mask[cell >>> 5] |= 1 << (cell & 31);
   return mask;
@@ -212,6 +212,22 @@ export function placePatch(model: Model, s: State, patch: Patch): boolean {
   for (let w = 0; w < model.words; w++) if ((s.covered[w] & mask[w]) !== 0) return false;
   place(model, s, patch.clue, index);
   return true;
+}
+
+/**
+ * A state with the player's patches in it. A patch that does not fit its clue (the player drew it at the wrong size) is
+ * not one of the clue's candidates, so it is added to a copy of the model: it still covers its cells and uses its clue,
+ * which is what the rest of the board has to work around. Use the returned model, not the one passed in.
+ */
+export function loadPatches(model: Model, patches: readonly Patch[]): { model: Model; state: State } {
+  const loose = patches.filter((p) => !model.cands[p.clue]?.some((c) => c.cells.length === p.cells.length && c.cells.every((cell, i) => cell === p.cells[i])));
+  const extended: Model =
+    loose.length === 0
+      ? model
+      : { ...model, cands: model.cands.map((list, i) => [...list, ...loose.filter((p) => p.clue === i).map((p) => ({ cells: [...p.cells], mask: maskOf(p.cells, model.words) }))]) };
+  const state = emptyState(extended);
+  for (const patch of patches) placePatch(extended, state, patch);
+  return { model: extended, state };
 }
 
 /** Why propagation gave up. */

@@ -80,7 +80,7 @@ export interface GameState extends Clocked {
 }
 
 export interface PatchesSettings {
-  /** Mark clues and cells that no remaining patch can serve, as soon as the board changes. */
+  /** Mark clues and cells that no remaining patch can serve, as soon as the board changes. Off unless asked for: drawing is free. */
   autoCheck: boolean;
   /** Show the number of cells still to cover. */
   showRemaining: boolean;
@@ -88,7 +88,7 @@ export interface PatchesSettings {
   larger: boolean;
 }
 
-export const DEFAULT_SETTINGS: PatchesSettings = { autoCheck: true, showRemaining: true, larger: false };
+export const DEFAULT_SETTINGS: PatchesSettings = { autoCheck: false, showRemaining: true, larger: false };
 
 /** What is saved for a finished or abandoned game. Points are worked out from it, never stored. */
 export interface SessionData {
