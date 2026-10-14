@@ -73,7 +73,7 @@ describe("storeUploaded", () => {
     const reply = await storeUploaded({ sessions: ["ok-1", "nope", "ok-2", "ok-3"] }, options);
     assert.equal(reply.status, 500);
     assert.deepEqual(reply.body, { error: "Failed to sync", synced: [{ clientId: "ok-1" }], rejected: [{ clientId: "nope", reason: "bad" }] });
-    assert.deepEqual(logs, ["Failed to sync test sessions:"]);
+    assert.deepEqual(logs, ["Failed to sync test sessions"]);
   });
 });
 
@@ -81,6 +81,14 @@ describe("loadRecent", () => {
   it("wraps the records as { sessions }", async () => {
     const reply = await loadRecent({ label: "test sessions", noun: "sessions" }, async () => [{ a: 1 }], quiet);
     assert.deepEqual(reply, { status: 200, body: { sessions: [{ a: 1 }] } });
+  });
+
+  it("puts the log reference in a failure reply, so a report from a device can be matched to the server's log line", async () => {
+    const reply = await storeUploaded({ sessions: [{ clientId: "ok-1" }] }, { label: "test sessions", parse: (raw) => ({ ok: true, data: raw as Item }), insert: async () => Promise.reject(new Error("db down")), log: () => "ref12345" });
+    assert.equal(reply.status, 500);
+    assert.equal(reply.body.reference, "ref12345");
+    const loaded = await loadRecent({ label: "2048 games", noun: "games" }, () => Promise.reject(new Error("db down")), () => "ref67890");
+    assert.equal(loaded.body.reference, "ref67890");
   });
 
   it("answers 500 with the noun of the game when loading fails", async () => {
@@ -93,6 +101,6 @@ describe("loadRecent", () => {
       (message) => logs.push(message)
     );
     assert.deepEqual(reply, { status: 500, body: { error: "Failed to load games" } });
-    assert.deepEqual(logs, ["Failed to load 2048 games:"]);
+    assert.deepEqual(logs, ["Failed to load 2048 games"]);
   });
 });

@@ -1,5 +1,6 @@
 "use client";
 
+import { log } from "@/lib/logger";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { RotateCcw } from "lucide-react";
@@ -56,7 +57,7 @@ export default function ReviewButton({ source, label, variant = "primary", class
       }
       router.push(remote ? `/practice/${data.id}` : playHref(data.id));
     } catch (err) {
-      console.error(err);
+      log.error("Could not start a mistake review", err);
       setError("Could not start the review.");
       setStarting(false);
     }

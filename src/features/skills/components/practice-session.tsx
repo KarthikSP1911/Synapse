@@ -1,5 +1,6 @@
 "use client";
 
+import { log } from "@/lib/logger";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Check, Flame, Lightbulb, Pause, Play, SkipForward, Volume2, VolumeX, X } from "lucide-react";
@@ -143,7 +144,7 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
     try {
       await request(`/api/sessions/${sessionId}/end`, { method: "POST" });
     } catch (err) {
-      console.error(err);
+      log.error("Could not end the session on the server (the summary opens anyway)", err, { sessionId });
     }
     router.push(summaryUrl(sessionId));
   }, [sessionId, router, request]);
@@ -189,7 +190,7 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
         timeoutSentRef.current = false;
         later(() => inputRef.current?.focus(), 30);
       } catch (err) {
-        console.error(err);
+        log.error("Could not load the next question", err, { sessionId });
         setError("Could not load the next question. Please try again.");
       } finally {
         setLoading(false);
@@ -279,7 +280,7 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
           later(next, data.isCorrect ? CORRECT_DELAY_MS : INCORRECT_DELAY_MS);
         }
       } catch (err) {
-        console.error(err);
+        log.error("Could not submit an answer", err, { sessionId });
         setError("Could not submit your answer. Please try again.");
       } finally {
         setSubmitting(false);
@@ -312,7 +313,7 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
         later(() => inputRef.current?.focus(), 30);
       }
     } catch (err) {
-      console.error(err);
+      log.error(paused ? "Could not resume the session" : "Could not pause the session", err, { sessionId });
       setError(paused ? "Could not resume. Please try again." : "Could not pause. Please try again.");
     }
   }, [question, submitting, paused, sessionId, request, syncDeadline, later]);

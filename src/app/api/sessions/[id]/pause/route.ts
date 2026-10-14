@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { serverFailure } from "@/lib/http";
 import { db } from "@/db";
 import { practiceSessions } from "@/db/schema";
 import { and, eq, isNull } from "drizzle-orm";
@@ -32,7 +33,6 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
 
     return NextResponse.json({ paused: true });
   } catch (error) {
-    console.error("Failed to pause session:", error);
-    return NextResponse.json({ error: "Failed to pause session" }, { status: 500 });
+    return serverFailure("Failed to pause session", error, { route: "/api/sessions/[id]/pause", method: "POST" });
   }
 }

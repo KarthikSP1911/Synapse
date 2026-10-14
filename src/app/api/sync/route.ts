@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { serverFailure } from "@/lib/http";
 import { getCurrentUser, unauthorized } from "@/features/auth/server/auth";
 import { readSyncBody } from "@/features/offline/lib/sync/body";
 import { parseSyncBody, validateSession } from "@/features/offline/lib/sync/payload";
@@ -49,8 +50,7 @@ export async function POST(request: Request) {
     }
   } catch (error) {
     // Sessions stored before the failure stay stored; the client retries the rest and the repeat is harmless.
-    console.error("Failed to sync sessions:", error);
-    return NextResponse.json({ error: "Failed to sync", synced, rejected }, { status: 500 });
+    return serverFailure("Failed to sync", error, { route: "/api/sync", method: "POST", stored: synced.length, rejected: rejected.length }, { synced, rejected });
   }
   return NextResponse.json({ synced, rejected });
 }

@@ -204,6 +204,7 @@ A third puzzle on the same shell (`patches/lib`, `patches/components`). A clue i
 - **Solver** (`solver.ts`): each clue has candidate patches (rectangles by enumeration; freeform shapes by Redelmeier's method, each exactly once), and a solution is an exact cover of the cells. Propagation on bit masks (clue singles, cell singles, dead ends) then branching on the clue with the fewest candidates, counting up to two solutions under a node budget (`NODE_BUDGET` 20,000) and a candidate cap (40,000), so a puzzle always costs the same and anything bigger is "could not be verified". It is checked against a brute force that shares none of its code (`engine.test.ts`).
 - **Generator** (`generator.ts`): carve a valid partition first (rectangles, plus bent shapes on Hard and Expert), put one clue in each patch saying what is true of it, then while a second solution exists either say more on a clue it gets wrong or move a clue inside its own patch to a cell the other solution gives elsewhere (both only add constraints the real partition meets). Harder levels then take back whatever the puzzle does not need. Nothing is accepted that is not proved unique.
 - **Difficulty is the logic needed**, not just size (`rateLogic`): Easy and Medium are solved by singles alone; Hard needs a lookahead (try a placement, see it leave a clue or cell with nothing); Expert needs chained lookaheads and has more freeform shapes and plain clues. Boards are 5, 6, 7, 8 (standard) or 6, 7, 8, 9 (larger) per level.
+- **Free drawing** (`canPlace` in `rules.ts`): a patch is placed if it holds exactly one clue and its cells touch; its area and shape may be wrong (it is marked, and adjusted by drawing again), and only `validateBoard` needs every patch right. `loadPatches` lets the solver and hints treat such a patch as covering its cells and using its clue.
 - **Rules vs. the solution**: drawing, Check and Auto-check use only the clues and the patches placed (`rules.ts`, `conflicts`), never the hidden solution; only a paid hint consults it (`hints.ts`), so free checking cannot leak the answer. A solved board is `validateBoard`, the same patch check as drawing.
 - **Interaction** (`draw.ts`, `components/board.tsx`): pressing a free cell draws (a rectangle, or painted cells for a freeform clue), pressing a patch picks it up (`grabPatch`: a rectangle is held by its nearest corner and stretches in the hand, a freeform patch grows where it is painted), a tap erases, and `commitPatch` replaces any patches a valid new one is drawn over (one undo step; a refused patch takes nothing off the board). Each clue has its own colour (`colors.ts`), used for its symbol, its patch and the draft preview. The half-drawn patch, the patch in hand, the cursor and all animation state live in the component; the game state holds only committed patches and history, so animation timing cannot change what is saved or whether the puzzle is solved. Animations are CSS (`.pt-*` in `globals.css`) and every one is switched off under `prefers-reduced-motion` (checked by a test).
 - **Records** store the puzzle only: the server re-solves it, checks times and recomputes the score (`/api/sync/patches`, table `patches_sessions`).
@@ -216,3 +217,18 @@ A third puzzle on the same shell (`patches/lib`, `patches/components`). A clue i
 | Larger board (6 / 7 / 8 / 9) | 0.1 / 0 ms | 1 / 2 ms | 7 / 29 ms | 269 / 965 ms |
 
 Solver nodes of an accepted puzzle are at most 1,494 (`GENERATION_NODES` is 1,500). Verifying ten of the costliest uploaded records takes 17 ms. Expert is the slowest to build because most random boards do not need chained lookaheads; `PROFILES` in `generator.ts` is the dial.
+
+## Errors and logs
+
+The logger, the reference scheme and what each layer does on failure are described in the README (`Errors and logs`). Where the code is:
+
+| Piece | File | Job |
+|---|---|---|
+| Logger | `src/lib/logger.ts` | levels, structured entries, error description, redaction, references |
+| API failure | `src/lib/http.ts` | `serverFailure`: log and answer 500 with `{ error, reference }` |
+| Server hook | `src/instrumentation.ts`, `instrumentation-node.ts` | `onRequestError` for pages, routes and Server Actions; process-wide handlers (Node only) |
+| Browser hook | `src/instrumentation-client.ts` | uncaught errors and rejections |
+| Error pages | `src/app/error.tsx`, `global-error.tsx`, `src/lib/classify-error.ts` | offline / outdated / failed, reference, `retry` |
+| Actions | `features/auth/server/auth-actions.ts` | failures become a form message with a reference |
+
+A failure that is only a nicety (the home page's progress summaries, the profile's wallet, the time zone saved at login, claiming old data for the first account) is logged and the page or action carries on without it.

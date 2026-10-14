@@ -1,5 +1,6 @@
 "use client";
 
+import { log } from "@/lib/logger";
 import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Plus, Share, X } from "lucide-react";
@@ -131,7 +132,7 @@ export function InstallPrompt() {
       if (outcome === "dismissed") snooze("declined");
       // On "accepted" the `appinstalled` event records the install.
     } catch (err) {
-      console.error(err);
+      log.warn("The install prompt failed", undefined, err);
     } finally {
       // A prompt event can only be used once; Chromium fires a fresh one if it is still installable.
       window.__mathzInstallEvent = undefined;

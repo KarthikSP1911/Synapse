@@ -1,5 +1,6 @@
 "use client";
 
+import { log } from "@/lib/logger";
 import { useEffect } from "react";
 
 /**
@@ -14,7 +15,7 @@ export function ServiceWorkerRegister() {
   useEffect(() => {
     if (process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator)) return;
     navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" }).catch((err) => {
-      console.error("Service worker registration failed", err);
+      log.error("Service worker registration failed (the app still works, but not offline)", err);
     });
     navigator.storage?.persist?.().catch(() => {});
   }, []);

@@ -58,7 +58,16 @@ const PAGE_PATHS = new Set([
 const SHARED_SHELLS = new Set(["/play", "/play/summary"]);
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(SHELL_CACHE).then((cache) => cache.addAll(PRECACHE)));
+  event.waitUntil(
+    caches
+      .open(SHELL_CACHE)
+      .then((cache) => cache.addAll(PRECACHE))
+      .catch((error) => {
+        // Without the shell files the worker is useless offline: say why, and let the install fail so the browser retries.
+        console.error("[mathz sw] Could not store the offline shell:", error);
+        throw error;
+      })
+  );
   self.skipWaiting();
 });
 
