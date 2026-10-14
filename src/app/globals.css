@@ -1080,3 +1080,176 @@ html.play-focus body {
   .zp-badge { transition: none; }
   .zp-badge[data-open="true"] { animation: none; }
 }
+
+/*
+  The win card (shared/components/win-overlay.tsx): a native modal <dialog> over the solved board, with confetti
+  falling behind the card. `--accent` is the game's colour. Everything that moves is switched off for people who
+  prefer reduced motion.
+*/
+.win-dialog {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 1rem;
+  border: 0;
+  background: transparent;
+  color: var(--foreground);
+  overflow: hidden;
+  place-items: center;
+}
+.win-dialog[open] {
+  display: grid;
+}
+.win-dialog::backdrop {
+  background: rgb(0 0 0 / 0.55);
+  backdrop-filter: blur(3px);
+}
+.win-card {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 22rem);
+  max-height: 100%;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--card);
+  padding: 1.5rem;
+  text-align: center;
+  box-shadow: var(--shadow-pop);
+  animation: win-pop 380ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+.win-trophy {
+  display: inline-grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #111111;
+}
+.win-confetti {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.win-confetti > span {
+  position: absolute;
+  top: -1.5rem;
+  width: 0.6rem;
+  height: 1rem;
+  border-radius: 1px;
+  background: var(--accent);
+  opacity: 0;
+  animation: win-fall linear both;
+}
+.win-confetti > span[data-tone="1"] { background: #fbbf24; }
+.win-confetti > span[data-tone="2"] { background: #34d399; }
+.win-confetti > span[data-tone="3"] { background: #f472b6; }
+@keyframes win-fall {
+  0% { opacity: 1; transform: translate3d(0, 0, 0) rotate(0deg); }
+  100% { opacity: 1; transform: translate3d(var(--drift), 105dvh, 0) rotate(var(--spin)); }
+}
+@keyframes win-pop {
+  from { opacity: 0; transform: translateY(0.75rem) scale(0.92); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .win-card { animation: none; }
+  .win-confetti { display: none; }
+}
+
+/*
+  The win animation on the board (shared/components/win-burst.tsx): the game's symbol springs up huge over the solved
+  board and fades while the pieces ripple, then the win card opens (BURST_MS). All of it is off for reduced motion.
+*/
+.win-burst {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  color: var(--accent);
+  animation: win-burst 1.6s ease-in-out both;
+}
+.win-burst-icon {
+  width: 78%;
+  height: 78%;
+  fill: color-mix(in oklab, var(--accent) 30%, transparent);
+  filter: drop-shadow(0 0 1.2rem color-mix(in oklab, var(--accent) 70%, transparent));
+}
+/* Zip's symbol would vanish into its own blue path, so it is drawn in the text colour instead. */
+.win-burst[data-accent="zip"] {
+  color: var(--foreground);
+}
+.win-burst[data-accent="zip"] .win-burst-icon {
+  fill: none;
+  filter: drop-shadow(0 0 1.2rem var(--accent));
+}
+@keyframes win-burst {
+  0% { opacity: 0; transform: scale(0.2) rotate(-8deg); }
+  28% { opacity: 1; transform: scale(1.08) rotate(0deg); }
+  42% { transform: scale(0.98); }
+  58% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.25); }
+}
+/* Queens: every queen pops in a wave from the top-left corner. */
+.qn-board[data-won="true"] .qn-queen {
+  animation: win-queen 0.7s ease-in-out var(--wave) 2 both;
+}
+@keyframes win-queen {
+  0%, 100% { transform: scale(1); }
+  45% { transform: scale(1.45) rotate(-8deg); }
+}
+.qn-board[data-won="true"] .qn-cell {
+  filter: saturate(1.25) brightness(1.08);
+}
+/* Zip: the path glows and draws itself once more from 1 to the end. */
+.zp-board[data-won="true"] .zp-path {
+  stroke-dasharray: 1;
+  animation: win-path 1.1s ease-in-out both, win-glow 0.55s ease-in-out 1.1s 2 alternate;
+}
+@keyframes win-path {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes win-glow {
+  to { stroke-width: 0.56; }
+}
+.zp-board[data-won="true"] .zp-badge {
+  animation: win-queen 0.7s ease-in-out 2 both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .win-burst { display: none; }
+  .qn-board[data-won="true"] .qn-queen,
+  .zp-board[data-won="true"] .zp-path,
+  .zp-board[data-won="true"] .zp-badge { animation: none; }
+}
+
+/* While the burst plays, everything behind the symbol is blurred and dimmed (and comes back before the card opens). */
+.play-screen[data-won="true"] .sdk-side,
+.play-screen[data-won="true"] aside > div {
+  animation: win-recede 1.6s ease-in-out both;
+}
+.qn-board[data-won="true"] .qn-grid,
+.zp-board[data-won="true"] .zp-grid {
+  animation: win-recede-board 1.6s ease-in-out both;
+}
+@keyframes win-recede {
+  0%, 100% { filter: none; opacity: 1; }
+  22%, 78% { filter: blur(8px); opacity: 0.2; }
+}
+@keyframes win-recede-board {
+  0%, 100% { filter: none; opacity: 1; }
+  22%, 78% { filter: blur(9px) brightness(0.55); opacity: 0.55; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .play-screen[data-won="true"] .sdk-side,
+  .play-screen[data-won="true"] aside > div,
+  .qn-board[data-won="true"] .qn-grid,
+  .zp-board[data-won="true"] .zp-grid { animation: none; }
+}

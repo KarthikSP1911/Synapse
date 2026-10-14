@@ -37,9 +37,11 @@ interface CellProps {
   hinted: "cell" | "wrong" | null;
   preview: boolean;
   tabbable: boolean;
+  /** The order this cell's queen joins the win ripple, in ms. */
+  wave: number;
 }
 
-const Cell = memo(function Cell({ index, n, region, mark, top, left, conflict, unit, hinted, preview, tabbable }: CellProps) {
+const Cell = memo(function Cell({ index, n, region, mark, top, left, conflict, unit, hinted, preview, tabbable, wave }: CellProps) {
   return (
     <button
       type="button"
@@ -53,6 +55,7 @@ const Cell = memo(function Cell({ index, n, region, mark, top, left, conflict, u
       data-hint={hinted ?? undefined}
       data-preview={preview ? "true" : undefined}
       className="qn-cell"
+      style={{ "--wave": `${wave}ms` } as CSSProperties}
       tabIndex={tabbable ? 0 : -1}
       aria-label={describe(index, n, region, mark, conflict, hinted === "wrong")}
     >
@@ -76,6 +79,7 @@ export function Board({
   hint,
   hintUnitCells,
   covered,
+  won,
   onTap,
   onSet,
   onMark,
@@ -89,6 +93,8 @@ export function Board({
   /** The cells of the units a hint talks about. */
   hintUnitCells: ReadonlySet<number>;
   covered: boolean;
+  /** The puzzle is solved: play the win ripple. */
+  won: boolean;
   onTap: (index: number) => void;
   onSet: (index: number, mark: typeof EMPTY | typeof CROSS | typeof QUEEN) => void;
   onMark: (indices: number[], to: typeof CROSS | typeof EMPTY) => void;
@@ -172,7 +178,7 @@ export function Board({
   const hintCells = useMemo(() => new Set(hint?.cells ?? []), [hint]);
 
   return (
-    <div className="qn-board" data-covered={covered ? "true" : undefined}>
+    <div className="qn-board" data-covered={covered ? "true" : undefined} data-won={won ? "true" : undefined}>
       <div
         ref={ref}
         role="group"
@@ -205,6 +211,7 @@ export function Board({
               hinted={hintCells.has(i) ? (hint?.kind === "wrong" ? "wrong" : "cell") : null}
               preview={shown !== null}
               tabbable={i === focus}
+              wave={(r + c) * 70}
             />
           );
         })}
