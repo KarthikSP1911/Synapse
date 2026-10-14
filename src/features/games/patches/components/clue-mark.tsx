@@ -16,11 +16,12 @@ export function ShapeGlyph({ shape, className }: { shape: Shape; className?: str
 
 /**
  * What a clue cell shows: its area as a number, its shape as a symbol, both, or (for a clue that says neither) a
- * plain dot. The state is told by the outline and fill as well as by colour: a placed clue is solid, one with no room
- * left is dashed and marked.
+ * plain dot, all in the clue's own colour. The state is told by the outline and fill as well as by colour: a placed
+ * clue is solid, one with no room left is dashed and marked.
  */
 export const ClueMark = memo(function ClueMark({
   clue,
+  color,
   placed,
   conflict,
   hinted,
@@ -28,6 +29,8 @@ export const ClueMark = memo(function ClueMark({
   celebrate,
 }: {
   clue: Clue;
+  /** The clue's own colour (0 to 7): its symbol is drawn in it, and the patch drawn for it is filled with it. */
+  color: number;
   placed: boolean;
   conflict: boolean;
   hinted: boolean;
@@ -40,6 +43,7 @@ export const ClueMark = memo(function ClueMark({
     <span
       className="pt-clue"
       data-kind={kind}
+      data-c={color >= 0 ? color : undefined}
       data-placed={placed ? "true" : undefined}
       data-conflict={conflict ? "true" : undefined}
       data-hint={hinted ? "true" : undefined}

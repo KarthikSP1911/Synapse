@@ -4,10 +4,10 @@ import { memo, useEffect, useId, useMemo, useRef, useState, type CSSProperties, 
 import { ACCENT } from "@/lib/accent";
 import { cellsAlong, pointToCell, type BoardRect } from "@/features/games/shared/lib/board-geometry";
 import { ClueMark } from "@/features/games/patches/components/clue-mark";
-import { beginDraft, draftCells, extendDraft, type Draft } from "@/features/games/patches/lib/draw";
+import { beginDraft, draftCells, extendDraft, grabPatch, type Draft } from "@/features/games/patches/lib/draw";
 import { cascadeSteps, cellsPath, outlinePath } from "@/features/games/patches/lib/outline";
 import { describeClue, placeName } from "@/features/games/patches/lib/puzzle-format";
-import { checkDraft, clueAt, ownerMap, type DraftCheck } from "@/features/games/patches/lib/rules";
+import { checkDraft, clueAt, overlappedClues, ownerMap, ownerWithout, type DraftCheck } from "@/features/games/patches/lib/rules";
 import type { Conflicts } from "@/features/games/patches/lib/game";
 import type { Clue, Hint, Patch, PatchesPuzzle } from "@/features/games/patches/lib/types";
 
@@ -18,7 +18,7 @@ const CASCADE_MAX_MS = 360;
 const REJECT_MS = 520;
 const LEAVE_MS = 240;
 /** A finger or mouse that moved less than this (px) between pressing and letting go has tapped. */
-const TAP_SLOP = 8;
+const TAP_SLOP = 10;
 /** How long the completion wave takes to cross the board. */
 export const WIN_WAVE_MS = 700;
 
@@ -27,12 +27,18 @@ interface CellProps {
   /** Delay (ms) before the cell fills in, or null when it is not arriving. */
   enter: number | null;
   clue: Clue | null;
+  /** The clue's own colour. */
+  clueColor: number;
   placed: boolean;
   /** The clue has no room left (or, for a plain cell, nothing could cover it). */
   dead: boolean;
   hinted: boolean;
   cursor: boolean;
-  draft: "valid" | "neutral" | "blocked" | null;
+  draft: "valid" | "neutral" | null;
+  /** The colour a draft is filled with: that of the clue inside it, or -1 while it has none. */
+  draftColor: number;
+  /** The cell belongs to a patch that the draft would replace. */
+  dim: boolean;
   /** A label for the cell holding the end of a draft ("3/6"). */
   count: string | null;
   clueEnter: number | null;
@@ -40,7 +46,7 @@ interface CellProps {
   wave: number | null;
 }
 
-const Cell = memo(function Cell({ color, enter, clue, placed, dead, hinted, cursor, draft, count, clueEnter, wave }: CellProps) {
+const Cell = memo(function Cell({ color, enter, clue, clueColor, placed, dead, hinted, cursor, draft, draftColor, dim, count, clueEnter, wave }: CellProps) {
   return (
     <div
       className="pt-cell"
@@ -49,51 +55,55 @@ const Cell = memo(function Cell({ color, enter, clue, placed, dead, hinted, curs
       data-cursor={cursor ? "true" : undefined}
       style={wave !== null ? ({ "--wd": `${wave}ms` } as CSSProperties) : undefined}
     >
-      <i className="pt-fill" data-c={color >= 0 ? color : undefined} data-enter={enter !== null ? "" : undefined} style={enter !== null ? ({ "--d": `${enter}ms` } as CSSProperties) : undefined} />
-      {draft && <i className="pt-draft" data-state={draft} />}
-      {clue && <ClueMark clue={clue} placed={placed} conflict={dead} hinted={hinted} entering={clueEnter} celebrate={wave !== null} />}
+      <i className="pt-fill" data-c={color >= 0 ? color : undefined} data-dim={dim ? "true" : undefined} data-enter={enter !== null ? "" : undefined} style={enter !== null ? ({ "--d": `${enter}ms` } as CSSProperties) : undefined} />
+      {draft && <i className="pt-draft" data-state={draft} data-c={draftColor >= 0 ? draftColor : undefined} />}
+      {clue && <ClueMark clue={clue} color={clueColor} placed={placed} conflict={dead} hinted={hinted} entering={clueEnter} celebrate={wave !== null} />}
       {count && <b className="pt-count">{count}</b>}
     </div>
   );
 });
 
 function describeBoard(puzzle: PatchesPuzzle, patches: readonly Patch[], left: number): string {
-  return `Patches board, ${puzzle.rows} by ${puzzle.cols}. ${patches.length} of ${puzzle.clues.length} patches placed, ${left} ${left === 1 ? "cell" : "cells"} left. Drag across the board to draw a patch around a clue.`;
+  return `Patches board, ${puzzle.rows} by ${puzzle.cols}. ${patches.length} of ${puzzle.clues.length} patches placed, ${left} ${left === 1 ? "cell" : "cells"} left. Drag across the board to draw a patch around a clue. Drag from the edge of a patch to resize it, draw over a patch to replace it, tap a patch to erase it.`;
 }
+
+const sameCells = (a: readonly number[], b: readonly number[]): boolean => a.length === b.length && a.every((cell, i) => cell === b[i]);
 
 /**
  * The Patches board: cells, clues, the patches drawn so far and the one being drawn.
  *
- * Drawing is one gesture of pointer events (mouse, touch and pen alike). Pressing a free cell starts a draft: for
- * most clues a rectangle from that cell to the one under the pointer, and when the press is on the clue of a freeform
- * patch, the cells painted across. Nothing reaches the game until the pointer is released, and a cancelled pointer
- * (a call, a scroll takeover, the page hiding) throws the draft away. Pressing a patch that is already there selects
- * it instead; a patch can never be drawn over. The keyboard does the same with the arrow keys and Enter.
+ * Drawing is one gesture of pointer events (mouse, touch and pen alike), and every part of it can be done again
+ * without a Remove button:
+ *   - press a free cell and drag: a draft rectangle from that cell to the one under the pointer (or, on the clue of a
+ *     freeform patch, the cells painted across). It is filled in the colour of the clue it holds as it grows;
+ *   - press a patch and drag: the patch is picked up. A rectangle is held by its nearest corner, so it stretches and
+ *     shrinks in your hand; a freeform patch grows where you paint;
+ *   - tap a patch (press and let go without moving): it is erased;
+ *   - draw over patches: they are shown dimmed and are replaced when a valid patch is let go over them.
+ * Nothing reaches the game until the pointer is released, a refused patch changes nothing (a patch you were holding
+ * stays as it was), and a cancelled pointer (a call, a scroll takeover, the page hiding) throws the draft away. The
+ * keyboard does the same with the arrow keys, Enter and Delete.
  *
- * The draft, the selection, the cursor and every animation live here, in the component: the committed patches come
- * from the game and are never changed by how long an animation takes. `touch-action: none` is on the board only.
+ * The draft, the patch in hand, the cursor and every animation live here, in the component: the committed patches
+ * come from the game and are never changed by how long an animation takes. `touch-action: none` is on the board only.
  */
 export function Board({
   puzzle,
   patches,
   colors,
-  selected,
   hint,
   dead,
   covered,
   won,
   soft,
   onCommit,
-  onSelect,
   onRemove,
   onNotice,
 }: {
   puzzle: PatchesPuzzle;
   patches: readonly Patch[];
-  /** The colour index of every clue's patch. */
+  /** The colour index of every clue (its symbol, and the patch drawn for it). */
   colors: readonly number[];
-  /** The clue of the selected patch. */
-  selected: number | null;
   hint: Hint | null;
   /** Dead ends to mark, or null when none are shown. */
   dead: Conflicts | null;
@@ -102,9 +112,8 @@ export function Board({
   won: boolean;
   /** Patches arrive without the cascade (Undo and Redo). */
   soft: boolean;
-  /** Offers cells as a patch; the game answers with why it was refused, or null once it is placed. */
+  /** Offers cells as a patch (replacing any it covers); the game answers with why it was refused, or null once it is placed. */
   onCommit: (cells: number[]) => DraftCheck | null;
-  onSelect: (clue: number | null) => void;
   onRemove: (clue: number) => void;
   /** Says something to the player (a hint at how to draw, say). */
   onNotice: (message: string) => void;
@@ -113,9 +122,12 @@ export function Board({
   const n = rows * cols;
   const patternId = useId();
   const ref = useRef<HTMLDivElement>(null);
-  const press = useRef<{ pointerId: number; kind: "draw" | "tap"; clue: number; last: [number, number]; from: [number, number]; travelled: number } | null>(null);
+  const press = useRef<{ pointerId: number; kind: "draw" | "grab"; clue: number; last: [number, number]; from: [number, number]; travelled: number } | null>(null);
   const draftRef = useRef<Draft | null>(null);
+  const liftedRef = useRef<number | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
+  /** The clue of the patch in hand, which is drawn as part of the draft until it is put down. */
+  const [lifted, setLifted] = useState<number | null>(null);
   const [cursor, setCursor] = useState<number | null>(null);
   const [reject, setReject] = useState<{ key: number; cells: number[] } | null>(null);
 
@@ -124,6 +136,8 @@ export function Board({
   useEffect(() => {
     ownerRef.current = owner;
   }, [owner]);
+  /** Nothing is taken: a draft may run over patches, which it then replaces. */
+  const noOwner = useMemo(() => new Int16Array(n).fill(-1), [n]);
 
   // Patches that just arrived or left, worked out when the patches change (never stored anywhere that matters).
   const [seen, setSeen] = useState(patches);
@@ -151,21 +165,37 @@ export function Board({
     setWasCovered(covered);
     if (covered) {
       setDraft(null);
+      setLifted(null);
       setCursor(null);
     }
   }
 
-  // The ref follows the state after every render (it is also set at once by `updateDraft`, because a gesture can deliver several moves before React renders).
+  // The refs follow the state after every render (they are also set at once by the updaters below, because a gesture can deliver several moves before React renders).
   useEffect(() => {
     draftRef.current = draft;
   }, [draft]);
+  useEffect(() => {
+    liftedRef.current = lifted;
+  }, [lifted]);
 
   const updateDraft = (next: Draft | null) => {
     draftRef.current = next;
     setDraft(next);
   };
+  const updateLifted = (next: number | null) => {
+    liftedRef.current = next;
+    setLifted(next);
+  };
+  /** Puts the gesture down: no draft, nothing in hand. */
+  const clearGesture = () => {
+    updateDraft(null);
+    updateLifted(null);
+  };
 
   // ---- What is drawn --------------------------------------------------------
+
+  /** The board without the patch in hand. */
+  const base = useMemo(() => (lifted === null ? owner : ownerWithout(owner, [lifted])), [owner, lifted]);
 
   const enterDelay = useMemo(() => {
     const delays = new Map<number, number>();
@@ -186,9 +216,13 @@ export function Board({
 
   const shownDraft = covered ? null : draft;
   const cells = useMemo(() => (shownDraft ? draftCells(shownDraft, cols) : []), [shownDraft, cols]);
-  const check = useMemo(() => (shownDraft ? checkDraft(puzzle, owner, cells) : null), [shownDraft, puzzle, owner, cells]);
-  const draftState: "valid" | "neutral" | "blocked" = check?.ok ? "valid" : check?.reason === "overlap" ? "blocked" : "neutral";
+  /** The patches the draft would replace, and the draft's check once they are out of the way. */
+  const replaced = useMemo(() => overlappedClues(base, cells), [base, cells]);
+  const check = useMemo(() => (shownDraft ? checkDraft(puzzle, ownerWithout(base, replaced), cells) : null), [shownDraft, puzzle, base, replaced, cells]);
+  const draftState: "valid" | "neutral" = check?.ok ? "valid" : "neutral";
+  const draftColor = check?.clue != null ? colors[check.clue] : -1;
   const draftSet = useMemo(() => new Set(cells), [cells]);
+  const dimmed = useMemo(() => new Set(replaced), [replaced]);
   const countLabel = useMemo(() => {
     if (!shownDraft || !check) return null;
     const clue = check.clue !== null ? puzzle.clues[check.clue] : null;
@@ -200,7 +234,6 @@ export function Board({
   const deadCells = useMemo(() => new Set(dead?.cells ?? []), [dead]);
   const patchOf = useMemo(() => new Map(patches.map((p) => [p.clue, p])), [patches]);
   const at = clueAt(puzzle);
-  const selectedPatch = selected !== null ? (patchOf.get(selected) ?? null) : null;
 
   // ---- Pointer ----------------------------------------------------------------
 
@@ -211,25 +244,49 @@ export function Board({
     return { left: box.left, top: box.top, width: box.width, height: box.height, rows, cols };
   };
 
+  /** What the game will make of these cells, given the patch in hand and the ones they would replace. */
+  const checkNow = (drawn: readonly number[]): DraftCheck => {
+    const free = liftedRef.current === null ? ownerRef.current : ownerWithout(ownerRef.current, [liftedRef.current]);
+    return checkDraft(puzzle, ownerWithout(free, overlappedClues(free, drawn)), drawn);
+  };
+
+  const offer = (drawn: number[]) => {
+    const refused = onCommit(drawn);
+    if (refused) setReject({ key: Date.now(), cells: drawn });
+  };
+
   /** Lets go of the gesture: the draft is offered to the game (commit) or thrown away. */
   const finish = (commit: boolean) => {
     const gesture = press.current;
-    press.current = null;
     const current = draftRef.current;
-    updateDraft(null);
-    if (!commit || !current || !gesture || gesture.kind !== "draw") return;
+    const heldClue = liftedRef.current;
+    press.current = null;
+    clearGesture();
+    if (!commit || !current || !gesture) return;
     const drawn = draftCells(current, cols);
+
+    if (gesture.kind === "grab") {
+      // Let go without moving: the patch is erased. Let go after moving: the new shape replaces it (if it is valid).
+      if (gesture.travelled < TAP_SLOP) {
+        if (heldClue !== null) onRemove(heldClue);
+        return;
+      }
+      const held = heldClue !== null ? patchOf.get(heldClue) : undefined;
+      if (held && sameCells(held.cells, drawn)) return;
+      offer(drawn);
+      return;
+    }
+
     if (drawn.length === 1) {
       // A single cell is only a patch when the clue says one cell, or the pointer clearly drew it; a stray tap is not.
-      const only = checkDraft(puzzle, ownerRef.current, drawn);
+      const only = checkNow(drawn);
       const sure = only.ok && only.clue !== null && puzzle.clues[only.clue].area === 1;
       if (!sure && gesture.travelled < TAP_SLOP) {
         onNotice("Drag from one corner of the patch to the opposite corner. For a freeform clue, drag across the cells it should take.");
         return;
       }
     }
-    const refused = onCommit(drawn);
-    if (refused) setReject({ key: Date.now(), cells: drawn });
+    offer(drawn);
   };
 
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
@@ -241,12 +298,16 @@ export function Board({
     setCursor(null);
     const point: [number, number] = [event.clientX, event.clientY];
     const taken = ownerRef.current[cell];
-    if (taken >= 0) {
-      press.current = { pointerId: event.pointerId, kind: "tap", clue: taken, last: point, from: point, travelled: 0 };
+    const held = taken >= 0 ? patchOf.get(taken) : undefined;
+    if (held) {
+      // A patch is picked up where it was pressed.
+      press.current = { pointerId: event.pointerId, kind: "grab", clue: taken, last: point, from: point, travelled: 0 };
+      updateLifted(taken);
+      updateDraft(grabPatch(puzzle, held, cell));
       return;
     }
     press.current = { pointerId: event.pointerId, kind: "draw", clue: -1, last: point, from: point, travelled: 0 };
-    updateDraft(beginDraft(puzzle, ownerRef.current, cell));
+    updateDraft(beginDraft(puzzle, noOwner, cell));
   };
 
   const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
@@ -263,12 +324,13 @@ export function Board({
     for (const point of points) {
       s.travelled = Math.max(s.travelled, Math.hypot(point[0] - s.from[0], point[1] - s.from[1]));
       let d = draftRef.current;
-      if (s.kind === "draw" && d) {
+      // A grab only starts to change the shape once the pointer has clearly moved, so a tap does not nudge it.
+      if (d && (s.kind === "draw" || s.travelled >= TAP_SLOP)) {
         if (d.mode === "rect") {
           const cell = pointToCell(r, point[0], point[1], 1);
-          if (cell !== null) d = extendDraft(d, ownerRef.current, cell);
+          if (cell !== null) d = extendDraft(d, noOwner, cell);
         } else {
-          for (const cell of cellsAlong(r, s.last, point)) d = extendDraft(d, ownerRef.current, cell);
+          for (const cell of cellsAlong(r, s.last, point)) d = extendDraft(d, noOwner, cell);
         }
         if (d !== draftRef.current) updateDraft(d);
       }
@@ -281,21 +343,13 @@ export function Board({
     if (!s || s.pointerId !== event.pointerId) return;
     if (covered) {
       press.current = null;
-      updateDraft(null);
-      return;
-    }
-    if (s.kind === "tap") {
-      press.current = null;
-      // Let go over the same patch it was pressed on, without dragging away: select it (again: deselect).
-      const r = rect();
-      const cell = r ? pointToCell(r, event.clientX, event.clientY, 1) : null;
-      if (s.travelled < TAP_SLOP * 2 && cell !== null && ownerRef.current[cell] === s.clue) onSelect(selected === s.clue ? null : s.clue);
+      clearGesture();
       return;
     }
     finish(true);
   };
 
-  /** The pointer was taken away (a system gesture, a lost capture): nothing is placed. */
+  /** The pointer was taken away (a system gesture, a lost capture): nothing is placed, and a patch in hand stays as it was. */
   const onCancel = () => {
     if (press.current) finish(false);
   };
@@ -321,7 +375,7 @@ export function Board({
       const next = r * cols + c;
       setCursor(next);
       const d = draftRef.current;
-      if (d) updateDraft(extendDraft(d, ownerRef.current, next));
+      if (d) updateDraft(extendDraft(d, noOwner, next));
       return;
     }
     if (key === "Enter" || key === " ") {
@@ -332,30 +386,25 @@ export function Board({
       if (d) {
         const drawn = draftCells(d, cols);
         updateDraft(null);
-        const refused = onCommit(drawn);
-        if (refused) setReject({ key: Date.now(), cells: drawn });
+        offer(drawn);
       } else if (ownerRef.current[here] >= 0) {
-        const clue = ownerRef.current[here];
-        onSelect(selected === clue ? null : clue);
+        // Enter on a patch erases it, as a tap does.
+        onRemove(ownerRef.current[here]);
       } else {
-        updateDraft(beginDraft(puzzle, ownerRef.current, here));
+        updateDraft(beginDraft(puzzle, noOwner, here));
       }
       return;
     }
     if (key === "Escape") {
-      if (draftRef.current || selected !== null) {
+      if (draftRef.current) {
         stop();
         updateDraft(null);
-        onSelect(null);
       }
       return;
     }
-    if (key === "Delete" || key === "Backspace") {
-      const target = selected ?? (cursor !== null && ownerRef.current[cursor] >= 0 ? ownerRef.current[cursor] : null);
-      if (target !== null) {
-        stop();
-        onRemove(target);
-      }
+    if ((key === "Delete" || key === "Backspace") && cursor !== null && ownerRef.current[cursor] >= 0) {
+      stop();
+      onRemove(ownerRef.current[cursor]);
     }
   };
 
@@ -367,11 +416,11 @@ export function Board({
   const spoken =
     cursor === null
       ? ""
-      : `${placeName(cursor, cols)}. ${at[cursor] >= 0 ? `Clue: ${describeClue(puzzle.clues[at[cursor]])}.` : owner[cursor] >= 0 ? "In a patch." : "Empty."}${shownDraft ? ` Drawing, ${cells.length} ${cells.length === 1 ? "cell" : "cells"}.` : ""}`;
+      : `${placeName(cursor, cols)}. ${at[cursor] >= 0 ? `Clue: ${describeClue(puzzle.clues[at[cursor]])}.` : owner[cursor] >= 0 ? "In a patch. Enter erases it." : "Empty."}${shownDraft ? ` Drawing, ${cells.length} ${cells.length === 1 ? "cell" : "cells"}.` : ""}`;
   const head = shownDraft ? shownDraft.head : -1;
 
   return (
-    <div className="pt-board" data-covered={covered ? "true" : undefined} data-won={won ? "true" : undefined} data-soft={soft ? "true" : undefined} style={style}>
+    <div className="pt-board" data-covered={covered ? "true" : undefined} data-won={won ? "true" : undefined} data-soft={soft ? "true" : undefined} data-holding={lifted !== null ? "true" : undefined} style={style}>
       <div
         ref={ref}
         role="group"
@@ -387,24 +436,27 @@ export function Board({
         onKeyDown={onKeyDown}
         onBlur={() => {
           setCursor(null);
-          if (draftRef.current && !press.current) updateDraft(null);
+          if (draftRef.current && !press.current) clearGesture();
         }}
         onContextMenu={(e) => e.preventDefault()}
       >
         {Array.from({ length: n }, (_, i) => {
           const clueIndex = at[i];
-          const owned = owner[i];
+          const owned = base[i];
           return (
             <Cell
               key={i}
               color={owned >= 0 ? colors[owned] : -1}
               enter={enterDelay.cells.has(i) ? enterDelay.cells.get(i)! : null}
               clue={clueIndex >= 0 ? puzzle.clues[clueIndex] : null}
-              placed={clueIndex >= 0 && patchOf.has(clueIndex)}
+              clueColor={clueIndex >= 0 ? colors[clueIndex] : -1}
+              placed={clueIndex >= 0 && patchOf.has(clueIndex) && clueIndex !== lifted}
               dead={clueIndex >= 0 ? deadClues.has(clueIndex) : deadCells.has(i)}
               hinted={hintCells.has(i)}
               cursor={cursor === i}
               draft={shownDraft && draftSet.has(i) ? draftState : null}
+              draftColor={draftColor}
+              dim={shownDraft !== null && owned >= 0 && dimmed.has(owned)}
               count={i === head ? countLabel : null}
               clueEnter={clueIndex >= 0 && enterDelay.clues.has(clueIndex) ? enterDelay.clues.get(clueIndex)! : null}
               wave={won ? ((Math.floor(i / cols) + (i % cols)) * WIN_WAVE_MS) / (rows + cols) : null}
@@ -420,14 +472,15 @@ export function Board({
             </pattern>
           </defs>
           {(dead?.cells ?? []).length > 0 && <path d={cellsPath(dead!.cells, cols)} fill={`url(#${patternId}-dead)`} className="pt-dead" />}
-          {patches.map((p) => (
-            <path key={`${p.clue}:${p.cells[0]}`} className="pt-line" d={outlinePath(p.cells, cols)} data-enter={enterDelay.clues.has(p.clue) ? "" : undefined} style={{ "--ld": `${lineDelay}ms` } as CSSProperties} />
-          ))}
+          {patches
+            .filter((p) => p.clue !== lifted)
+            .map((p) => (
+              <path key={`${p.clue}:${p.cells[0]}`} className="pt-line" d={outlinePath(p.cells, cols)} data-enter={enterDelay.clues.has(p.clue) ? "" : undefined} style={{ "--ld": `${lineDelay}ms` } as CSSProperties} />
+            ))}
           {leaving.map((p) => (
             <path key={`gone:${p.clue}:${p.cells[0]}`} className="pt-line" data-leaving="" d={outlinePath(p.cells, cols)} />
           ))}
-          {selectedPatch && <path className="pt-selected" d={outlinePath(selectedPatch.cells, cols)} />}
-          {shownDraft && cells.length > 0 && <path className="pt-draft-line" data-state={draftState} d={outlinePath(cells, cols)} />}
+          {shownDraft && cells.length > 0 && <path className="pt-draft-line" data-state={draftState} data-c={draftColor >= 0 ? draftColor : undefined} d={outlinePath(cells, cols)} />}
           {reject && (
             <g key={reject.key} className="pt-reject">
               <path className="pt-reject-fill" d={cellsPath(reject.cells, cols)} />

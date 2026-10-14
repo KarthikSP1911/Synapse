@@ -1,6 +1,6 @@
 import { clueAt } from "./rules";
-import { rectangleBetween } from "./shapes";
-import type { PatchesPuzzle } from "./types";
+import { boundingBox, isRectangle, rectangleBetween } from "./shapes";
+import type { Patch, PatchesPuzzle } from "./types";
 
 /**
  * Drawing a patch, as a small state machine on plain data. The board component turns pointer and key events into
@@ -36,6 +36,25 @@ export function extendDraft(draft: Draft, owner: Int16Array, cell: number): Draf
   if (owner[cell] >= 0) return draft;
   if (draft.cells.includes(cell)) return draft.head === cell ? draft : { ...draft, head: cell };
   return { mode: "free", cells: [...draft.cells, cell], head: cell };
+}
+
+/**
+ * Picks a patch up to adjust it. A rectangle is held by the corner nearest to the pressed cell: the draft starts as
+ * the very same rectangle and that corner follows the pointer, with the opposite corner fixed. Any other shape
+ * (freeform) is held as it is, and what is painted next is added to it.
+ */
+export function grabPatch(puzzle: PatchesPuzzle, patch: Patch, pressed: number): Draft {
+  const { cols } = puzzle;
+  if (!isRectangle(patch.cells, cols)) return { mode: "free", cells: [...patch.cells], head: pressed };
+  const box = boundingBox(patch.cells, cols);
+  const row = Math.floor(pressed / cols);
+  const col = pressed % cols;
+  // Nearer to the top half or the bottom half, the left half or the right half (the middle counts as the far side).
+  const bottom = row - box.r0 >= box.r1 - row;
+  const right = col - box.c0 >= box.c1 - col;
+  const head = (bottom ? box.r1 : box.r0) * cols + (right ? box.c1 : box.c0);
+  const anchor = (bottom ? box.r0 : box.r1) * cols + (right ? box.c0 : box.c1);
+  return { mode: "rect", anchor, head };
 }
 
 /** The cells a draft covers, in index order. */

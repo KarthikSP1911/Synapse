@@ -1264,29 +1264,44 @@ html.play-focus body {
 .pt-board {
   --pt-ink: #1c1c22;
   --pt-line: #1c1c22;
-  --pt-c0: #f6a6a6;
-  --pt-c1: #fbc18a;
-  --pt-c2: #f3df7a;
-  --pt-c3: #a6dfa0;
-  --pt-c4: #8adbd0;
-  --pt-c5: #9bbff2;
-  --pt-c6: #c1aef2;
-  --pt-c7: #f2aed4;
-  --pt-sel: color-mix(in oklab, var(--pt) 55%, #000);
+  /* Every clue has its own colour: a strong one for its symbol and solid badge (`--pt-sN`, with the ink that reads on it
+     `--pt-iN`), and a softer fill of the same hue for its patch (`--pt-cN`). */
+  --pt-s0: #d32f2f; --pt-i0: #fff;
+  --pt-s1: #e65100; --pt-i1: #fff;
+  --pt-s2: #f9a825; --pt-i2: #1c1c22;
+  --pt-s3: #2e7d32; --pt-i3: #fff;
+  --pt-s4: #00838f; --pt-i4: #fff;
+  --pt-s5: #1565c0; --pt-i5: #fff;
+  --pt-s6: #7b1fa2; --pt-i6: #fff;
+  --pt-s7: #c2185b; --pt-i7: #fff;
+  --pt-fill-mix: 46%;
   container-type: inline-size;
 }
 .dark .pt-board {
   --pt-ink: #f4f4f6;
   --pt-line: #f4f4f6;
-  --pt-c0: #8a3535;
-  --pt-c1: #8a5320;
-  --pt-c2: #766a1c;
-  --pt-c3: #2f7440;
-  --pt-c4: #1f716c;
-  --pt-c5: #2b5a9e;
-  --pt-c6: #5845a0;
-  --pt-c7: #8a3a6c;
-  --pt-sel: var(--pt);
+  --pt-s0: #ff6b6b; --pt-i0: #14141a;
+  --pt-s1: #ffa14a; --pt-i1: #14141a;
+  --pt-s2: #ffd54a; --pt-i2: #14141a;
+  --pt-s3: #6bd36f; --pt-i3: #14141a;
+  --pt-s4: #3dd6e0; --pt-i4: #14141a;
+  --pt-s5: #64b5f6; --pt-i5: #14141a;
+  --pt-s6: #c58cff; --pt-i6: #14141a;
+  --pt-s7: #ff7eb6; --pt-i7: #14141a;
+  --pt-fill-mix: 52%;
+}
+.pt-board {
+  --pt-c0: color-mix(in oklab, var(--pt-s0) var(--pt-fill-mix), var(--card));
+  --pt-c1: color-mix(in oklab, var(--pt-s1) var(--pt-fill-mix), var(--card));
+  --pt-c2: color-mix(in oklab, var(--pt-s2) var(--pt-fill-mix), var(--card));
+  --pt-c3: color-mix(in oklab, var(--pt-s3) var(--pt-fill-mix), var(--card));
+  --pt-c4: color-mix(in oklab, var(--pt-s4) var(--pt-fill-mix), var(--card));
+  --pt-c5: color-mix(in oklab, var(--pt-s5) var(--pt-fill-mix), var(--card));
+  --pt-c6: color-mix(in oklab, var(--pt-s6) var(--pt-fill-mix), var(--card));
+  --pt-c7: color-mix(in oklab, var(--pt-s7) var(--pt-fill-mix), var(--card));
+}
+.pt-board[data-holding="true"] .pt-grid {
+  cursor: grabbing;
 }
 .pt-board[data-covered="true"] .pt-grid {
   filter: blur(14px);
@@ -1349,6 +1364,11 @@ html.play-focus body {
 .pt-fill[data-c="5"] { background: var(--pt-c5); }
 .pt-fill[data-c="6"] { background: var(--pt-c6); }
 .pt-fill[data-c="7"] { background: var(--pt-c7); }
+/* A patch the draft would replace is dimmed, and marked by its hatching so it is not told by colour alone. */
+.pt-fill[data-c][data-dim="true"] {
+  opacity: 0.35;
+  background-image: repeating-linear-gradient(135deg, transparent 0 0.35em, color-mix(in oklab, var(--pt-line) 35%, transparent) 0.35em 0.5em);
+}
 /* A patch settles into place: its cells fill in outwards from the clue (`--d`), then its outline draws in. */
 .pt-fill[data-enter] {
   animation: pt-fill-in 300ms cubic-bezier(0.2, 0.8, 0.2, 1) var(--d, 0ms) backwards;
@@ -1364,9 +1384,17 @@ html.play-focus body {
 .pt-draft {
   animation: pt-draft-in 90ms ease-out both;
 }
-.pt-draft[data-state="valid"] { background: color-mix(in oklab, var(--pt) 42%, transparent); }
-.pt-draft[data-state="neutral"] { background: color-mix(in oklab, var(--foreground) 16%, transparent); }
-.pt-draft[data-state="blocked"] { background: color-mix(in oklab, var(--destructive) 30%, transparent); }
+.pt-draft[data-c="0"], .pt-draft-line[data-c="0"] { --dc: var(--pt-s0); }
+.pt-draft[data-c="1"], .pt-draft-line[data-c="1"] { --dc: var(--pt-s1); }
+.pt-draft[data-c="2"], .pt-draft-line[data-c="2"] { --dc: var(--pt-s2); }
+.pt-draft[data-c="3"], .pt-draft-line[data-c="3"] { --dc: var(--pt-s3); }
+.pt-draft[data-c="4"], .pt-draft-line[data-c="4"] { --dc: var(--pt-s4); }
+.pt-draft[data-c="5"], .pt-draft-line[data-c="5"] { --dc: var(--pt-s5); }
+.pt-draft[data-c="6"], .pt-draft-line[data-c="6"] { --dc: var(--pt-s6); }
+.pt-draft[data-c="7"], .pt-draft-line[data-c="7"] { --dc: var(--pt-s7); }
+/* Solid when the patch would be accepted, lighter while it is not right yet (or has no clue in it). */
+.pt-draft[data-state="valid"] { background: color-mix(in oklab, var(--dc, var(--pt)) 62%, transparent); }
+.pt-draft[data-state="neutral"] { background: color-mix(in oklab, var(--dc, var(--foreground)) 26%, transparent); }
 @keyframes pt-draft-in {
   from { opacity: 0; transform: scale(0.8); }
 }
@@ -1425,7 +1453,7 @@ html.play-focus body {
 .pt-line {
   fill: none;
   stroke: var(--pt-line);
-  stroke-width: 0.075;
+  stroke-width: 0.06;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
@@ -1441,14 +1469,6 @@ html.play-focus body {
 @keyframes pt-line-out {
   to { opacity: 0; }
 }
-.pt-selected {
-  fill: none;
-  stroke: var(--pt-sel);
-  stroke-width: 0.15;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-dasharray: 0.32 0.16;
-}
 .pt-draft-line {
   fill: none;
   stroke-width: 0.1;
@@ -1456,9 +1476,8 @@ html.play-focus body {
   stroke-dasharray: 0.22 0.14;
   transition: stroke 120ms ease;
 }
-.pt-draft-line[data-state="valid"] { stroke: var(--pt-sel); }
-.pt-draft-line[data-state="neutral"] { stroke: var(--muted-foreground); }
-.pt-draft-line[data-state="blocked"] { stroke: var(--destructive); }
+.pt-draft-line[data-state="valid"] { stroke: var(--dc, var(--pt-line)); stroke-width: 0.13; }
+.pt-draft-line[data-state="neutral"] { stroke: var(--dc, var(--muted-foreground)); }
 /* A refused patch flashes red, shakes a little and is gone, leaving the board as it was. */
 .pt-reject {
   animation: pt-shake 380ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
@@ -1496,22 +1515,32 @@ html.play-focus body {
   width: 78%;
   height: 78%;
   border-radius: 22%;
-  border: max(1.5px, calc(4cqw / var(--ptn))) solid var(--pt-ink);
+  border: max(1.5px, calc(4cqw / var(--ptn))) solid var(--cc, var(--pt-ink));
   background: var(--card);
-  color: var(--pt-ink);
+  color: var(--cc, var(--pt-ink));
   font-weight: 700;
   line-height: 1;
   font-variant-numeric: tabular-nums;
   pointer-events: none;
   transition: background-color 160ms ease, color 160ms ease;
 }
+.pt-clue[data-c="0"] { --cc: var(--pt-s0); --ci: var(--pt-i0); }
+.pt-clue[data-c="1"] { --cc: var(--pt-s1); --ci: var(--pt-i1); }
+.pt-clue[data-c="2"] { --cc: var(--pt-s2); --ci: var(--pt-i2); }
+.pt-clue[data-c="3"] { --cc: var(--pt-s3); --ci: var(--pt-i3); }
+.pt-clue[data-c="4"] { --cc: var(--pt-s4); --ci: var(--pt-i4); }
+.pt-clue[data-c="5"] { --cc: var(--pt-s5); --ci: var(--pt-i5); }
+.pt-clue[data-c="6"] { --cc: var(--pt-s6); --ci: var(--pt-i6); }
+.pt-clue[data-c="7"] { --cc: var(--pt-s7); --ci: var(--pt-i7); }
 .pt-clue[data-placed="true"] {
-  background: var(--pt-ink);
-  color: var(--card);
+  background: var(--cc, var(--pt-ink));
+  color: var(--ci, var(--card));
 }
 .pt-clue[data-conflict="true"] {
   border-style: dashed;
   border-color: var(--destructive);
+  background: var(--card);
+  color: var(--cc, var(--pt-ink));
 }
 .pt-clue[data-conflict="true"]::after {
   content: "!";

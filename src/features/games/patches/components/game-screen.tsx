@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, CheckCheck, Ellipsis, Eraser, Pause, Play, Redo2, RotateCcw, Sparkles, Trash2, Undo2 } from "lucide-react";
+import { ArrowLeft, CheckCheck, Ellipsis, Eraser, Pause, Play, Redo2, RotateCcw, Sparkles, Undo2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Chip, Switch } from "@/components/form/choice-controls";
@@ -96,14 +96,13 @@ export function AssistanceSwitches({ settings, onChange }: { settings: PatchesSe
   );
 }
 
-const HELP = "Drag across the board to draw a patch that holds exactly one clue and matches it. A number is the area; a symbol is the shape (square, wide, tall, or freeform: drag across its cells). A plain dot says nothing: any rectangle. Tap a patch to select it.";
+const HELP = "Drag across the board to draw a patch that holds exactly one clue and matches it. A number is the area; a symbol is the shape (square, wide, tall, or freeform: drag across its cells); a plain dot says nothing: any rectangle. Each clue has its own colour, and its patch is filled with it. Drag from the edge of a patch to resize it, draw over a patch to replace it, tap a patch to erase it.";
 
 export function GameScreen({ initial, settings, onSettingsChange, onChange, onEnd, onLeave, onAbandon }: PlayScreenProps<GameState, PatchesSettings>) {
   const [game, setGame] = useState(initial);
   const [dialog, setDialog] = useState<Dialog>(null);
   const [more, setMore] = useState(false);
   const [notice, setNotice] = useState("");
-  const [selected, setSelected] = useState<number | null>(null);
   const [soft, setSoft] = useState(false);
   /** The patches on the board when Check was pressed, so what it found is shown until the board changes. */
   const [checked, setChecked] = useState<{ patches: GameState["patches"]; marks: Conflicts } | null>(null);
@@ -183,26 +182,16 @@ export function GameScreen({ initial, settings, onSettingsChange, onChange, onEn
         latest.current = result.state;
         setGame(result.state);
         setSoft(false);
-        setSelected(null);
         setNotice("");
       }
       return null;
     },
     []
   );
-  const remove = useCallback(
-    (clue: number) => {
-      update((g) => removePatch(g, clue, Date.now()), true);
-      setSelected(null);
-    },
-    [update]
-  );
+  const remove = useCallback((clue: number) => update((g) => removePatch(g, clue, Date.now()), true), [update]);
   const doUndo = useCallback(() => update((g) => undo(g), true), [update]);
   const doRedo = useCallback(() => update((g) => redo(g), true), [update]);
-  const doReset = useCallback(() => {
-    update((g) => resetPatches(g, Date.now()), true);
-    setSelected(null);
-  }, [update]);
+  const doReset = useCallback(() => update((g) => resetPatches(g, Date.now()), true), [update]);
   const requestPaid = paid.request;
   /**
    * The hint is worked out first without changing anything; if there is none to give, nothing is charged and no cooldown
@@ -224,7 +213,6 @@ export function GameScreen({ initial, settings, onSettingsChange, onChange, onEn
 
   // ---- Keyboard ------------------------------------------------------------------
 
-  const selectedClue = selected !== null && game.patches.some((p) => p.clue === selected) ? selected : null;
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (dialog !== null || more || isTextEntry(event.target)) return;
@@ -239,14 +227,12 @@ export function GameScreen({ initial, settings, onSettingsChange, onChange, onEn
       if (event.altKey || event.ctrlKey || event.metaKey || !playing) return;
       if (lower === "h") hint();
       else if (lower === "c") doCheck();
-      else if ((event.key === "Delete" || event.key === "Backspace") && selectedClue !== null) remove(selectedClue);
-      else if (event.key === "Escape" && selectedClue !== null) setSelected(null);
       else return;
       event.preventDefault();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [dialog, more, playing, selectedClue, doUndo, doRedo, hint, doCheck, remove]);
+  }, [dialog, more, playing, doUndo, doRedo, hint, doCheck]);
 
   // ---- What to show -------------------------------------------------------------------
 
@@ -327,14 +313,12 @@ export function GameScreen({ initial, settings, onSettingsChange, onChange, onEn
                 puzzle={puzzle}
                 patches={game.patches}
                 colors={colors}
-                selected={selectedClue}
                 hint={game.hint}
                 dead={shownMarks}
                 covered={paused}
                 won={finished}
                 soft={soft}
                 onCommit={commit}
-                onSelect={setSelected}
                 onRemove={remove}
                 onNotice={setNotice}
               />
@@ -354,7 +338,7 @@ export function GameScreen({ initial, settings, onSettingsChange, onChange, onEn
         </section>
 
         <aside aria-label="Controls" className="min-w-0 space-y-2 lg:space-y-3">
-          <div className="sdk-side grid grid-cols-5 gap-2">
+          <div className="sdk-side grid grid-cols-4 gap-2">
             <button type="button" className={toolButton} onClick={doUndo} disabled={!playing || game.undoStack.length === 0} aria-label="Undo">
               <Undo2 className="size-5" aria-hidden />
               Undo
@@ -364,10 +348,6 @@ export function GameScreen({ initial, settings, onSettingsChange, onChange, onEn
               Redo
             </button>
             <HintToolButton hint={paid} onClick={hint} disabled={!playing} />
-            <button type="button" className={toolButton} onClick={() => selectedClue !== null && remove(selectedClue)} disabled={!playing || selectedClue === null} aria-label="Remove selected patch">
-              <Trash2 className="size-5" aria-hidden />
-              Remove
-            </button>
             <button type="button" className={toolButton} onClick={doCheck} disabled={!playing} aria-label="Check the board">
               <CheckCheck className="size-5" aria-hidden />
               Check
@@ -387,7 +367,7 @@ export function GameScreen({ initial, settings, onSettingsChange, onChange, onEn
               </div>
             </details>
 
-            <p className="text-xs text-muted-foreground">{HELP} Keys: arrows move · Enter starts and places · Esc cancels · Delete removes · H hint · C check · Ctrl+Z undo · Ctrl+Y redo</p>
+            <p className="text-xs text-muted-foreground">{HELP} Keys: arrows move · Enter starts, places or erases · Esc cancels · Delete erases · H hint · C check · Ctrl+Z undo · Ctrl+Y redo</p>
           </div>
         </aside>
       </div>
@@ -412,7 +392,6 @@ export function GameScreen({ initial, settings, onSettingsChange, onChange, onEn
           onCancel={() => setDialog(null)}
           onConfirm={() => {
             update((g) => restartGame(g, Date.now()), true);
-            setSelected(null);
             setDialog(null);
           }}
         />

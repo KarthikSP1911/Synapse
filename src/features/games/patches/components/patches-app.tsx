@@ -41,7 +41,7 @@ const kit: PuzzleKit<GameState, PatchesSettings, SessionData> = {
     <>
       <p>Divide the whole grid into patches. Every cell belongs to exactly one patch, and every patch holds exactly one clue.</p>
       <p>A number is the patch&apos;s area. A symbol is its shape: a square, a wide rectangle, a tall rectangle, or a freeform shape of any outline (drag across its cells). A clue with only a dot says nothing, so its patch is any rectangle.</p>
-      <p>Drag from one corner of a patch to the opposite one. Tap a patch to select and remove it; Undo, Redo and Reset never touch the puzzle itself.</p>
+      <p>Drag from one corner of a patch to the opposite one; the patch fills with the colour of its clue as you go. Drag from the edge of a patch to resize it, draw over a patch to replace it, or tap a patch to erase it. Undo takes any of that back.</p>
     </>
   ),
 };
