@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { DIFFICULTIES, DIFFICULTY_LABEL, formatTime, type Difficulty } from "@/features/games/shared/lib/puzzle-session";
 import type { PuzzleRecord, PuzzleStats } from "@/features/games/shared/lib/puzzle-stats";
 
-/** Figures for one difficulty at a time, with a short list of the latest games across all of them. Shared by Queens and Zip. */
+/** Figures for one difficulty at a time, with a short list of the latest games across all of them. Shared by Queens, Zip and Patches. */
 export function PuzzleStatsPanel<T extends PuzzleRecord>({
   stats,
   initialDifficulty,

@@ -25,7 +25,7 @@ const TABS = [
 ] as const;
 
 /**
- * The shell of a puzzle game (Queens, Zip): setup, playing, result and the stats tab, plus saving, resuming and
+ * The shell of a puzzle game (Queens, Zip, Patches): setup, playing, result and the stats tab, plus saving, resuming and
  * uploading. The game itself comes in as a `PuzzleKit`. Opening the page changes nothing: a game is only saved
  * to history when it ends or is given up after being touched.
  */
@@ -136,7 +136,7 @@ export default function PuzzleApp<G extends PuzzleGame, S, D extends PuzzleRecor
       // Let the "Building puzzle" label paint before the (short) search blocks the page.
       setTimeout(() => {
         try {
-          const created = kit.newGame(level, newClientId(), Date.now());
+          const created = kit.newGame(level, newClientId(), Date.now(), settings);
           if (store) storage.saveGame(store, kit.freeze(created, Date.now()));
           setSaved(null);
           setGame(created);
@@ -150,7 +150,7 @@ export default function PuzzleApp<G extends PuzzleGame, S, D extends PuzzleRecor
         }
       }, 30);
     },
-    [store, kit, storage]
+    [store, kit, storage, settings]
   );
 
   const start = useCallback(() => {
@@ -316,7 +316,7 @@ export default function PuzzleApp<G extends PuzzleGame, S, D extends PuzzleRecor
           difficulty={difficulty}
           onDifficulty={changeDifficulty}
           descriptions={kit.difficultyDescription}
-          boardLabel={kit.boardLabel}
+          boardLabel={typeof kit.boardLabel === "function" ? kit.boardLabel(settings) : kit.boardLabel}
           bestTimes={bestTimes}
           saved={saved ? { difficulty: saved.difficulty, playedMs: elapsedAt(saved, 0), progress: kit.progressLabel(saved) } : null}
           assistance={<Assistance settings={settings} onChange={changeSettings} />}

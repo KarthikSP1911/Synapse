@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ACCENT, type AccentId } from "@/lib/accent";
 import { DIFFICULTIES, DIFFICULTY_LABEL, formatTime, type Difficulty } from "@/features/games/shared/lib/puzzle-session";
 
-/** The setup screen of Queens and Zip: pick a difficulty, adjust assistance, start a new game or resume the unfinished one. */
+/** The setup screen of Queens, Zip and Patches: pick a difficulty, adjust assistance, start a new game or resume the unfinished one. */
 export function PuzzleSetup({
   accent,
   idPrefix,

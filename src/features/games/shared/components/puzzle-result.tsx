@@ -10,7 +10,7 @@ import type { PuzzleRecord } from "@/features/games/shared/lib/puzzle-stats";
 import type { AccentId } from "@/lib/accent";
 import { cn } from "@/lib/utils";
 
-/** The end-of-game screen for Queens and Zip: what happened, how the points add up, and where to go next. */
+/** The end-of-game screen for Queens, Zip and Patches: what happened, how the points add up, and where to go next. */
 export function PuzzleResultScreen({
   accent,
   name,

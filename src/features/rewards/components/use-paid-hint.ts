@@ -93,4 +93,4 @@ export function usePaidHint({ chargeScope, cooldownScope }: { chargeScope: strin
 }
 
 /** The scope strings for a puzzle attempt. Restarting gives the game a new start time, so a restarted puzzle is a new attempt that pays for its own hints. */
-export const puzzleHintScope = (game: "queens" | "zip" | "sudoku", state: { clientId: string; startedAt: number }): string => `${game}:${state.clientId}:${state.startedAt}`;
+export const puzzleHintScope = (game: "queens" | "zip" | "sudoku" | "patches", state: { clientId: string; startedAt: number }): string => `${game}:${state.clientId}:${state.startedAt}`;

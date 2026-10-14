@@ -53,7 +53,7 @@ describe("skill routes", () => {
   it("lists every game page in the service worker and the offline warm-up", () => {
     const worker = readFileSync(join(process.cwd(), "public", "sw.js"), "utf8");
     const client = readFileSync(join(process.cwd(), "src", "features", "offline", "lib", "sw-client.ts"), "utf8");
-    for (const game of ["mindsprint", "recall", "sudoku", "2048", "queens", "zip"]) {
+    for (const game of ["mindsprint", "recall", "sudoku", "2048", "queens", "zip", "patches"]) {
       assert.ok(worker.includes(`"/games/${game}"`), `sw.js is missing /games/${game}`);
       assert.ok(client.includes(`"/games/${game}"`), `sw-client.ts does not warm /games/${game}`);
     }

@@ -24,9 +24,10 @@ export const countsAsAnswer = (outcome: string): boolean => outcome === "correct
 /** A Sudoku counts when the puzzle was solved. A revealed solution or an abandoned game does not. */
 export const sudokuCounts = (session: { completed: boolean }): boolean => session.completed;
 
-/** A Queens or Zip puzzle counts when it was solved. An abandoned game does not, and opening the game never does. */
+/** A Queens, Zip or Patches puzzle counts when it was solved. An abandoned game does not, and opening the game never does. */
 export const queensCounts = (session: { completed: boolean }): boolean => session.completed;
 export const zipCounts = (session: { completed: boolean }): boolean => session.completed;
+export const patchesCounts = (session: { completed: boolean }): boolean => session.completed;
 
 export const game2048Counts =(session: { gameOver: boolean; reached2048: boolean; moves: number }): boolean =>
   session.gameOver || session.reached2048 || session.moves >= MIN_2048_MOVES;

@@ -45,12 +45,12 @@ features/
     lib/practice/           session rules: selection, spaced repetition, item stats, request validation
     server/                 attempts.ts, mistakes.ts (DB access)
   games/
-    mindsprint/ recall/ sudoku/ game2048/ queens/ zip/
+    mindsprint/ recall/ sudoku/ game2048/ queens/ zip/ patches/
                             each: components/ (setup, game, result screens, stats panel, app shell)
                                   lib/ (engine, config, scoring, records.ts, storage.ts, sync.ts, types.ts)
     shared/                 what every game reuses
       components/result-parts.tsx   SaveState, SaveStatus, RecordBanner, ResultActions
-      components/puzzle-*.tsx       the shell Queens and Zip share: setup, results, stats tab, resume and save
+      components/puzzle-*.tsx       the shell Queens, Zip and Patches share: setup, results, stats tab, resume and save
                                     (puzzle-app.tsx takes a PuzzleKit from puzzle-kit.ts)
       lib/format.ts                 formatSeconds, formatApproxDuration
       lib/clock.ts, puzzle-session.ts, puzzle-stats.ts, board-geometry.ts, shuffle.ts   puzzle-game basics
@@ -116,7 +116,7 @@ A streak is the run of consecutive calendar days (in the user's own time zone) o
 of it is a **set of `YYYY-MM-DD` days**; `features/progress/lib/streak.ts` turns a set into current and longest.
 
 - **What counts** (`streak.ts`, mirrored in SQL by `getActivityDays`): an answered practice question (right or wrong,
-  not skipped or timed out), a finished MindSprint or Number Recall session, a solved Sudoku, Queens or Zip puzzle, a 2048
+  not skipped or timed out), a finished MindSprint or Number Recall session, a solved Sudoku, Queens, Zip or Patches puzzle, a 2048
   game that ended, reached 2048 or had 20+ moves. Opening a page or starting a game records nothing.
 - **Signed in**: the server derives every day, all-time, from the existing tables with one `UNION` query bucketed in
   `users.timezone` (no new table or migration). The profile adds the days of the device's offline copy
@@ -158,6 +158,8 @@ One ledger, two homes. A **ledger entry** has a unique idempotency key, a signed
 
 ## Queens and Zip
 
+(Patches, below, uses the same shell.)
+
 Two puzzle games that share a shell (`features/games/shared/components/puzzle-app.tsx`), because unlike the older
 games their setup, results and stats screens are the same apart from text: each game hands the shell a `PuzzleKit`
 (its pure game functions, storage, play screen and rules text). Every game is a freshly generated puzzle (there is no
@@ -194,3 +196,23 @@ the budget the server allows. Limits to keep in mind: Expert Zip is the slowest 
 on a desktop, a few seconds on a slow phone, shown as "Building..."); Queens Expert needs tier 5 or more, which about
 one random layout in seven reaches; if either becomes a problem the profiles in the two `generator.ts` files are the
 dials.
+
+## Patches
+
+A third puzzle on the same shell (`patches/lib`, `patches/components`). A clue is `{ cell, area | null, shape | null }`; the text form is `6x6;0:4s,9,14:6w,20:5f`. `shapes.ts` is the one definition of "this set of cells fits this clue" and is used by the solver, the drawing rules, the board check and the tests.
+
+- **Solver** (`solver.ts`): each clue has candidate patches (rectangles by enumeration; freeform shapes by Redelmeier's method, each exactly once), and a solution is an exact cover of the cells. Propagation on bit masks (clue singles, cell singles, dead ends) then branching on the clue with the fewest candidates, counting up to two solutions under a node budget (`NODE_BUDGET` 20,000) and a candidate cap (40,000), so a puzzle always costs the same and anything bigger is "could not be verified". It is checked against a brute force that shares none of its code (`engine.test.ts`).
+- **Generator** (`generator.ts`): carve a valid partition first (rectangles, plus bent shapes on Hard and Expert), put one clue in each patch saying what is true of it, then while a second solution exists either say more on a clue it gets wrong or move a clue inside its own patch to a cell the other solution gives elsewhere (both only add constraints the real partition meets). Harder levels then take back whatever the puzzle does not need. Nothing is accepted that is not proved unique.
+- **Difficulty is the logic needed**, not just size (`rateLogic`): Easy and Medium are solved by singles alone; Hard needs a lookahead (try a placement, see it leave a clue or cell with nothing); Expert needs chained lookaheads and has more freeform shapes and plain clues. Boards are 5, 6, 7, 8 (standard) or 6, 7, 8, 9 (larger) per level.
+- **Rules vs. the solution**: drawing, Check and Auto-check use only the clues and the patches placed (`rules.ts`, `conflicts`), never the hidden solution; only a paid hint consults it (`hints.ts`), so free checking cannot leak the answer. A solved board is `validateBoard`, the same patch check as drawing.
+- **Interaction** (`draw.ts`, `components/board.tsx`): the half-drawn patch, selection, cursor and all animation state live in the component; the game state holds only committed patches and history, so animation timing cannot change what is saved or whether the puzzle is solved. Animations are CSS (`.pt-*` in `globals.css`) and every one is switched off under `prefers-reduced-motion` (checked by a test).
+- **Records** store the puzzle only: the server re-solves it, checks times and recomputes the score (`/api/sync/patches`, table `patches_sessions`).
+
+### Measured (scripts/bench-puzzles.ts patches, one desktop machine)
+
+| Generation, mean / worst of 40 | Easy | Medium | Hard | Expert |
+|---|---|---|---|---|
+| Standard board (5 / 6 / 7 / 8) | 0.3 / 3 ms | 1 / 6 ms | 6 / 25 ms | 155 / 591 ms |
+| Larger board (6 / 7 / 8 / 9) | 0.1 / 0 ms | 1 / 2 ms | 7 / 29 ms | 269 / 965 ms |
+
+Solver nodes of an accepted puzzle are at most 1,494 (`GENERATION_NODES` is 1,500). Verifying ten of the costliest uploaded records takes 17 ms. Expert is the slowest to build because most random boards do not need chained lookaheads; `PROFILES` in `generator.ts` is the dial.

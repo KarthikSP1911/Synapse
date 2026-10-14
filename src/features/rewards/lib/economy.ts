@@ -26,7 +26,7 @@ export interface Economy {
   };
   mindsprint: RoundGame;
   recall: RoundGame;
-  /** Sudoku, Queens and Zip: once, for a solved puzzle. A revealed or abandoned one earns nothing. */
+  /** Sudoku, Queens, Zip and Patches: once, for a solved puzzle. A revealed or abandoned one earns nothing. */
   puzzle: Record<PuzzleDifficulty, number>;
   game2048: {
     /**

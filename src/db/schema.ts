@@ -379,6 +379,36 @@ export const zipSessions = pgTable(
 );
 
 /**
+ * Patches games of a signed-in user that ended (solved or given up), uploaded from the device. `puzzle` is the board's
+ * text form (size and clues, see `src/features/games/patches/lib/puzzle-format.ts`), whose solution is unique, so
+ * nothing else needs storing; `score` is a copy of what the other fields work out to.
+ */
+export const patchesSessions = pgTable(
+  "patches_sessions",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    /** The browser's random id for the game; unique per user, which makes uploads idempotent. */
+    clientId: varchar("client_id", { length: 64 }).notNull(),
+    difficulty: varchar("difficulty", { length: 10 }).notNull(), // easy | medium | hard | expert
+    puzzle: varchar("puzzle", { length: 600 }).notNull(),
+    completed: boolean("completed").notNull(),
+    elapsedMs: integer("elapsed_ms").notNull(),
+    hintsUsed: integer("hints_used").notNull(),
+    score: integer("score").notNull(),
+    startedAt: timestamp("started_at").notNull(),
+    endedAt: timestamp("ended_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("patches_sessions_user_client_idx").on(table.userId, table.clientId),
+    index("patches_sessions_user_difficulty_ended_idx").on(table.userId, table.difficulty, table.endedAt),
+  ]
+);
+
+/**
  * A user's coins and Streak Shields (the running totals; the ledger below is the record). The totals change only in the
  * same statement that appends a ledger row (see `src/features/rewards/server/wallet.ts`), and the CHECK constraints refuse
  * a negative balance or shield count whatever the application does.

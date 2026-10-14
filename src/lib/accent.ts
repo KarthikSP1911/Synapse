@@ -1,7 +1,7 @@
 import type { Skill } from "@/features/skills/lib/types";
 
 /** Games and skills each own one accent colour. No React here, so server and client share it. */
-export type AccentId = Skill | "mindsprint" | "recall" | "sudoku" | "game2048" | "queens" | "zip";
+export type AccentId = Skill | "mindsprint" | "recall" | "sudoku" | "game2048" | "queens" | "zip" | "patches";
 
 /** The one place accent colours are defined. Tiles, outlines and selected labels all read from this. */
 export const ACCENT: Record<AccentId, string> = {
@@ -19,4 +19,5 @@ export const ACCENT: Record<AccentId, string> = {
   game2048: "#FB923C",
   queens: "#A78BFA",
   zip: "#60A5FA",
+  patches: "#A3E635",
 };
