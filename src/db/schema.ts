@@ -1,4 +1,5 @@
-import { pgTable, serial, integer, timestamp, boolean, varchar, primaryKey, jsonb, text, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { pgTable, serial, integer, timestamp, boolean, varchar, primaryKey, jsonb, text, index, uniqueIndex, check } from "drizzle-orm/pg-core";
 import type { PracticeConfig } from "@/features/skills/lib/types";
 
 export const users = pgTable(
@@ -374,5 +375,63 @@ export const zipSessions = pgTable(
   (table) => [
     uniqueIndex("zip_sessions_user_client_idx").on(table.userId, table.clientId),
     index("zip_sessions_user_difficulty_ended_idx").on(table.userId, table.difficulty, table.endedAt),
+  ]
+);
+
+/**
+ * A user's coins and Streak Shields (the running totals; the ledger below is the record). The totals change only in the
+ * same statement that appends a ledger row (see `src/features/rewards/server/wallet.ts`), and the CHECK constraints refuse
+ * a negative balance or shield count whatever the application does.
+ */
+export const wallets = pgTable(
+  "wallets",
+  {
+    userId: integer("user_id")
+      .primaryKey()
+      .references(() => users.id, { onDelete: "cascade" }),
+    balance: integer("balance").default(0).notNull(),
+    shieldsOwned: integer("shields_owned").default(0).notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    check("wallets_balance_nonnegative", sql`${table.balance} >= 0`),
+    check("wallets_shields_range", sql`${table.shieldsOwned} >= 0 AND ${table.shieldsOwned} <= 100`),
+  ]
+);
+
+/**
+ * Every coin and shield movement, append-only. `key` is the idempotency key (unique per user): rewards are keyed by the
+ * activity they pay for, purchases by the purchase attempt, hint charges by game attempt and hint number, shield uses by the
+ * day they protect. `amount` is signed coins, `shields_delta` signed shields, `ref` the related activity, game or day, `link`
+ * (on a shield use) the purchase key of the shield it consumed.
+ */
+export const walletTransactions = pgTable(
+  "wallet_transactions",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    key: varchar("key", { length: 160 }).notNull(),
+    /** earning | spending | purchase | hint_charge | refund | shield_use */
+    type: varchar("type", { length: 16 }).notNull(),
+    amount: integer("amount").notNull(),
+    shieldsDelta: integer("shields_delta").default(0).notNull(),
+    reason: varchar("reason", { length: 200 }).notNull(),
+    ref: varchar("ref", { length: 160 }),
+    link: varchar("link", { length: 160 }),
+    /** When the rewarded thing happened (for an earning: the activity's end), otherwise when it was recorded. */
+    occurredAt: timestamp("occurred_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("wallet_transactions_user_key_idx").on(table.userId, table.key),
+    uniqueIndex("wallet_transactions_user_link_idx").on(table.userId, table.link).where(sql`${table.link} IS NOT NULL`),
+    index("wallet_transactions_user_id_idx").on(table.userId, table.id),
+    check("wallet_transactions_type_check", sql`${table.type} IN ('earning', 'spending', 'purchase', 'hint_charge', 'refund', 'shield_use')`),
+    check(
+      "wallet_transactions_sign_check",
+      sql`(${table.type} IN ('earning', 'refund') AND ${table.amount} > 0) OR (${table.type} IN ('spending', 'purchase', 'hint_charge') AND ${table.amount} < 0) OR (${table.type} = 'shield_use' AND ${table.amount} = 0)`
+    ),
   ]
 );
