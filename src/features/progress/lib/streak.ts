@@ -83,14 +83,19 @@ export interface StreakSummary {
 
 /**
  * Streaks from a set of active days. Days after `today` (a device clock that ran ahead) and anything that is not a
- * real day are ignored.
+ * real day are ignored. `protectedDays` are days a Streak Shield covers: they keep the streak alive but are not
+ * counted as active (not in `activeLastYear`, not in `todayDone`).
  */
-export function summarizeStreaks(days: Iterable<string>, today: string): StreakSummary {
+export function summarizeStreaks(days: Iterable<string>, today: string, protectedDays: Iterable<string> = []): StreakSummary {
   const counts = new Map<string, number>();
   for (const day of days) {
     if (isDayKey(day) && day <= today) counts.set(day, 1);
   }
-  const { current, longest } = streaks(counts, today);
+  const bridged = new Set<string>();
+  for (const day of protectedDays) {
+    if (isDayKey(day) && day < today) bridged.add(day);
+  }
+  const { current, longest } = streaks(counts, today, bridged);
   const yearStart = addDays(today, -364);
   let activeLastYear = 0;
   for (const day of counts.keys()) if (day >= yearStart) activeLastYear += 1;
