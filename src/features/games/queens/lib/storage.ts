@@ -7,6 +7,7 @@ import { isIntInRange } from "@/lib/validation";
 import { MAX_HISTORY, isComplete } from "./game";
 import { isSolution, parseRegions } from "./grid";
 import { parseSessionData } from "./records";
+import { sessionGrants } from "./rewards";
 import { countSolutions } from "./solver";
 import { DEFAULT_SETTINGS, HINTED, type GameState, type Mark, type Move, type QueensSettings, type SessionData } from "./types";
 
@@ -21,6 +22,7 @@ export const queensHistory = createLocalHistory<SessionData>({
   suffix: "queens",
   parse: dataOrNull(parseSessionData),
   countsAsActivity: queensCounts,
+  grants: sessionGrants,
 });
 
 export const loadHistory = queensHistory.load;

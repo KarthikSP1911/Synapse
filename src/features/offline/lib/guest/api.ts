@@ -2,6 +2,8 @@ import { applyAttempt } from "@/features/skills/lib/practice/item-stats";
 import { guestNextQuestion } from "@/features/offline/lib/guest/engine";
 import { recordActivityDay } from "@/features/offline/lib/activity-days";
 import { countsAsAnswer } from "@/features/progress/lib/streak";
+import { practiceAnswerGrants, practiceBonusGrants } from "@/features/rewards/lib/grants";
+import { awardGrants } from "@/features/rewards/lib/service";
 import {
   GUEST_STORAGE_KEY,
   MAX_ATTEMPTS_PER_SESSION,
@@ -54,6 +56,18 @@ const timing = (s: GuestSession): TimedSession => ({
   pausedAt: s.pausedAt === null ? null : new Date(s.pausedAt),
   pausedMs: s.pausedMs,
 });
+
+/**
+ * What identifies a practice session in the ledger. A signed-in session has the random client id the server also knows
+ * (so the device and the server mint the same reward keys); a guest's has no server, so its number and start time do.
+ */
+const rewardRef = (s: GuestSession): string => s.clientId ?? `g${s.id}-${s.startedAt}`;
+
+/** Pays the session bonus if the session just ended and earned it. Keyed by session, so it can only ever pay once. */
+function awardSessionBonus(store: LocalStore, session: GuestSession): void {
+  if (session.endedAt === null) return;
+  awardGrants(store, practiceBonusGrants(rewardRef(session), session.attempts, session.endedAt));
+}
 
 /** The session as the API returns it: without the attempt log (`undefined` is dropped when serialised). */
 const publicSession = (s: GuestSession) => ({ ...s, attempts: undefined });
@@ -220,7 +234,7 @@ function nextQuestion(store: LocalStore, data: GuestData, session: GuestSession,
       // A timed session ended when its clock ran out, not when this request happened to arrive.
       session.endedAt = sessionDeadline(timing(session))?.getTime() ?? Date.now();
       touch(store, session);
-      saveGuestData(data, store.key);
+      if (saveGuestData(data, store.key)) awardSessionBonus(store, session);
     }
     return json({ finished: true });
   }
@@ -327,7 +341,15 @@ function recordAttempt(store: LocalStore, data: GuestData, session: GuestSession
 
   touch(store, session);
   // A guest's day is noted as the answer is saved: the stored sessions are trimmed, a streak must not be.
-  if (saveGuestData(data, store.key) && countsAsAnswer(outcome)) recordActivityDay(store, now);
+  const saved = saveGuestData(data, store.key);
+  if (saved && countsAsAnswer(outcome)) recordActivityDay(store, now);
+  // Coins are paid only for an answer that was validated and saved (this function returned early otherwise), and the
+  // key is made from the attempt, so nothing here can pay twice. The previous attempt is included so a doubled
+  // submission of the same question is recognised (see `practiceAnswerGrants`).
+  if (saved) {
+    const ref = rewardRef(session);
+    awardGrants(store, [...practiceAnswerGrants(ref, session.attempts.slice(-2)), ...(finished ? practiceBonusGrants(ref, session.attempts, now) : [])], now);
+  }
   return json({
     isCorrect,
     outcome,
@@ -345,7 +367,7 @@ function endSession(store: LocalStore, data: GuestData, session: GuestSession): 
     session.pausedAt = null;
     session.endedAt = now;
     touch(store, session);
-    saveGuestData(data, store.key);
+    if (saveGuestData(data, store.key)) awardSessionBonus(store, session);
   }
   return json({ ended: true });
 }

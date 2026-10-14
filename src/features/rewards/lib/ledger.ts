@@ -140,16 +140,16 @@ export function buyShield(wallet: Wallet, request: { id: string; today: string }
 
 /**
  * Uses up one shield to protect `date`. At most once per date (the key is the date) and never more than one shield per
- * date. Picks the shield bought longest ago that was already owned on `date`: a shield bought after a day is over
- * cannot rescue that day.
+ * date. Picks the shield bought longest ago that was already owned on `date` (or the one named by `shieldKey`, when the
+ * planner has matched days to shields): a shield bought after a day is over cannot rescue that day.
  */
-export function useShield(wallet: Wallet, request: { date: string }, options: PostOptions, economy: Economy = ECONOMY): OperationResult<{ wallet: Wallet; entry: LedgerEntry }> {
+export function useShield(wallet: Wallet, request: { date: string; shieldKey?: string }, options: PostOptions, economy: Economy = ECONOMY): OperationResult<{ wallet: Wallet; entry: LedgerEntry }> {
   const key = useKey(request.date);
   const existing = findEntry(wallet, key);
   if (existing || wallet.uses.some((u) => u.date === request.date)) {
     return existing ? { ok: true, duplicate: true, wallet, entry: existing } : fail("invalid", "That day is already protected.");
   }
-  const shield = eligibleShield(wallet, request.date);
+  const shield = request.shieldKey ? wallet.shields.find((s) => s.key === request.shieldKey && s.boughtOn <= request.date) : eligibleShield(wallet, request.date);
   if (!shield) return fail("no_shield", "No Streak Shield was available for that day.");
 
   const posted = post(wallet, { key, type: "shield_use", amount: 0, shields: -1, reason: `Streak Shield protected ${request.date}`, ref: request.date }, options, economy);

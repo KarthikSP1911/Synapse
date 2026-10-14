@@ -21,16 +21,26 @@ const percent = (part: number, whole: number): number => (whole === 0 ? 0 : Math
 
 export interface PracticeAttemptLike {
   outcome: string;
+  /** The question that was answered; used to recognise one submission sent twice. */
+  questionId?: string;
   /** When it was answered (epoch ms); unique within a session, so it identifies the attempt. */
   at: number;
 }
 
 const answered = (attempts: readonly PracticeAttemptLike[]) => attempts.filter((a) => a.outcome === "correct" || a.outcome === "incorrect");
 
-/** Two coins for each correct answer. `sessionRef` identifies the session (its client id). */
+/**
+ * Two coins for each correct answer. `sessionRef` identifies the session (its client id). An attempt that repeats the
+ * question of the attempt just before it within `duplicateSubmissionMs` is a doubled submission and earns nothing.
+ */
 export function practiceAnswerGrants(sessionRef: string, attempts: readonly PracticeAttemptLike[], economy: Economy = ECONOMY): Grant[] {
-  return attempts
-    .filter((a) => a.outcome === "correct")
+  const ordered = [...attempts].sort((a, b) => a.at - b.at);
+  return ordered
+    .filter((a, i) => {
+      const previous = ordered[i - 1];
+      const doubled = previous !== undefined && a.questionId !== undefined && previous.questionId === a.questionId && a.at - previous.at < economy.practice.duplicateSubmissionMs;
+      return a.outcome === "correct" && !doubled;
+    })
     .map((a) => ({ key: `practice:${sessionRef}:${a.at}`, amount: economy.practice.correctAnswer, reason: "Correct answer", ref: sessionRef, at: a.at }));
 }
 

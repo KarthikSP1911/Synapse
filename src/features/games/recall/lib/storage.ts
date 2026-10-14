@@ -2,6 +2,7 @@ import { createLocalHistory, type Stored } from "@/features/games/shared/lib/his
 import { dataOrNull } from "@/lib/records";
 import { defaultConfig, parseConfig } from "./config";
 import { parseSessionData } from "./records";
+import { sessionGrants } from "./rewards";
 import { RECALL_MODES, type RecallConfig, type RecallMode, type SessionData } from "./types";
 
 /**
@@ -14,6 +15,7 @@ export type StoredSession = Stored<SessionData>;
 export const recallHistory = createLocalHistory<SessionData>({
   suffix: "recall",
   parse: dataOrNull(parseSessionData),
+  grants: sessionGrants,
 });
 
 export const loadHistory = recallHistory.load;

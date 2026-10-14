@@ -18,6 +18,11 @@ export interface Economy {
     minAnsweredForBonus: number;
     /** Whole percent of the answered questions that must be right for the session bonus. */
     minAccuracyPercentForBonus: number;
+    /**
+     * The same question answered again this soon after it was answered is the same submission sent twice (a double tap,
+     * a retried request), not a second answer, and is not paid twice. A person cannot see and answer a question in less.
+     */
+    duplicateSubmissionMs: number;
   };
   mindsprint: RoundGame;
   recall: RoundGame;
@@ -67,7 +72,7 @@ interface RoundGame {
 }
 
 export const ECONOMY: Economy = {
-  practice: { correctAnswer: 2, sessionBonus: 5, minAnsweredForBonus: 5, minAccuracyPercentForBonus: 50 },
+  practice: { correctAnswer: 2, sessionBonus: 5, minAnsweredForBonus: 5, minAccuracyPercentForBonus: 50, duplicateSubmissionMs: 400 },
   mindsprint: { correctRound: 2, sessionBonus: 5, minRoundsForBonus: 3, minAccuracyPercentForBonus: 50 },
   recall: { correctRound: 2, sessionBonus: 5, minRoundsForBonus: 3, minAccuracyPercentForBonus: 50 },
   puzzle: { easy: 10, medium: 15, hard: 20, expert: 30 },

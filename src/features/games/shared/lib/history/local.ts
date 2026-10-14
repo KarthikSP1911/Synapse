@@ -1,5 +1,7 @@
 import type { LocalStore } from "@/features/offline/lib/guest/api";
 import { recordActivityDay } from "@/features/offline/lib/activity-days";
+import { awardGrants } from "@/features/rewards/lib/service";
+import type { Grant } from "@/features/rewards/lib/types";
 
 /**
  * Finished-game history on this device, shared by the games that keep their own history (MindSprint, Number
@@ -29,9 +31,14 @@ interface LocalHistoryOptions<T extends HistoryItem> {
   parse: (raw: unknown) => T | null;
   /** Whether a saved session is a day of activity for the streak (default: every saved session is). */
   countsAsActivity?: (session: T) => boolean;
+  /**
+   * The coins a saved session earns (see `src/features/rewards`). Credited as the session is saved, and again, harmlessly, if
+   * the same session is saved twice: every reward has a key made from the session, and a key pays only once.
+   */
+  grants?: (session: T) => Grant[];
 }
 
-export function createLocalHistory<T extends HistoryItem>({ suffix, parse, countsAsActivity }: LocalHistoryOptions<T>) {
+export function createLocalHistory<T extends HistoryItem>({ suffix, parse, countsAsActivity, grants }: LocalHistoryOptions<T>) {
   const keyFor = (storeKey: string): string => `${storeKey}:${suffix}`;
 
   function read(key: string): Stored<T>[] {
@@ -90,10 +97,15 @@ export function createLocalHistory<T extends HistoryItem>({ suffix, parse, count
     save(store: LocalStore, data: T): boolean {
       const key = keyFor(store.key);
       const sessions = read(key);
-      if (sessions.some((s) => s.clientId === data.clientId)) return true;
+      // Already saved (a retry, a second tab): nothing to store, but the reward is checked again in case the first attempt could not be recorded.
+      if (sessions.some((s) => s.clientId === data.clientId)) {
+        if (grants) awardGrants(store, grants(data));
+        return true;
+      }
       sessions.push(store.syncable ? { ...data, synced: false } : data);
       const saved = write(key, sessions);
       if (saved && (countsAsActivity?.(data) ?? true)) recordActivityDay(store, data.endedAt);
+      if (saved && grants) awardGrants(store, grants(data));
       return saved;
     },
 

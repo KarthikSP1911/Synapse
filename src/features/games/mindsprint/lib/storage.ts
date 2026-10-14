@@ -2,6 +2,7 @@ import { createLocalHistory, type Stored } from "@/features/games/shared/lib/his
 import { dataOrNull } from "@/lib/records";
 import { DEFAULT_ROUND, DEFAULT_ROUND_COUNT, parseSetup } from "./config";
 import { parseSessionData } from "./records";
+import { sessionGrants } from "./rewards";
 import type { RoundConfig, SessionData } from "./types";
 
 /**
@@ -16,6 +17,7 @@ export type StoredSession = Stored<SessionData>;
 export const mindsprintHistory = createLocalHistory<SessionData>({
   suffix: "mindsprint",
   parse: dataOrNull(parseSessionData),
+  grants: sessionGrants,
 });
 
 export const loadHistory = mindsprintHistory.load;

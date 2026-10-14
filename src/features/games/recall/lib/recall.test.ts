@@ -424,7 +424,9 @@ describe("device storage", () => {
     saveSession(account, makeSession(configFor("single", "easy", { rounds: 1 }), 30));
     assert.equal(loadHistory(account)[0].synced, false);
     assert.equal(loadHistory(guest).length, 0);
-    assert.ok([...storage.items.keys()].every((k) => k.endsWith(":recall")));
+    // The only other thing a saved session touches is the viewer's own wallet (the coins it earned), under the same per-viewer key.
+    assert.ok([...storage.items.keys()].every((k) => k.endsWith(":recall") || k.endsWith(":wallet")));
+    assert.ok([...storage.items.keys()].filter((k) => k.endsWith(":wallet")).every((k) => k.startsWith(account.key)));
   });
 
   it("remembers settings and the chosen mode separately for each mode", () => {
