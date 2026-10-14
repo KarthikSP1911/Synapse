@@ -85,7 +85,7 @@ const earningRows: { what: string; coins: string }[] = [
   { what: `A MindSprint session finished (${ECONOMY.mindsprint.minRoundsForBonus}+ rounds, ${ECONOMY.mindsprint.minAccuracyPercentForBonus}%+ right)`, coins: `${ECONOMY.mindsprint.sessionBonus} bonus` },
   { what: "A correct Number Recall round", coins: `${ECONOMY.recall.correctRound}` },
   { what: `A Number Recall session finished (${ECONOMY.recall.minRoundsForBonus}+ rounds, ${ECONOMY.recall.minAccuracyPercentForBonus}%+ right)`, coins: `${ECONOMY.recall.sessionBonus} bonus` },
-  { what: "A solved Sudoku, Queens or Zip", coins: `${ECONOMY.puzzle.easy} / ${ECONOMY.puzzle.medium} / ${ECONOMY.puzzle.hard} / ${ECONOMY.puzzle.expert} (Easy / Medium / Hard / Expert)` },
+  { what: "A solved Sudoku, Queens, Zip or Patches", coins: `${ECONOMY.puzzle.easy} / ${ECONOMY.puzzle.medium} / ${ECONOMY.puzzle.hard} / ${ECONOMY.puzzle.expert} (Easy / Medium / Hard / Expert)` },
   { what: "A 2048 run, by its highest tile", coins: ECONOMY.game2048.byHighestTile.map(([tile, coins]) => `${tile}: ${coins}`).join(" · ") },
 ];
 

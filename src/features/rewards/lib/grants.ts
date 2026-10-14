@@ -87,9 +87,9 @@ export function roundGameGrants(
 // Puzzles and 2048
 // ---------------------------------------------------------------------------
 
-const PUZZLE_LABEL = { sudoku: "Sudoku", queens: "Queens", zip: "Zip" } as const;
+const PUZZLE_LABEL = { sudoku: "Sudoku", queens: "Queens", zip: "Zip", patches: "Patches" } as const;
 
-/** Coins for a solved Sudoku, Queens or Zip, by difficulty. Once per game id (restarting keeps the id). */
+/** Coins for a solved Sudoku, Queens, Zip or Patches puzzle, by difficulty. Once per game id (restarting keeps the id). */
 export function puzzleGrants(
   game: keyof typeof PUZZLE_LABEL,
   session: { clientId: string; completed: boolean; difficulty: PuzzleDifficulty; endedAt: number },

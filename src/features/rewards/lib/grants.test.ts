@@ -83,7 +83,7 @@ describe("puzzle rewards", () => {
   });
 
   it("pays nothing for a puzzle that was not solved", () => {
-    for (const game of ["sudoku", "queens", "zip"] as const) assert.deepEqual(puzzleGrants(game, solved("expert", false)), []);
+    for (const game of ["sudoku", "queens", "zip", "patches"] as const) assert.deepEqual(puzzleGrants(game, solved("expert", false)), []);
   });
 
   it("keys a reward by game and id, so restarting or re-saving cannot pay twice", () => {
