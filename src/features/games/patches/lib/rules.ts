@@ -27,6 +27,21 @@ export function ownerMap(patches: readonly Patch[], cellCount: number): Int16Arr
   return owner;
 }
 
+/** The clues whose patches the cells would cover, in order of first appearance. */
+export function overlappedClues(owner: Int16Array, cells: readonly number[]): number[] {
+  const clues: number[] = [];
+  for (const cell of cells) if (owner[cell] >= 0 && !clues.includes(owner[cell])) clues.push(owner[cell]);
+  return clues;
+}
+
+/** A copy of the owner map with the given patches taken off. */
+export function ownerWithout(owner: Int16Array, clues: readonly number[]): Int16Array {
+  if (clues.length === 0) return owner;
+  const next = owner.slice();
+  for (let cell = 0; cell < next.length; cell++) if (clues.includes(next[cell])) next[cell] = -1;
+  return next;
+}
+
 export type Reason = "empty" | "overlap" | "no-clue" | "many-clues" | "disconnected" | "shape" | "area";
 
 export interface DraftCheck {

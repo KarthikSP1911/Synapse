@@ -1,6 +1,6 @@
 import { elapsedAt, freezeClock, pauseClock, resumeClock, stopClock } from "@/features/games/shared/lib/clock";
 import { cellCount, parsePuzzle } from "./puzzle-format";
-import { checkDraft, ownerMap, validateBoard, type DraftCheck } from "./rules";
+import { checkDraft, overlappedClues, ownerMap, ownerWithout, validateBoard, type DraftCheck } from "./rules";
 import { buildModel, emptyState, placePatch, type Model } from "./solver";
 import type { GameState, Patch, PatchesPuzzle, Puzzle, SessionData } from "./types";
 
@@ -101,14 +101,22 @@ export interface Committed {
 /**
  * Places the cells as a patch. The rules are checked here again, whatever the screen thought, and a patch that
  * breaks any of them changes nothing: there is never a half-valid patch on the board.
+ *
+ * Drawing over patches that are already there replaces them (that is how a wrong patch is redrawn without
+ * removing it first), but only when the new patch is valid: a refused patch takes nothing off the board. The
+ * replacement and the new patch are one undo step. An identical patch changes nothing.
  */
 export function commitPatch(state: GameState, cells: readonly number[], now: number): Committed {
   if (!playing(state)) return { state, refused: null };
   const puzzle = puzzleFor(state.puzzle);
-  const check = checkDraft(puzzle, ownerMap(state.patches, cellCount(puzzle)), cells);
+  const owner = ownerMap(state.patches, cellCount(puzzle));
+  const covered = overlappedClues(owner, cells);
+  const check = checkDraft(puzzle, ownerWithout(owner, covered), cells);
   if (!check.ok || check.clue === null) return { state, refused: check };
   const patch: Patch = { clue: check.clue, cells: [...cells].sort((a, b) => a - b) };
-  return { state: withPatches(state, [...state.patches, patch], now), refused: null };
+  const same = state.patches.find((p) => p.clue === patch.clue);
+  if (same && same.cells.length === patch.cells.length && same.cells.every((cell, i) => cell === patch.cells[i])) return { state, refused: null };
+  return { state: withPatches(state, [...state.patches.filter((p) => !covered.includes(p.clue)), patch], now), refused: null };
 }
 
 /** Takes one patch off the board. */

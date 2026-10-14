@@ -11,7 +11,7 @@ import { balanceOf } from "@/features/rewards/lib/ledger";
 import { awardGrants, hintCooldownLeft, requestHint } from "@/features/rewards/lib/service";
 import { loadWallet } from "@/features/rewards/lib/wallet-store";
 import { cellsAlong, pointToCell, type BoardRect } from "@/features/games/shared/lib/board-geometry";
-import { beginDraft, draftCells, extendDraft } from "./draw";
+import { beginDraft, draftCells, extendDraft, grabPatch } from "./draw";
 import {
   MAX_HISTORY,
   checkBoard,
@@ -125,15 +125,39 @@ describe("placing patches", () => {
     }
   });
 
-  it("never lets patches overlap, and never shows a half-valid patch", () => {
-    let g = commitPatch(fresh(), [0, 1, 3, 4], clock).state;
-    const again = commitPatch(g, [0, 1, 3, 4], clock);
-    assert.equal(again.refused?.reason, "overlap");
-    assert.equal(again.state.patches.length, 1);
-    assert.equal(commitPatch(g, [1, 2], clock).refused?.reason, "overlap");
-    g = commitPatch(g, [2, 5], clock).state;
+  it("draws over patches by replacing them, never leaving two patches on one cell", () => {
+    const blank = newGame({ difficulty: "easy", puzzle: "4x4;0,15", solution: new Array(16).fill(0) }, "patches-over-1", clock);
+    const bottom = [8, 9, 10, 11, 12, 13, 14, 15];
+    let g = commitPatch(blank, bottom, clock).state;
+    g = commitPatch(g, [0, 1, 2, 3], clock).state;
     assert.equal(g.patches.length, 2);
-    for (const patch of g.patches) assert.ok(patch.cells.length > 0);
+    assert.equal(g.status, "playing", "row 1 is still empty");
+    // A bigger patch for the first clue covers the second clue's patch: that one is replaced, in a single undo step.
+    const three = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+    const over = commitPatch(g, three, clock);
+    assert.equal(over.refused, null);
+    assert.deepEqual(over.state.patches, [{ clue: 0, cells: three }], "the second clue's patch is gone");
+    assert.deepEqual([...ownerMap(over.state.patches, 16)].filter((c) => c === 1), []);
+    assert.deepEqual(undo(over.state).patches, g.patches, "one step brings both back");
+    // Redrawing a clue's own patch replaces it.
+    const again = commitPatch(g, [0], clock).state;
+    assert.deepEqual(again.patches.map((p) => p.cells), [bottom, [0]]);
+    assert.equal(commitPatch(again, [0], clock).state, again, "the identical patch changes nothing");
+    for (const state of [g, over.state, again]) {
+      const taken = state.patches.flatMap((p) => p.cells);
+      assert.equal(new Set(taken).size, taken.length, "no cell is in two patches");
+    }
+  });
+
+  it("takes nothing off the board when the patch drawn over it is refused", () => {
+    const blank = newGame({ difficulty: "easy", puzzle: "4x4;0,15", solution: new Array(16).fill(0) }, "patches-over-2", clock);
+    const g = commitPatch(blank, [8, 9, 10, 11, 12, 13, 14, 15], clock).state;
+    const bent = commitPatch(g, [0, 1, 4], clock);
+    assert.equal(bent.refused?.reason, "shape");
+    assert.equal(bent.state, g, "the patch it ran over is still there");
+    const noClue = commitPatch(g, [1, 2], clock);
+    assert.equal(noClue.refused?.reason, "no-clue");
+    assert.equal(noClue.state, g);
   });
 
   it("takes a clue that says nothing as any rectangle, and an area-only clue as a rectangle of that area", () => {
@@ -336,6 +360,39 @@ describe("the drawing gesture", () => {
     for (const cell of [2, 6, 7, 6, 10, 2]) d = extendDraft(d, taken, cell);
     assert.deepEqual(draftCells(d, 4), [2, 3, 6, 10], "7 belongs to a patch, repeats add nothing");
     assert.equal(d.head, 2);
+  });
+
+  it("picks a rectangle up by its nearest corner and stretches it in the hand", () => {
+    const patch = { clue: 0, cells: [5, 6, 9, 10] };
+    const held = grabPatch(puzzle, patch, 10);
+    assert.deepEqual(held, { mode: "rect", anchor: 5, head: 10 });
+    assert.deepEqual(draftCells(held, 4), patch.cells, "picked up, it is the same rectangle");
+    // Dragging the held corner to the bottom-right of the board stretches it; the opposite corner stays.
+    assert.deepEqual(draftCells(extendDraft(held, none, 15), 4), [5, 6, 7, 9, 10, 11, 13, 14, 15]);
+    // Pressing the top-left holds the top-left: shrinking from that side.
+    const other = grabPatch(puzzle, patch, 5);
+    assert.deepEqual(other, { mode: "rect", anchor: 10, head: 5 });
+    assert.deepEqual(draftCells(extendDraft(other, none, 10), 4), [10], "all the way in is one cell");
+    // A tall patch pressed near its bottom is held by the bottom.
+    assert.deepEqual(grabPatch(puzzle, { clue: 2, cells: [0, 4, 8, 12] }, 12), { mode: "rect", anchor: 0, head: 12 });
+  });
+
+  it("holds a freeform patch as it is and lets what is painted next join it", () => {
+    const patch = { clue: 1, cells: [2, 3, 7] };
+    const held = grabPatch(puzzle, patch, 7);
+    assert.equal(held.mode, "free");
+    assert.deepEqual(draftCells(held, 4), [2, 3, 7]);
+    assert.deepEqual(draftCells(extendDraft(held, none, 11), 4), [2, 3, 7, 11]);
+  });
+
+  it("redraws a patch in the hand without a remove: the stretched rectangle replaces the old one", () => {
+    const blank = newGame({ difficulty: "easy", puzzle: "4x4;0,15", solution: new Array(16).fill(0) }, "patches-grab-1", clock);
+    const g = commitPatch(blank, [0, 1, 4, 5], clock).state;
+    const held = grabPatch(parsePuzzle("4x4;0,15")!, g.patches[0], 5);
+    const stretched = commitPatch(g, draftCells(extendDraft(held, none, 10), 4), clock);
+    assert.equal(stretched.refused, null);
+    assert.deepEqual(stretched.state.patches, [{ clue: 0, cells: [0, 1, 2, 4, 5, 6, 8, 9, 10] }]);
+    assert.equal(undo(stretched.state).patches[0].cells.length, 4, "and one Undo gives the old shape back");
   });
 
   it("commits a finished drag and throws a cancelled one away", () => {
