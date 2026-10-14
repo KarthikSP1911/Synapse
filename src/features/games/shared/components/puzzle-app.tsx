@@ -200,6 +200,15 @@ export default function PuzzleApp<G extends PuzzleGame, S, D extends PuzzleRecor
     [store, kit, storage, result]
   );
 
+  /** Restart: the same difficulty again, but a different puzzle. */
+  const restart = useCallback(
+    (g: G) => {
+      discard(g);
+      begin(g.difficulty);
+    },
+    [discard, begin]
+  );
+
   const abandon = useCallback(
     (g: G) => {
       if (result) {
@@ -228,7 +237,7 @@ export default function PuzzleApp<G extends PuzzleGame, S, D extends PuzzleRecor
     const won = result && winOpen ? result : null;
     return (
       <>
-        <Play key={game.clientId + game.startedAt} initial={game} settings={settings} onSettingsChange={changeSettings} onChange={persist} onEnd={end} onLeave={leave} onAbandon={abandon} />
+        <Play key={game.clientId + game.startedAt} initial={game} settings={settings} onSettingsChange={changeSettings} onChange={persist} onEnd={end} onLeave={leave} onAbandon={abandon} onNewPuzzle={restart} />
         {won && (
           <WinOverlay
             accent={kit.accent}

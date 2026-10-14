@@ -32,6 +32,8 @@ export interface PlayScreenProps<G extends PuzzleGame, S> {
   onLeave: (game: G) => void;
   /** Back to the setup screen, giving this game up. */
   onAbandon: (game: G) => void;
+  /** Restart: gives this game up (it counts as an attempt if it was touched) and starts a different puzzle of the same difficulty. */
+  onNewPuzzle: (game: G) => void;
 }
 
 export interface PuzzleKit<G extends PuzzleGame, S, D extends PuzzleRecord> {

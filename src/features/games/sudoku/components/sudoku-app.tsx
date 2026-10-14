@@ -180,6 +180,15 @@ export default function SudokuApp() {
     [store]
   );
 
+  /** Restart: the same difficulty again, but a different puzzle. */
+  const restart = useCallback(
+    (g: GameState) => {
+      discard(g);
+      begin(g.difficulty);
+    },
+    [discard, begin]
+  );
+
   const abandon = useCallback(
     (g: GameState) => {
       discard(g);
@@ -192,7 +201,7 @@ export default function SudokuApp() {
   const stats = useMemo(() => (history ? computeStats(history, saved?.difficulty ?? null) : null), [history, saved]);
 
   if (view === "playing" && game) {
-    return <GameScreen key={game.clientId + game.startedAt} initial={game} settings={settings} onSettingsChange={changeSettings} onChange={persist} onEnd={end} onLeave={leave} onAbandon={abandon} />;
+    return <GameScreen key={game.clientId + game.startedAt} initial={game} settings={settings} onSettingsChange={changeSettings} onChange={persist} onEnd={end} onLeave={leave} onAbandon={abandon} onNewPuzzle={restart} />;
   }
 
   if (view === "result" && result) {

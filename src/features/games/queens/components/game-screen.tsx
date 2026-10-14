@@ -18,7 +18,7 @@ import { toolButton } from "@/features/games/shared/components/tool-button";
 import { DIFFICULTY_LABEL } from "@/features/games/shared/lib/puzzle-session";
 import { WinBurst } from "@/features/games/shared/components/win-burst";
 import { Board } from "@/features/games/queens/components/board";
-import { boardOf, checkBoard, clearBoard, giveHint, hasProgress, markCells, pauseGame, queensOn, redo, restartGame, resumeGame, setCell, tapCell, undo } from "@/features/games/queens/lib/game";
+import { boardOf, checkBoard, clearBoard, giveHint, hasProgress, markCells, pauseGame, queensOn, redo, resumeGame, setCell, tapCell, undo } from "@/features/games/queens/lib/game";
 import { conflictingQueens } from "@/features/games/queens/lib/grid";
 import { describeConflict } from "@/features/games/queens/lib/hints";
 import { regionCells } from "@/features/games/queens/lib/grid";
@@ -55,7 +55,7 @@ export function AssistanceSwitches({ settings, onChange }: { settings: QueensSet
   );
 }
 
-export function GameScreen({ initial, settings, onSettingsChange, onChange, onEnd, onLeave, onAbandon }: PlayScreenProps<GameState, QueensSettings>) {
+export function GameScreen({ initial, settings, onSettingsChange, onChange, onEnd, onLeave, onAbandon, onNewPuzzle }: PlayScreenProps<GameState, QueensSettings>) {
   const [game, setGame] = useState(initial);
   const [dialog, setDialog] = useState<Dialog>(null);
   const [more, setMore] = useState(false);
@@ -201,7 +201,7 @@ export function GameScreen({ initial, settings, onSettingsChange, onChange, onEn
   const message = finished ? "Solved!" : (game.hint?.text ?? notice) || (allPlaced && !settings.autoCheck ? "All queens are placed. Press Check to see if the board is right." : "");
 
   const actions = {
-    onRestart: () => (hasProgress(game) ? setDialog("restart") : setGame((g) => restartGame(g, Date.now()))),
+    onRestart: () => (hasProgress(game) ? setDialog("restart") : onNewPuzzle(game)),
     onNew: () => (hasProgress(game) && !finished ? setDialog("new") : onAbandon(game)),
   };
 
@@ -327,15 +327,14 @@ export function GameScreen({ initial, settings, onSettingsChange, onChange, onEn
 
       {dialog === "restart" && (
         <ConfirmDialog
-          title="Restart this puzzle?"
-          message="Your queens, cross-outs and hints are cleared and the timer starts again. The puzzle stays the same."
+          title="Restart with a new puzzle?"
+          message="This puzzle is given up and counts as an attempt. A different puzzle of the same difficulty starts right away."
           confirmLabel="Restart"
           destructive
           onCancel={() => setDialog(null)}
           onConfirm={() => {
-            setGame((g) => restartGame(g, Date.now()));
-            setChecked(null);
             setDialog(null);
+            onNewPuzzle(game);
           }}
         />
       )}
