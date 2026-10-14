@@ -13,6 +13,7 @@ import { MoreSheet } from "@/features/games/shared/components/more-sheet";
 import type { PlayScreenProps } from "@/features/games/shared/components/puzzle-kit";
 import { toolButton } from "@/features/games/shared/components/tool-button";
 import { DIFFICULTY_LABEL } from "@/features/games/shared/lib/puzzle-session";
+import { WinBurst } from "@/features/games/shared/components/win-burst";
 import { Board } from "@/features/games/queens/components/board";
 import { boardOf, checkBoard, clearBoard, giveHint, hasProgress, markCells, pauseGame, queensOn, redo, restartGame, resumeGame, setCell, tapCell, undo } from "@/features/games/queens/lib/game";
 import { conflictingQueens } from "@/features/games/queens/lib/grid";
@@ -21,9 +22,6 @@ import { regionCells } from "@/features/games/queens/lib/grid";
 import { CROSS, EMPTY, QUEEN, type Conflict, type GameState, type Mark, type QueensSettings } from "@/features/games/queens/lib/types";
 
 type Dialog = "restart" | "new" | null;
-
-/** After the last queen lands, the solved board stays up for a moment before the result screen takes over. */
-const SOLVED_PAUSE_MS = 700;
 
 /** The less frequent actions of a game. Inline beside the board on desktop, in the "More" sheet on phones. */
 function GameActions({ playing, finished, onRestart, onNew, onClose }: { playing: boolean; finished: boolean; onRestart: () => void; onNew: () => void; onClose?: () => void }) {
@@ -78,8 +76,8 @@ export function GameScreen({ initial, settings, onSettingsChange, onChange, onEn
   useEffect(() => {
     if (!finished || endedRef.current) return;
     endedRef.current = true;
-    const timer = setTimeout(() => onEnd(game), SOLVED_PAUSE_MS);
-    return () => clearTimeout(timer);
+    // Saved the moment it is solved; the win card on top of the board is the shell's (see puzzle-app.tsx).
+    onEnd(game);
   }, [finished, game, onEnd]);
 
   // Bank the elapsed time every so often, so a tab that is killed loses seconds, not minutes.
@@ -181,11 +179,11 @@ export function GameScreen({ initial, settings, onSettingsChange, onChange, onEn
 
   const actions = {
     onRestart: () => (hasProgress(game) ? setDialog("restart") : setGame((g) => restartGame(g, Date.now()))),
-    onNew: () => (hasProgress(game) ? setDialog("new") : onAbandon(game)),
+    onNew: () => (hasProgress(game) && !finished ? setDialog("new") : onAbandon(game)),
   };
 
   return (
-    <div className="play-screen play-below-lg sdk-screen py-3 lg:container lg:py-8">
+    <div className="play-screen play-below-lg sdk-screen py-3 lg:container lg:py-8" data-won={finished ? "true" : undefined}>
       <div className="sdk-layout mx-auto flex min-h-0 w-full flex-1 flex-col gap-2 lg:grid lg:max-w-5xl lg:flex-none lg:grid-cols-[minmax(0,34rem)_20rem] lg:justify-center lg:gap-8">
         <section aria-label="Game" className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 lg:block lg:flex-none lg:space-y-3">
           <div className="sdk-side flex items-center justify-between gap-2">
@@ -237,7 +235,8 @@ export function GameScreen({ initial, settings, onSettingsChange, onChange, onEn
 
           <div className="sdk-stage">
             <div className="sdk-square relative">
-              <Board size={game.size} regions={board.reg} cells={game.cells} conflicts={conflicts} hint={game.hint} hintUnitCells={hintUnitCells} covered={paused} onTap={tap} onSet={set} onMark={mark} />
+              <Board size={game.size} regions={board.reg} cells={game.cells} conflicts={conflicts} hint={game.hint} hintUnitCells={hintUnitCells} covered={paused} won={finished} onTap={tap} onSet={set} onMark={mark} />
+              {finished && <WinBurst accent="queens" />}
               {paused && (
                 <div className="absolute inset-0 grid place-items-center">
                   <div className="space-y-3 text-center">

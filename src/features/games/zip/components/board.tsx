@@ -61,6 +61,7 @@ export function Board({
   path,
   hint,
   covered,
+  won,
   onBegin,
   onDrag,
   onEnd,
@@ -69,6 +70,8 @@ export function Board({
   path: readonly number[];
   hint: Hint | null;
   covered: boolean;
+  /** The puzzle is solved: play the win animation on the path. */
+  won: boolean;
   onBegin: (cell: number) => void;
   onDrag: (cell: number) => void;
   onEnd: () => void;
@@ -127,7 +130,7 @@ export function Board({
   const points = path.map((c) => `${(c % puzzle.cols) + 0.5},${Math.floor(c / puzzle.cols) + 0.5}`).join(" ");
 
   return (
-    <div className="zp-board" data-covered={covered ? "true" : undefined} style={style}>
+    <div className="zp-board" data-covered={covered ? "true" : undefined} data-won={won ? "true" : undefined} style={style}>
       <div
         ref={ref}
         role="group"
@@ -149,7 +152,7 @@ export function Board({
           return <Cell key={i} on={inPath.has(i)} head={i === head} hint={hintCells.has(i)} number={number} state={state} />;
         })}
         <svg className="zp-svg" viewBox={`0 0 ${puzzle.cols} ${puzzle.rows}`} preserveAspectRatio="none" aria-hidden>
-          {path.length > 1 && <polyline className="zp-path" points={points} />}
+          {path.length > 1 && <polyline className="zp-path" points={points} pathLength={1} />}
           {head >= 0 && <circle className="zp-head" cx={(head % puzzle.cols) + 0.5} cy={Math.floor(head / puzzle.cols) + 0.5} r={0.17} />}
           {puzzle.walls.map((key) => {
             const line = wallLine(key, puzzle.cols);

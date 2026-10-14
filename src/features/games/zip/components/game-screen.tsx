@@ -13,6 +13,7 @@ import { MoreSheet } from "@/features/games/shared/components/more-sheet";
 import type { PlayScreenProps } from "@/features/games/shared/components/puzzle-kit";
 import { toolButton } from "@/features/games/shared/components/tool-button";
 import { DIFFICULTY_LABEL } from "@/features/games/shared/lib/puzzle-session";
+import { WinBurst } from "@/features/games/shared/components/win-burst";
 import { Board } from "@/features/games/zip/components/board";
 import { lastNumberOpen, nextNumber } from "@/features/games/zip/lib/draw";
 import {
@@ -36,9 +37,6 @@ import {
 import type { GameState, ZipSettings } from "@/features/games/zip/lib/types";
 
 type Dialog = "restart" | "new" | null;
-
-/** After the last square is filled, the solved board stays up for a moment before the result screen takes over. */
-const SOLVED_PAUSE_MS = 700;
 
 function GameActions({ playing, finished, onRestart, onNew, onClose }: { playing: boolean; finished: boolean; onRestart: () => void; onNew: () => void; onClose?: () => void }) {
   const run = (action: () => void) => () => {
@@ -104,8 +102,8 @@ export function GameScreen({ initial, settings, onSettingsChange, onChange, onEn
   useEffect(() => {
     if (!finished || endedRef.current) return;
     endedRef.current = true;
-    const timer = setTimeout(() => onEnd(game), SOLVED_PAUSE_MS);
-    return () => clearTimeout(timer);
+    // Saved the moment it is solved; the win card on top of the board is the shell's (see puzzle-app.tsx).
+    onEnd(game);
   }, [finished, game, onEnd]);
 
   // Bank the elapsed time every so often, so a tab that is killed loses seconds, not minutes.
@@ -191,11 +189,11 @@ export function GameScreen({ initial, settings, onSettingsChange, onChange, onEn
 
   const actions = {
     onRestart: () => (hasProgress(game) ? setDialog("restart") : update((g) => restartGame(g, Date.now()))),
-    onNew: () => (hasProgress(game) ? setDialog("new") : onAbandon(game)),
+    onNew: () => (hasProgress(game) && !finished ? setDialog("new") : onAbandon(game)),
   };
 
   return (
-    <div className="play-screen play-below-lg sdk-screen py-3 lg:container lg:py-8">
+    <div className="play-screen play-below-lg sdk-screen py-3 lg:container lg:py-8" data-won={finished ? "true" : undefined}>
       <div className="sdk-layout mx-auto flex min-h-0 w-full flex-1 flex-col gap-2 lg:grid lg:max-w-5xl lg:flex-none lg:grid-cols-[minmax(0,34rem)_20rem] lg:justify-center lg:gap-8">
         <section aria-label="Game" className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 lg:block lg:flex-none lg:space-y-3">
           <div className="sdk-side flex items-center justify-between gap-2">
@@ -251,7 +249,8 @@ export function GameScreen({ initial, settings, onSettingsChange, onChange, onEn
 
           <div className="sdk-stage">
             <div className="sdk-square relative">
-              <Board rules={rules} path={game.path} hint={game.hint} covered={paused} onBegin={begin} onDrag={drag} onEnd={release} />
+              <Board rules={rules} path={game.path} hint={game.hint} covered={paused} won={finished} onBegin={begin} onDrag={drag} onEnd={release} />
+              {finished && <WinBurst accent="zip" />}
               {paused && (
                 <div className="absolute inset-0 grid place-items-center">
                   <div className="space-y-3 text-center">

@@ -267,7 +267,9 @@ describe("drawing rules", () => {
   it("fills in the cells a fast drag skipped, and cuts a corner by the shorter legal route", () => {
     assert.deepEqual(reach(easy, [8], 2), [8, 3, 2], "diagonal: through the plain cell, not the numbered one");
     assert.deepEqual(reach(easy, [8], 18), [8, 13, 18]);
-    assert.deepEqual(reach(easy, [8, 13], 8), [8], "an earlier cell erases");
+    assert.deepEqual(reach(easy, [8, 13], 8), [8], "the square just behind the end erases one step");
+    assert.deepEqual(reach(easy, [8, 13, 12], 8), [8, 13, 12], "an earlier square is not crossed");
+    assert.deepEqual(reach(easy, [8, 13, 12, 7], 13), [8, 13, 12, 7], "nor is one three squares back");
     assert.deepEqual(reach(easy, [8], 24), [8], "too far to be a drag artefact");
     assert.deepEqual(reach(easy, [], 8), [8]);
     assert.deepEqual(reach(easy, [], 3), []);
@@ -380,9 +382,28 @@ describe("playing", () => {
     for (const c of [13, 12, 7]) g = dragTo(g, c, T0).state;
     g = dragTo(g, 12, T0).state;
     assert.deepEqual(g.path, [8, 13, 12]);
+    g = dragTo(g, 13, T0).state;
     g = dragTo(g, 8, T0).state;
     assert.deepEqual(g.path, [8]);
     assert.equal(dragTo(g, 8, T0).state.path.length, 1);
+  });
+
+  it("never crosses itself while drawing: only the square just behind the end can be gone back onto", () => {
+    let g = beginStroke(fresh(), 8, T0).state;
+    for (const c of [13, 12, 7]) g = dragTo(g, c, T0).state;
+    for (const earlier of [8, 13, 12]) {
+      const result = dragTo(g, earlier, T0);
+      if (earlier === 12) continue;
+      assert.deepEqual(result.state.path, [8, 13, 12, 7], `touching ${earlier} leaves the path alone`);
+    }
+    assert.equal(dragTo(g, 8, T0).refused, "visited", "touching a neighbouring square of its own path says why");
+    // A quick swing across the path (several squares in one go) cannot cut it either.
+    const swung = [8, 7, 2].reduce((state, c) => dragTo(state, c, T0).state, g);
+    assert.ok(swung.path.length >= 3 && swung.path[0] === 8 && swung.path.includes(13), "the earlier part survives");
+    // Stepping back one square at a time still erases as far as wanted.
+    let back = g;
+    for (const c of [12, 13, 8]) back = dragTo(back, c, T0).state;
+    assert.deepEqual(back.path, [8]);
   });
 
   it("carries on from the end, or from an earlier cell, when pressed again", () => {

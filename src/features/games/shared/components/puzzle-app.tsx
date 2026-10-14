@@ -6,6 +6,8 @@ import { PageHeader } from "@/components/layout/page-header";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { useLocalStore, useViewerInfo } from "@/features/auth/components/viewer-provider";
 import { PuzzleResultScreen } from "@/features/games/shared/components/puzzle-result";
+import { BURST_MS } from "@/features/games/shared/components/win-burst";
+import { WinOverlay } from "@/features/games/shared/components/win-overlay";
 import { PuzzleSetup } from "@/features/games/shared/components/puzzle-setup";
 import { PuzzleStatsPanel } from "@/features/games/shared/components/puzzle-stats-panel";
 import type { PuzzleGame, PuzzleKit } from "@/features/games/shared/components/puzzle-kit";
@@ -44,6 +46,8 @@ export default function PuzzleApp<G extends PuzzleGame, S, D extends PuzzleRecor
   const [generating, setGenerating] = useState(false);
   const [failed, setFailed] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  /** The win card is showing over the solved board. */
+  const [winOpen, setWinOpen] = useState(false);
   const historyRef = useRef<D[] | null>(null);
 
   useEffect(() => {
@@ -137,6 +141,7 @@ export default function PuzzleApp<G extends PuzzleGame, S, D extends PuzzleRecor
           setSaved(null);
           setGame(created);
           setResult(null);
+          setWinOpen(false);
           setView("playing");
         } catch {
           setFailed(true);
@@ -157,6 +162,7 @@ export default function PuzzleApp<G extends PuzzleGame, S, D extends PuzzleRecor
     if (!saved) return;
     setGame(kit.resume(saved, Date.now()));
     setResult(null);
+    setWinOpen(false);
     setView("playing");
   }, [saved, kit]);
 
@@ -170,37 +176,88 @@ export default function PuzzleApp<G extends PuzzleGame, S, D extends PuzzleRecor
       if (store) storage.clearGame(store);
       setSaved(null);
       setResult({ data, previousBestMs, previousBestScore, saveState: ok ? "saved" : "failed" });
-      setView("result");
+      // The board celebrates first; the win card follows (see the effect below).
     },
     [record, store, kit, storage]
   );
 
   const leave = useCallback(
     (g: G) => {
+      if (result) {
+        // Solved already (and saved): there is nothing to keep.
+        setResult(null);
+        setGame(null);
+        setWinOpen(false);
+        setView("setup");
+        return;
+      }
       const frozen = kit.freeze(g, Date.now());
       if (store) storage.saveGame(store, frozen);
       setSaved(frozen);
       setGame(null);
       setView("setup");
     },
-    [store, kit, storage]
+    [store, kit, storage, result]
   );
 
   const abandon = useCallback(
     (g: G) => {
-      discard(g);
+      if (result) {
+        setResult(null);
+        setWinOpen(false);
+      } else discard(g);
       setGame(null);
       setView("setup");
     },
-    [discard]
+    [discard, result]
   );
+
+  // The win card opens once the board's own animation has played (at once if the player prefers reduced motion).
+  useEffect(() => {
+    if (!result || view !== "playing") return;
+    const calm = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const timer = setTimeout(() => setWinOpen(true), calm ? 0 : BURST_MS);
+    return () => clearTimeout(timer);
+  }, [result, view]);
 
   const stats = useMemo(() => (history ? kit.computeStats(history, saved?.difficulty ?? null) : null), [history, saved, kit]);
   const bestTimes = useMemo(() => Object.fromEntries(DIFFICULTIES.map((d) => [d, stats?.byDifficulty[d].bestTimeMs ?? null])) as Record<Difficulty, number | null>, [stats]);
 
   if (view === "playing" && game) {
     const Play = kit.PlayScreen;
-    return <Play key={game.clientId + game.startedAt} initial={game} settings={settings} onSettingsChange={changeSettings} onChange={persist} onEnd={end} onLeave={leave} onAbandon={abandon} />;
+    const won = result && winOpen ? result : null;
+    return (
+      <>
+        <Play key={game.clientId + game.startedAt} initial={game} settings={settings} onSettingsChange={changeSettings} onChange={persist} onEnd={end} onLeave={leave} onAbandon={abandon} />
+        {won && (
+          <WinOverlay
+            accent={kit.accent}
+            noun={kit.noun}
+            data={won.data}
+            score={kit.score(won.data)}
+            newBestTime={won.previousBestMs !== null && won.data.elapsedMs < won.previousBestMs}
+            newBestScore={won.previousBestScore > 0 && kit.score(won.data).total > won.previousBestScore}
+            firstSolve={won.previousBestMs === null}
+            saveState={won.saveState}
+            onPlayAgain={() => {
+              setWinOpen(false);
+              begin(won.data.difficulty);
+            }}
+            onChangeDifficulty={() => {
+              setWinOpen(false);
+              setResult(null);
+              setGame(null);
+              setView("setup");
+            }}
+            onDetails={() => {
+              setWinOpen(false);
+              setView("result");
+            }}
+            onClose={() => setWinOpen(false)}
+          />
+        )}
+      </>
+    );
   }
 
   if (view === "result" && result) {
@@ -217,6 +274,7 @@ export default function PuzzleApp<G extends PuzzleGame, S, D extends PuzzleRecor
         onReplay={() => begin(result.data.difficulty)}
         onChangeDifficulty={() => {
           setResult(null);
+          setGame(null);
           setView("setup");
         }}
       />
