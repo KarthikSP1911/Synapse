@@ -63,7 +63,7 @@ export function explain(reason: Exclude<StepResult, { ok: true }>["reason"], rul
     case "wall":
       return "A wall blocks that way.";
     case "visited":
-      return "That square is already on your path.";
+      return "The path cannot cross itself. Drag back along it to erase it.";
     case "order":
       return `Reach the numbers in order: you are heading for ${nextNumber(rules, path)}.`;
     default:
@@ -84,10 +84,12 @@ export function advance(rules: Rules, path: readonly number[], to: number): read
 /**
  * The pointer can jump over cells (a quick drag, or a corner cut diagonally). Finds the shortest legal way of
  * stepping from the path's end to `to`, up to `maxSteps` cells, and returns the extended path, or the path itself
- * when there is none. Cells already on the path are handled by `advance`.
+ * when there is none. While drawing, the path never crosses itself: the only cell of the path the pointer may go
+ * back onto is the one just behind the end (that undoes one step); every other cell of the path is ignored.
  */
 export function reach(rules: Rules, path: readonly number[], to: number, maxSteps = 4): readonly number[] {
-  if (path.includes(to) || path.length === 0) return advance(rules, path, to);
+  if (path.length === 0) return advance(rules, path, to);
+  if (path.includes(to)) return path.length > 1 && to === path[path.length - 2] ? path.slice(0, -1) : path;
   const find = (current: readonly number[], depth: number): readonly number[] | null => {
     if (canStep(rules, current, to).ok) return [...current, to];
     if (depth === 0) return null;

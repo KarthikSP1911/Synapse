@@ -114,15 +114,19 @@ export function beginStroke(state: GameState, cell: number, now: number): Began 
   return { state: withPath(started, path, now), refused: null };
 }
 
-/** The pointer reached `cell` during a stroke: erase back to it, or extend towards it by the shortest legal route. */
+/**
+ * The pointer reached `cell` during a stroke: step back if it is the square just behind the end, extend towards it by
+ * the shortest legal route, or ignore it. The path never crosses itself, so touching any other square of the path
+ * does nothing (pressing on an earlier square to start a stroke there is `beginStroke`).
+ */
 export function dragTo(state: GameState, cell: number, now: number): Began {
   if (!playing(state) || !state.stroke) return { state, refused: null };
   const rules = rulesFor(state.puzzle);
   const path = reach(rules, state.path, cell);
   if (path === state.path) {
-    // Say why a neighbouring square is closed; running over squares that are merely far or taken is not worth a message.
-    const why = state.path.includes(cell) ? null : canStep(rules, state.path, cell);
-    return { state, refused: why && !why.ok && (why.reason === "wall" || why.reason === "order" || why.reason === "last") ? why.reason : null };
+    // Say why a neighbouring square is closed; running over squares that are merely far is not worth a message.
+    const why = canStep(rules, state.path, cell);
+    return { state, refused: why && !why.ok && why.reason !== "far" && why.reason !== "start" ? why.reason : null };
   }
   return { state: withPath(state, path, now), refused: null };
 }
