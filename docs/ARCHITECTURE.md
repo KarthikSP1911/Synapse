@@ -57,6 +57,12 @@ features/
       lib/history/                  local.ts (device history), sync.ts (browser upload),
                                     upload.ts (pure server upload logic), route.ts (Next wrapper)
   progress/               Progress page: charts, heatmap, queries (server/)
+  rewards/                Coins, Streak Shields and paid hints
+                            lib/ economy.ts (every amount), ledger.ts (pure wallet rules), grants.ts (what an activity pays),
+                                  protection.ts (which missed days a shield covers), wallet-store.ts + service.ts (the device's
+                                  wallet), reconcile.ts + sync.ts (device <-> account)
+                            components/ header badge, toasts, shop, shield panel, usePaidHint
+                            server/ wallet.ts (atomic SQL), requests.ts, db-run.ts
   settings/               User settings form and parsing
   auth/                   Sign-in/up forms, ViewerProvider; server/ holds auth.ts and actions
   offline/                The "works without a connection" machinery
@@ -121,6 +127,17 @@ of it is a **set of `YYYY-MM-DD` days**; `features/progress/lib/streak.ts` turns
   of sessions saved before it existed are added once. A guest's data is not carried to a new account.
 - **Why a set**: retries, reloads, syncs and pulling history from another device can only re-add a day that is
   already there, so nothing can be counted twice.
+
+## Coins, Streak Shields and paid hints
+
+One ledger, two homes. A **ledger entry** has a unique idempotency key, a signed coin amount, a signed shield amount, a reason and a related id; the balance is the opening balance plus the entries and is never negative. `features/rewards/lib/ledger.ts` is the single set of rules (earn, buy a shield, spend a shield, charge a hint) as pure functions over a wallet value, and the same rules guard both homes.
+
+- **The device** keeps the wallet in `localStorage` per viewer (`<store key>:wallet`) and changes it only through `service.ts`: read, one pure step, write, in one synchronous call, so two taps cannot interleave. If the write fails nothing changed and the caller must not act (a hint is not shown). A guest's wallet is authoritative; a signed-in user's entries are `pending` until the server has them.
+- **The server** (`wallets`, `wallet_transactions`, migration `0009`) is authoritative for accounts. Every change is one SQL statement that locks the wallet row, inserts the ledger row (a duplicate key inserts nothing, so the totals do not move) and updates the totals together; the CHECK constraints (balance >= 0, shield count 0..100) abort anything that would break the invariant. Two requests racing for the same coins cannot both win. The same statements are run in tests against PGlite.
+- **Nothing the device says names an amount.** Earnings are computed from records the upload routes already validate (`practice`'s answers are re-checked, puzzle records are re-solved) by the same `grants.ts` functions the device used, with the same keys, so the device's optimistic entry and the server's credit are one entry. Hint charges arrive as "this hint of this attempt was delivered" and are priced from `ECONOMY`. Shield purchases are server-first and need a connection. Shield use is decided on the server from every device's activity days.
+- **Sync** (`sync.ts`, run by `SyncManager` after the practice and game uploads): send the pending hint charges and the pending keys, receive the account's wallet, and `reconcile` it with what is still pending. The device's balance is always the server's balance plus its pending entries.
+- **Hint order** (`use-paid-hint.ts`): work out the hint without side effects -> if none, stop (no charge, no cooldown) -> `requestHint` checks cooldown, then balance, then saves charge + cooldown -> show the hint only on success. Charges are keyed by game attempt (clientId + start time, so a restart is a new attempt) and hint number, so a crash between charge and display costs nothing the second time.
+- **Limits worth knowing.** A hint is computed on the device (the solution is in the browser), so the cooldown is enforced by the wallet service on the device, not by the server; the server's guarantee is that each delivered hint is charged exactly once at the right price and the balance never goes negative. Offline signed-in hints are charged against the device's copy and re-checked at sync; the account's balance is the authority, and a charge it cannot cover is dropped rather than leaving a negative balance. The device keeps the latest 500 ledger entries (older ones are folded into the opening balance); the server's unique keys are permanent.
 
 ## Decisions
 

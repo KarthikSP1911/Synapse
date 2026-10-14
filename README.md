@@ -19,6 +19,7 @@ Mathz is an adaptive mental-maths trainer. It drills four skills — **multiplic
 - **Settings** (stored in this browser): weak-question share, recent-question window, default difficulty, enabled exercise types per skill, default session length, per-question time limit, explanations, hints and live stats.
 - **Installable app (PWA)**: a web app manifest, generated icons (including a maskable one) and a service worker. On phones and tablets a non-intrusive "Install Mathz" banner appears when installation is supported (the native prompt on Chromium, Share-sheet steps on iOS Safari); it stays away once installed, running as an app, or dismissed. The service worker is registered in production builds only.
 - **Offline and slow networks**: after one online visit the app opens and practice runs with no connection. Practice always runs in the browser (`src/features/offline/lib/guest/api.ts`), so answers never wait on the network. Signed-in users' sessions are saved on the device and uploaded in the background (`src/features/offline/lib/sync/`, `POST /api/sync`) when the network is back; the server re-checks every answer and ignores repeats, so a retry can never double-count. Screens are served network-first with a 4 s cut-off, then from the last stored copy (`public/sw.js`). First sign-in, sign-up and "Try without an account" still need a connection once. Run `npm run db:migrate` to add the `client_id` column the upload uses.
+- **Coins, Streak Shields and paid hints**: practice and games pay coins, coins buy Streak Shields that protect the streak on a missed day, and every hint costs coins and starts a short cooldown. The wallet is in the header and the shop is at `/rewards`. See [Coins, shields and hints](#coins-streak-shields-and-hints).
 - **Keyboard-first** practice with visible focus rings, light/dark themes, and respect for `prefers-reduced-motion`.
 
 ## Skills and exercises
@@ -93,6 +94,27 @@ Open <http://localhost:3000>.
 | `npm run db:push`     | Sync the schema to a database with drizzle-kit               |
 | `npm run db:generate` | Generate SQL migrations                                      |
 | `npm run db:studio`   | Browse data with Drizzle Studio                              |
+
+## Coins, Streak Shields and paid hints
+
+Every amount below lives in one file, `src/features/rewards/lib/economy.ts` (`ECONOMY`). Change a value there and the games, the shop, the server and the tests follow.
+
+| Activity | Coins |
+| --- | --- |
+| Correct practice answer | 2 |
+| Practice session finished (at least 5 answered, at least 50% right) | 5 bonus |
+| Correct MindSprint round / perfectly recalled Number Recall round | 2 each |
+| MindSprint / Number Recall session finished (at least 3 rounds, at least 50% right) | 5 bonus |
+| Solved Sudoku, Queens or Zip: Easy / Medium / Hard / Expert | 10 / 15 / 20 / 30 |
+| 2048 run, once, by highest tile: 128 / 256 / 512 / 1024 / 2048 / 4096 / 8192 / 16384+ | 3 / 5 / 8 / 12 / 20 / 30 / 40 / 50 |
+| **Spend**: Streak Shield (up to 5 held) | 100 |
+| **Spend**: a hint that is actually delivered (then 5 s cooldown per game or session) | 5 |
+
+- **What earns nothing**: opening a page, starting a game, refreshing, wrong/skipped/timed-out answers, a revealed Sudoku, an abandoned puzzle or session, a 2048 game left after a few moves, the same answer submitted twice within 400 ms. Each reward has an idempotency key made from the thing it pays for (`practice:<session>:<answer time>`, `queens:<game id>`, ...), so a retry, re-render, re-upload or sync pays once.
+- **Streak Shields** protect one missed calendar day each (the user's own time zone). The next time the app opens or syncs, a missed day with a shield available is covered automatically. A gap is covered whole or not at all (shields are not wasted on a streak that breaks anyway); a shield only covers days on or after the day it was bought, so it cannot revive a streak that already broke; one shield per day, never twice for the same date. A protected day keeps the streak alive but is **not** activity: it adds nothing to streak length or active days, earns no coins, and does not appear on the calendar.
+- **Hints** (Queens, Zip, Sudoku and practice) share one mechanism (`use-paid-hint.ts` over `requestHint` in `service.ts`). The hint is worked out first; if there is none to give, nothing is charged. Then the wallet checks the cooldown and balance and takes the price in one saved step, and only if that succeeded is the hint shown. The cooldown is stored in the wallet (not in React state), so rapid clicks, the `H` key, touch events and reloads cannot skip it.
+- **Where the money is**: a guest's wallet lives in this browser only and is not carried to a new account (the same rule as their practice history). A signed-in user's wallet is kept on the server (`wallets`, `wallet_transactions`) and cached on the device so the app still works offline. Earnings are credited by the upload routes from records the server has just re-validated (never from an amount the device sends); hint charges the device made offline are re-charged by the server at its own price when it syncs; shield purchases go to the server and need a connection.
+- **Deploying**: run `npm run db:migrate` (adds `0009_wallet.sql`, additive and idempotent) **before** deploying this code. Until it has run, uploads that earn coins fail with a 500 and the device keeps retrying, so nothing is lost, but nothing syncs.
 
 ## Upgrading an existing database
 
@@ -185,7 +207,7 @@ Per question: starts from the error rate (`100 − accuracy`), adds 10 if the av
 
 ## Testing
 
-`npm test` runs 83 unit tests with no database: rational arithmetic, every spec example, question ids (round-trip and rejection of malformed ones), answer validation edge cases, difficulty-specific pool generation (every question in every pool is checked for tier, uniqueness and an exact answer), config and session-request validation, Leitner transitions and due dates, weakness scores, adaptive selection (rates, weighting, recent avoidance, fallbacks, focus modes), pause-aware timeouts, settings migration, and the square-range chart.
+`npm test` runs the unit tests with no external database. The wallet's SQL is tested against an in-process Postgres (PGlite, a dev dependency) with the real `0009_wallet.sql` applied, including concurrent purchases, duplicate keys and the CHECK constraints. The first group of tests (originally 83) covers: rational arithmetic, every spec example, question ids (round-trip and rejection of malformed ones), answer validation edge cases, difficulty-specific pool generation (every question in every pool is checked for tier, uniqueness and an exact answer), config and session-request validation, Leitner transitions and due dates, weakness scores, adaptive selection (rates, weighting, recent avoidance, fallbacks, focus modes), pause-aware timeouts, settings migration, and the square-range chart.
 
 Not covered by automated tests: the SQL that updates session totals and the React components. During development these were exercised by hand against a development database (all four skills end to end: creating sessions, answering, skipping, hints, timeouts, pause/resume, mistake review, summary, progress and tables pages) and by `npm run build`, `npm run lint` and `npm run typecheck`; there is no committed end-to-end suite.
 
