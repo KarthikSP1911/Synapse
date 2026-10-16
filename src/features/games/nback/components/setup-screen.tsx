@@ -10,7 +10,7 @@ import { formatApproxDuration } from "@/features/games/shared/lib/format";
 import { activeStreams, minTrials, scoreableTrials, streamMode, validateConfig, withN } from "@/features/games/nback/lib/config";
 import { difficultyOf } from "@/features/games/nback/lib/difficulty";
 import { STREAM_KEY } from "@/features/games/nback/lib/keys";
-import { ADAPT_DOWN_PERCENT, ADAPT_UP_PERCENT, LIMITS, LIVES, MIN_GAP_MS, MODE_LABEL, STREAMS, STREAM_LABEL, defaultTrialCount, type NBackConfig, type StreamId } from "@/features/games/nback/lib/types";
+import { ADAPT_DOWN_PERCENT, ADAPT_UP_PERCENT, LIMITS, LIVES, MIN_GAP_MS, MIN_SCOREABLE, MODE_LABEL, STREAMS, STREAM_LABEL, defaultTrialCount, type NBackConfig, type StreamId } from "@/features/games/nback/lib/types";
 
 const STREAM_HELP: Record<StreamId, string> = {
   position: "Which cell lights up.",
@@ -69,7 +69,7 @@ export function SetupScreen({
     edit({ streams: { ...config.streams, [stream]: !config.streams[stream] } });
   };
 
-  /** A new stimulus time also pulls the trial time up with it, so the stimulus never outlasts the trial. */
+  /** A new stimulus time also pulls the flash time up with it, so the stimulus never outlasts the flash. */
   const setStimulus = (stimulusMs: number) => edit({ stimulusMs, trialMs: Math.max(config.trialMs, stimulusMs + MIN_GAP_MS) });
 
   const startButton = (
@@ -118,7 +118,7 @@ export function SetupScreen({
           <div className="mt-4 grid gap-6">
             <Stepper
               label="n"
-              hint={`Match against the stimulus ${config.n} ${config.n === 1 ? "trial" : "trials"} back`}
+              hint={`Match against the stimulus ${config.n} ${config.n === 1 ? "flash" : "flashes"} back`}
               value={config.n}
               min={LIMITS.n.min}
               max={LIMITS.n.max}
@@ -148,15 +148,25 @@ export function SetupScreen({
 
         <Section id="nb-timing" title="Timing">
           <div className="mt-4 grid gap-6">
-            <Stepper
-              label="Trials"
-              hint={`${scoreableTrials(config)} of them are scored; the first ${config.n} only set the pace`}
-              value={config.trials}
-              min={minTrials(config.n)}
-              max={LIMITS.trials.max}
-              onChange={(trials) => edit({ trials, autoTrials: trials === defaultTrialCount(config.n) ? config.autoTrials : false })}
+            <Switch
+              label="Unlimited flashes"
+              hint={`No set length. You play until you run out of ${LIVES} lives, or finish when you choose (after ${MIN_SCOREABLE} scored flashes). Finishing saves a completed session; Game Over does not.`}
+              checked={config.unlimited}
+              onChange={(unlimited) => edit({ unlimited })}
             />
-            <Switch label="Follow n" hint={`Use ${defaultTrialCount(config.n)} trials (20 + n) and keep that as n changes`} checked={config.autoTrials} onChange={(autoTrials) => edit(autoTrials ? { autoTrials, trials: defaultTrialCount(config.n) } : { autoTrials })} />
+            {!config.unlimited && (
+              <>
+                <Stepper
+                  label="Flashes"
+                  hint={`${scoreableTrials(config)} of them are scored; the first ${config.n} only set the pace`}
+                  value={config.trials}
+                  min={minTrials(config.n)}
+                  max={LIMITS.trials.max}
+                  onChange={(trials) => edit({ trials, autoTrials: trials === defaultTrialCount(config.n) ? config.autoTrials : false })}
+                />
+                <Switch label="Follow n" hint={`Use ${defaultTrialCount(config.n)} flashes (20 + n) and keep that as n changes`} checked={config.autoTrials} onChange={(autoTrials) => edit(autoTrials ? { autoTrials, trials: defaultTrialCount(config.n) } : { autoTrials })} />
+              </>
+            )}
             <div className="grid gap-6 sm:grid-cols-2">
               <Slider
                 label="Stimulus time"
@@ -169,7 +179,7 @@ export function SetupScreen({
                 format={seconds}
               />
               <Slider
-                label="Time per trial"
+                label="Time per flash"
                 hint={`Lit time plus a gap of at least ${MIN_GAP_MS} ms; you can answer the whole time`}
                 value={config.trialMs}
                 min={Math.max(LIMITS.trialMs.min, config.stimulusMs + MIN_GAP_MS)}
@@ -185,8 +195,8 @@ export function SetupScreen({
         <Section id="nb-feedback" title="Feedback">
           <div className="mt-4">
             <Switch
-              label="Per-trial feedback"
-              hint="Mark each stream right or wrong after every trial. Off, it plays like a test and everything shows at the end. Your hearts update either way."
+              label="Per-flash feedback"
+              hint="Mark each stream right or wrong after every flash. Off, it plays like a test and everything shows at the end. Your hearts update either way."
               checked={config.feedback}
               onChange={(feedback) => edit({ feedback })}
             />
@@ -220,14 +230,14 @@ export function SetupScreen({
           <Row label="Mode" value={`${MODE_LABEL[streamMode(config)]} · ${streams.map((s) => STREAM_LABEL[s]).join(" + ")}`} />
           <Row label="n" value={`${config.n}${config.adaptive ? " (adaptive)" : ""}`} />
           <Row label="Board" value={`${config.grid}×${config.grid}`} />
-          <Row label="Trials" value={`${config.trials} (${scoreableTrials(config)} scored)`} />
-          <Row label="Length" value={formatApproxDuration((config.trials * config.trialMs) / 1000 + 3)} />
+          <Row label="Flashes" value={config.unlimited ? "Unlimited" : `${config.trials} (${scoreableTrials(config)} scored)`} />
+          <Row label="Length" value={config.unlimited ? "Until Game Over or you finish" : formatApproxDuration((config.trials * config.trialMs) / 1000 + 3)} />
           <Row label="Lives" value={`${LIVES}`} />
           <Row label="Reward" value={`${reward} coins · ${DIFFICULTY_NAME[difficultyOf(config)]}`} />
         </dl>
         <div className="mt-5 hidden lg:block">{startButton}</div>
         <p className="mt-3 text-center text-xs text-muted-foreground">
-          Run out of {LIVES} lives and the session ends. Coins are paid only for a session played to the end.
+          Run out of {LIVES} lives and the session ends. Coins are paid only for a session played to the end{config.unlimited ? " (finished by you)" : ""}.
         </p>
         <Button variant="ghost" size="sm" className="mt-2 w-full" onClick={onHowTo}>
           <CircleHelp /> How it works

@@ -38,6 +38,12 @@ export const MIN_SCOREABLE = 10;
 /** The stimulus must be gone at least this long before the next trial begins. */
 export const MIN_GAP_MS = 200;
 
+/**
+ * How many trials an unlimited session is generated with. It ends long before that unless the player is very good
+ * (at the default timing it is over 40 minutes of play); reaching it counts as finishing.
+ */
+export const UNLIMITED_TRIALS = 1000;
+
 /** Trials in a session unless the player picks a number: 20 beyond the first n. */
 export const defaultTrialCount = (n: number): number => 20 + n;
 
@@ -52,8 +58,13 @@ export interface NBackConfig {
   colors: number;
   /** How many letters of the letter pool are in play. */
   letters: number;
-  /** Total trials, the first n included. */
+  /** Total trials, the first n included. Not used while `unlimited` is on, but kept so turning it off brings the number back. */
   trials: number;
+  /**
+   * No fixed length: the session runs until the last life is lost (Game Over) or the player chooses to finish, which
+   * they can do once `MIN_SCOREABLE` trials have been scored. A finished session counts as completed.
+   */
+  unlimited: boolean;
   /** When true, `trials` follows `20 + n` whenever n changes. */
   autoTrials: boolean;
   /** How long the stimulus stays lit. */
@@ -129,6 +140,7 @@ export const DEFAULT_CONFIG: NBackConfig = {
   letters: 6,
   trials: defaultTrialCount(2),
   autoTrials: true,
+  unlimited: false,
   stimulusMs: 500,
   trialMs: 2500,
   feedback: true,

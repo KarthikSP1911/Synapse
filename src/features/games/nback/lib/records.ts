@@ -1,9 +1,9 @@
 import { MAX_PLAYED_MS, openRecord, type Parsed } from "@/lib/records";
 import { isIntInRange } from "@/lib/validation";
-import { activeStreams, parseConfig } from "./config";
+import { activeStreams, parseConfig, sessionTrials } from "./config";
 import { generateSequence, paramsFromConfig } from "./generator";
 import { scoreSession } from "./scoring";
-import { GENERATOR_VERSION, STREAMS, STREAM_BIT, type SessionData } from "./types";
+import { GENERATOR_VERSION, MIN_SCOREABLE, STREAMS, STREAM_BIT, type SessionData } from "./types";
 
 /**
  * Checks a saved or uploaded N-Back session. Nothing in it is trusted. The settings must be valid; the seed and
@@ -41,9 +41,12 @@ export function parseSessionData(raw: unknown, { now, verify = false }: { now?: 
   if (generator !== GENERATOR_VERSION) return fail("Unknown sequence generator.");
 
   const active = activeStreams(config).reduce((mask, s) => mask | STREAM_BIT[s], 0);
-  if (!Array.isArray(responses) || responses.length < 1 || responses.length > config.trials) return fail("Invalid responses.");
+  const total = sessionTrials(config);
+  if (!Array.isArray(responses) || responses.length < 1 || responses.length > total) return fail("Invalid responses.");
   if (!responses.every((r) => isIntInRange(r, 0, ALL_BITS) && (r & ~active) === 0)) return fail("A response marks a stream that is off.");
-  if (outcome === "completed" && responses.length !== config.trials) return fail("A completed session plays every trial.");
+  if (outcome === "completed" && !config.unlimited && responses.length !== total) return fail("A completed session plays every trial.");
+  // An unlimited session is completed by the player finishing it, once enough trials have been scored.
+  if (outcome === "completed" && config.unlimited && responses.length - config.n < MIN_SCOREABLE) return fail("Too few trials were scored to finish an unlimited session.");
 
   if (!isIntInRange(durationMs, 0, MAX_PLAYED_MS)) return fail("Invalid time played.");
   if (Math.abs(durationMs - responses.length * config.trialMs) > TIMING_SLACK_MS) return fail("The time played does not match the trials played.");
@@ -52,7 +55,9 @@ export function parseSessionData(raw: unknown, { now, verify = false }: { now?: 
   const data: SessionData = { clientId, startedAt, endedAt, outcome, config, seed, generator, responses: responses as number[], durationMs };
   if (verify) {
     const result = scoreSession({ config, trials: generateSequence(paramsFromConfig(config, seed)), responses: data.responses });
-    if (result.outcome !== outcome) return fail("The outcome does not match the responses.");
+    // Replayed, an unlimited session the player ended reads as "incomplete" (the trials ran out of responses, not of lives).
+    const matches = result.outcome === outcome || (outcome === "completed" && config.unlimited && result.outcome === "incomplete");
+    if (!matches) return fail("The outcome does not match the responses.");
     if (result.trialsPlayed !== responses.length) return fail("The session continued after the last life was lost.");
   }
   return { ok: true, data };
