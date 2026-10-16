@@ -10,7 +10,7 @@ import { balanceOf } from "@/features/rewards/lib/ledger";
 import { loadWallet } from "@/features/rewards/lib/wallet-store";
 import { setsBestN, suggestNextN } from "./adaptive";
 import { analyze } from "./analysis";
-import { activeStreams, isPlayable, minTrials, parseConfig, readSettings, scoreableTrials, streamMode, validateConfig, withN } from "./config";
+import { activeStreams, isPlayable, minTrials, parseConfig, readSettings, scoreableTrials, sessionTrials, streamMode, validateConfig, withN } from "./config";
 import { difficultyLoad, difficultyOf } from "./difficulty";
 import { MATCH_TOLERANCE, generateSequence, longestRun, nearMissCount, paramsFromConfig, type GenerateParams } from "./generator";
 import { BOARD_PADDING, MIN_CELL, MIN_VIEWPORT, PHONE_GUTTER, cellGap, cellSize, letterSize } from "./geometry";
@@ -31,6 +31,7 @@ import {
   MATCH_RATE,
   MIN_SCOREABLE,
   STREAMS,
+  UNLIMITED_TRIALS,
   STREAM_BIT,
   defaultTrialCount,
   type NBackConfig,
@@ -770,6 +771,87 @@ describe("motion", () => {
       const body = section.slice(section.indexOf(rule), section.indexOf("}", section.indexOf(rule)));
       assert.ok(!/transition|animation/.test(body), `${rule} must not animate`);
     }
+  });
+});
+
+describe("unlimited trials", () => {
+  const realNow = Date.now;
+  const T0 = Date.parse("2026-10-13T12:00:00Z");
+  beforeEach(() => {
+    (globalThis as { localStorage?: unknown }).localStorage = new MemoryStorage();
+  });
+  afterEach(() => {
+    Date.now = realNow;
+  });
+  const open = cfg({ unlimited: true, streams: withStreams("position", "letter") });
+
+  /** A session of `open` that the player ended after `played` perfect trials. */
+  function ended(id: string, played: number, c: NBackConfig = open): SessionData {
+    const trials = generate(c, 77);
+    const durationMs = played * c.trialMs;
+    return { clientId: id, startedAt: T0 - durationMs - 5000, endedAt: T0, outcome: "completed", config: c, seed: 77, generator: GENERATOR_VERSION, responses: perfect(c, trials).slice(0, played), durationMs };
+  }
+
+  it("generates one long fixed sequence and keeps the chosen trial count for when the switch goes off", () => {
+    assert.equal(sessionTrials(open), UNLIMITED_TRIALS);
+    assert.equal(sessionTrials(cfg({ trials: 30, autoTrials: false })), 30);
+    assert.equal(open.trials, 22, "the number is kept");
+    const trials = generate(open, 5);
+    assert.equal(trials.length, UNLIMITED_TRIALS);
+    for (const stream of activeStreams(open)) {
+      const matches = trials.filter((t) => t.matches[stream]).length / (UNLIMITED_TRIALS - open.n);
+      assert.ok(matches >= MATCH_TOLERANCE.min && matches <= MATCH_TOLERANCE.max, `${stream} ${matches}`);
+    }
+    assert.ok(trials.slice(0, open.n).every((t) => !t.matches.position && !t.matches.letter));
+    assert.deepEqual(generate(open, 5), trials);
+    assert.equal(scoreableTrials(open), UNLIMITED_TRIALS - open.n);
+  });
+
+  it("reads settings saved before the option existed as fixed-length, and keeps the switch when saved", () => {
+    const { unlimited: _unused, ...old } = DEFAULT_CONFIG;
+    void _unused;
+    assert.equal(parseConfig(old).ok, true);
+    assert.equal(readSettings(old).unlimited, false);
+    assert.equal(parseConfig({ ...old, unlimited: "yes" }).ok, false);
+    saveSettings(open);
+    assert.equal(loadSettings().unlimited, true);
+    assert.equal(loadSettings().trials, 22);
+  });
+
+  it("accepts a session the player finished once enough trials were scored, and nothing sooner", () => {
+    const enough = ended("unlimited-aaaa-01", open.n + MIN_SCOREABLE);
+    assert.equal(parseSessionData(enough, { now: T0, verify: true }).ok, true);
+    assert.equal(parseSessionData(ended("unlimited-bbbb-02", open.n + MIN_SCOREABLE - 1), { now: T0, verify: true }).ok, false, "one trial short");
+    const long = ended("unlimited-cccc-03", 150);
+    assert.equal(parseSessionData(long, { now: T0, verify: true }).ok, true);
+    // A fixed-length session still has to play every trial.
+    const fixed = cfg({ streams: withStreams("position") });
+    assert.equal(parseSessionData(ended("unlimited-dddd-04", 15, fixed), { now: T0, verify: true }).ok, false);
+  });
+
+  it("still ends an unlimited session in Game Over, and rejects one relabelled as finished", () => {
+    const trials = generate(open, 77);
+    const responses = trials.map(() => STREAM_BIT.position | STREAM_BIT.letter);
+    const result = scoreSession({ config: open, trials, responses });
+    assert.equal(result.outcome, "gameover");
+    const played = result.trialsPlayed;
+    const over: SessionData = { ...ended("unlimited-eeee-05", played), outcome: "gameover", responses: responses.slice(0, played) };
+    assert.equal(parseSessionData(over, { now: T0, verify: true }).ok, true);
+    assert.equal(parseSessionData({ ...over, outcome: "completed" }, { now: T0, verify: true }).ok, false);
+    // Said to be finished, but the lives had in fact run out earlier.
+    assert.equal(parseSessionData({ ...over, responses: responses.slice(0, played + 3), durationMs: (played + 3) * open.trialMs, outcome: "completed" }, { now: T0, verify: true }).ok, false);
+  });
+
+  it("pays a finished unlimited session once, by its difficulty, and a Game Over nothing", () => {
+    const done = ended("unlimited-ffff-06", 60);
+    assert.equal(sessionGrants(done)[0].amount, ECONOMY.puzzle[difficultyOf(open)]);
+    assert.equal(analyze(done).result.outcome, "incomplete", "replayed, it simply stops where the player stopped");
+    assert.equal(analyze(done).result.livesRemaining, LIVES);
+    assert.equal(analyze(done).setsBestN, true, "a flawless finished session sets a best n");
+    saveSession(GUEST_STORE, done);
+    saveSession(GUEST_STORE, done);
+    assert.equal(balanceOf(loadWallet(GUEST_STORE)), ECONOMY.puzzle[difficultyOf(open)]);
+    assert.deepEqual(sessionGrants({ ...done, outcome: "gameover" }), []);
   });
 });
 

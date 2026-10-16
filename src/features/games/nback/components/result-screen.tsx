@@ -7,7 +7,7 @@ import { Page, PageHeader, StatTile } from "@/components/layout/page-header";
 import { RecordBanner, SaveStatus, type SaveState } from "@/features/games/shared/components/result-parts";
 import { Lives } from "@/features/games/nback/components/lives";
 import { analyze } from "@/features/games/nback/lib/analysis";
-import { activeStreams, streamMode } from "@/features/games/nback/lib/config";
+import { activeStreams, sessionTrials, streamMode } from "@/features/games/nback/lib/config";
 import { suggestNextN } from "@/features/games/nback/lib/adaptive";
 import { sessionGrants } from "@/features/games/nback/lib/rewards";
 import { LIVES, MODE_LABEL, STREAM_LABEL, type SessionData } from "@/features/games/nback/lib/types";
@@ -58,8 +58,8 @@ export function ResultScreen({
         title={gameOver ? "Game over" : `${accuracy}% accuracy`}
         description={
           gameOver
-            ? `You lost your last life at trial ${result.gameOverTrial} of ${config.trials}. No coins this time; play a session to the end to earn them.`
-            : `${result.trialsPlayed} trials played with ${result.livesRemaining} of ${LIVES} lives left.`
+            ? `You lost your last life at flash ${result.gameOverTrial}${config.unlimited ? "" : ` of ${sessionTrials(config)}`}. No coins this time; play a session to the end to earn them.`
+            : `${result.trialsPlayed} flashes played with ${result.livesRemaining} of ${LIVES} lives left.`
         }
         actions={
           <>
@@ -89,7 +89,7 @@ export function ResultScreen({
         <StatTile label="Accuracy" value={`${accuracy}%`} tone={a.accuracy >= 80 ? "success" : a.accuracy >= 50 ? "warning" : "danger"} hint={`${result.overall.correct} of ${result.overall.total} decisions right`} />
         <StatTile label="Score" value={a.points.toLocaleString()} hint="decisions × n" />
         <StatTile label="Coins" value={coins > 0 ? `+${coins}` : "0"} hint={gameOver ? "none for Game Over" : coins > 0 ? `${a.difficulty} reward` : "no reward"} />
-        <StatTile label="Time" value={clock(data.durationMs)} hint={`${result.trialsPlayed} of ${config.trials} trials`} />
+        <StatTile label="Time" value={clock(data.durationMs)} hint={config.unlimited ? `${result.trialsPlayed} flashes` : `${result.trialsPlayed} of ${sessionTrials(config)} flashes`} />
       </div>
 
       <section aria-labelledby="nb-summary" className="rounded-xl border border-border bg-card p-5 shadow-card">
@@ -102,9 +102,9 @@ export function ResultScreen({
           <Item label="n level" value={String(config.n)} />
           <Item label="Streams" value={activeStreams(config).map((s) => STREAM_LABEL[s]).join(" + ")} />
           <Item label="Board" value={`${config.grid}×${config.grid}`} />
-          <Item label="Trials played" value={`${result.trialsPlayed} of ${config.trials}`} />
-          {gameOver && <Item label="Last life lost at" value={`trial ${result.gameOverTrial}`} />}
-          {result.livesLostAt.length > 0 && !gameOver && <Item label="Lives lost at" value={result.livesLostAt.map((t) => `trial ${t}`).join(", ")} />}
+          <Item label="Flashes played" value={config.unlimited ? `${result.trialsPlayed} (unlimited)` : `${result.trialsPlayed} of ${sessionTrials(config)}`} />
+          {gameOver && <Item label="Last life lost at" value={`flash ${result.gameOverTrial}`} />}
+          {result.livesLostAt.length > 0 && !gameOver && <Item label="Lives lost at" value={result.livesLostAt.map((t) => `flash ${t}`).join(", ")} />}
         </dl>
       </section>
 
@@ -130,7 +130,7 @@ export function ResultScreen({
                   <Count label="Correct rejections" value={s.correctRejections} />
                 </dl>
                 <p className="mt-2 text-xs text-muted-foreground">
-                  {s.matches === 0 ? "No matches came up in this stream." : `Caught ${s.hits} of ${s.matches} ${s.matches === 1 ? "match" : "matches"} (${pct(s.detection ?? 0)}%).`} Accuracy is (hits + correct rejections) ÷ {s.scoreable} scored trials.
+                  {s.matches === 0 ? "No matches came up in this stream." : `Caught ${s.hits} of ${s.matches} ${s.matches === 1 ? "match" : "matches"} (${pct(s.detection ?? 0)}%).`} Accuracy is (hits + correct rejections) ÷ {s.scoreable} scored flashes.
                 </p>
               </li>
             );

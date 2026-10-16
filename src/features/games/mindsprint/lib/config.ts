@@ -24,7 +24,6 @@ export interface Preset {
   id: "easy" | "medium" | "hard" | "expert";
   label: string;
   description: string;
-  rounds: number;
   round: RoundConfig;
 }
 
@@ -33,33 +32,64 @@ export const PRESETS: readonly Preset[] = [
     id: "easy",
     label: "Easy",
     description: "Single digits, add and subtract, a relaxed pace.",
-    rounds: 5,
     round: { flashes: 4, digits: 1, operations: ["add", "subtract"], allowNegative: false, decimals: false, decimalPlaces: 1, displayMs: 1500, gapMs: 500 },
   },
   {
     id: "medium",
     label: "Medium",
     description: "Two-digit numbers with multiplication.",
-    rounds: 5,
     round: { flashes: 5, digits: 2, operations: ["add", "subtract", "multiply"], allowNegative: false, decimals: false, decimalPlaces: 1, displayMs: 1100, gapMs: 400 },
   },
   {
     id: "hard",
     label: "Hard",
     description: "All four operations, negatives, quick flashes.",
-    rounds: 6,
     round: { flashes: 6, digits: 2, operations: ["add", "subtract", "multiply", "divide"], allowNegative: true, decimals: false, decimalPlaces: 1, displayMs: 700, gapMs: 300 },
   },
   {
     id: "expert",
     label: "Expert",
     description: "Three digits, decimals, negatives and very fast flashes.",
-    rounds: 6,
     round: { flashes: 7, digits: 3, operations: ["add", "subtract", "multiply", "divide"], allowNegative: true, decimals: true, decimalPlaces: 1, displayMs: 500, gapMs: 200 },
   },
 ];
 
 export const DEFAULT_ROUND_COUNT = 5;
+
+/**
+ * What the setup screen holds: one set of settings that every round of the session uses, and how many rounds there
+ * are. (A saved session still records the settings of each round it played, so older history, which could mix
+ * settings, keeps reading correctly.)
+ */
+export interface MindSprintSetup {
+  config: RoundConfig;
+  rounds: number;
+}
+
+export const copyRound = (config: RoundConfig): RoundConfig => ({ ...config, operations: [...config.operations] });
+
+export const DEFAULT_SETUP: MindSprintSetup = { config: DEFAULT_ROUND, rounds: DEFAULT_ROUND_COUNT };
+
+/** The rounds of a session started from this setup: the same settings, as many times as the player chose. */
+export const roundsOf = (setup: MindSprintSetup): RoundConfig[] => Array.from({ length: setup.rounds }, () => copyRound(setup.config));
+
+export type PresetId = Preset["id"];
+
+const sameRound = (a: RoundConfig, b: RoundConfig): boolean =>
+  a.flashes === b.flashes &&
+  a.digits === b.digits &&
+  a.allowNegative === b.allowNegative &&
+  a.decimals === b.decimals &&
+  a.decimalPlaces === b.decimalPlaces &&
+  a.displayMs === b.displayMs &&
+  a.gapMs === b.gapMs &&
+  a.operations.length === b.operations.length &&
+  a.operations.every((op) => b.operations.includes(op));
+
+/** The preset these settings are exactly, or "custom" when they match none (any change to a preset makes it custom). */
+export function presetOf(config: RoundConfig): PresetId | "custom" {
+  return PRESETS.find((p) => sameRound(p.round, config))?.id ?? "custom";
+}
 
 // ---------------------------------------------------------------------------
 // Difficulty
@@ -141,15 +171,20 @@ export function parseRoundConfig(raw: unknown): ParsedRound {
   };
 }
 
-export function parseSetup(raw: unknown): RoundConfig[] | null {
-  if (!Array.isArray(raw) || raw.length < LIMITS.rounds.min || raw.length > LIMITS.rounds.max) return null;
-  const rounds: RoundConfig[] = [];
-  for (const item of raw) {
-    const parsed = parseRoundConfig(item);
-    if (!parsed.ok) return null;
-    rounds.push(parsed.config);
+/**
+ * A remembered setup read back from storage, or null. Reads the current shape, and the older one (a list of rounds,
+ * each with its own settings) by taking the first round's settings and the number of rounds.
+ */
+export function parseSetup(raw: unknown): MindSprintSetup | null {
+  if (Array.isArray(raw)) {
+    if (raw.length < LIMITS.rounds.min || raw.length > LIMITS.rounds.max) return null;
+    const first = parseRoundConfig(raw[0]);
+    return first.ok ? { config: first.config, rounds: raw.length } : null;
   }
-  return rounds;
+  if (!raw || typeof raw !== "object") return null;
+  const { config, rounds } = raw as Record<string, unknown>;
+  const parsed = parseRoundConfig(config);
+  return parsed.ok && inRange(rounds, LIMITS.rounds.min, LIMITS.rounds.max) ? { config: parsed.config, rounds } : null;
 }
 
 /** One-line description of a round for lists: "5 × 2-digit · + − × · 1.0s". */

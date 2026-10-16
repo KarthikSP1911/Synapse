@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Pause, Play, X } from "lucide-react";
+import { Flag, Pause, Play, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
@@ -10,11 +10,11 @@ import { Board } from "@/features/games/nback/components/board";
 import { Lives } from "@/features/games/nback/components/lives";
 import { ResponseBar } from "@/features/games/nback/components/response-bar";
 import { useNBackSession } from "@/features/games/nback/components/use-nback-session";
-import { activeStreams, streamMode } from "@/features/games/nback/lib/config";
+import { activeStreams, sessionTrials, streamMode } from "@/features/games/nback/lib/config";
 import { STREAM_KEY, streamForKey } from "@/features/games/nback/lib/keys";
 import type { RunnerResult } from "@/features/games/nback/lib/runner";
 import { stimulusFor } from "@/features/games/nback/lib/stimuli";
-import { LIVES, MODE_LABEL, type NBackConfig } from "@/features/games/nback/lib/types";
+import { LIVES, MIN_SCOREABLE, MODE_LABEL, type NBackConfig } from "@/features/games/nback/lib/types";
 
 const clock = (ms: number): string => {
   const total = Math.floor(ms / 1000);
@@ -29,9 +29,13 @@ const clock = (ms: number): string => {
 export function GameScreen({ config, seed, onFinish, onQuit }: { config: NBackConfig; seed: number; onFinish: (result: RunnerResult) => void; onQuit: () => void }) {
   usePlayFocus(true);
   const session = useNBackSession({ config, seed, onFinish });
-  const { stage, paused, count, view, trial, lives, flash, evaluated, pressedMask, feedback, elapsedMs, pause, resume, respond } = session;
+  const { stage, paused, count, view, trial, lives, flash, evaluated, pressedMask, feedback, elapsedMs, pause, resume, respond, finishNow } = session;
   const [confirmQuit, setConfirmQuit] = useState(false);
+  const [confirmFinish, setConfirmFinish] = useState(false);
   const pausedBeforeQuit = useRef(false);
+  const scored = Math.max(0, evaluated - config.n);
+  const canFinish = config.unlimited && stage === "running" && scored >= MIN_SCOREABLE;
+  const dialogOpen = confirmQuit || confirmFinish;
 
   const openQuit = useCallback(() => {
     pausedBeforeQuit.current = paused;
@@ -41,6 +45,17 @@ export function GameScreen({ config, seed, onFinish, onQuit }: { config: NBackCo
 
   const closeQuit = useCallback(() => {
     setConfirmQuit(false);
+    if (!pausedBeforeQuit.current) resume();
+  }, [resume]);
+
+  const openFinish = useCallback(() => {
+    pausedBeforeQuit.current = paused;
+    pause();
+    setConfirmFinish(true);
+  }, [paused, pause]);
+
+  const closeFinish = useCallback(() => {
+    setConfirmFinish(false);
     if (!pausedBeforeQuit.current) resume();
   }, [resume]);
 
@@ -62,11 +77,11 @@ export function GameScreen({ config, seed, onFinish, onQuit }: { config: NBackCo
       if (stream) {
         event.preventDefault();
         // Holding a key repeats it; only the press counts.
-        if (event.repeat || confirmQuit || paused || !config.streams[stream]) return;
+        if (event.repeat || dialogOpen || paused || !config.streams[stream]) return;
         respond(stream, event.timeStamp);
         return;
       }
-      if (confirmQuit || stage === "finished") return;
+      if (dialogOpen || stage === "finished") return;
       if (event.key === "Escape" || event.key.toLowerCase() === "p") {
         event.preventDefault();
         if (event.repeat) return;
@@ -76,11 +91,12 @@ export function GameScreen({ config, seed, onFinish, onQuit }: { config: NBackCo
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [config.streams, confirmQuit, paused, stage, pause, resume, respond]);
+  }, [config.streams, dialogOpen, paused, stage, pause, resume, respond]);
 
   const lit = stage === "running" && !paused && view.stimulusVisible && trial !== null;
   const stimulus = trial ? stimulusFor(trial, config) : null;
-  const shown = Math.min(config.trials, Math.max(1, view.trial !== null ? view.trial + 1 : evaluated + 1));
+  const total = sessionTrials(config);
+  const shown = Math.min(total, Math.max(1, view.trial !== null ? view.trial + 1 : evaluated + 1));
   const warmup = stage === "running" && view.trial !== null && view.trial < config.n;
   const mode = MODE_LABEL[streamMode(config)];
   const streamNames = activeStreams(config).map((s) => s[0].toUpperCase() + s.slice(1)).join(" + ");
@@ -98,7 +114,7 @@ export function GameScreen({ config, seed, onFinish, onQuit }: { config: NBackCo
             </p>
             <p className="truncate text-xs text-muted-foreground">{streamNames}</p>
           </div>
-          <Button variant="outline" size="sm" onClick={paused ? resume : pause} disabled={stage === "finished" || confirmQuit} aria-keyshortcuts="Escape P">
+          <Button variant="outline" size="sm" onClick={paused ? resume : pause} disabled={stage === "finished" || dialogOpen} aria-keyshortcuts="Escape P">
             {paused ? <Play /> : <Pause />} {paused ? "Resume" : "Pause"}
           </Button>
         </div>
@@ -117,7 +133,7 @@ export function GameScreen({ config, seed, onFinish, onQuit }: { config: NBackCo
                 </div>
               )}
 
-              {paused && !confirmQuit && (
+              {paused && !dialogOpen && (
                 <div className="nb-overlay" role="dialog" aria-label="Paused">
                   <p className="text-lg font-semibold">Paused</p>
                   <p className="max-w-[16rem] text-center text-xs text-muted-foreground">The board is hidden and the clock is stopped. Nothing changes when you come back.</p>
@@ -132,13 +148,23 @@ export function GameScreen({ config, seed, onFinish, onQuit }: { config: NBackCo
           <div className="flex shrink-0 items-center justify-between gap-3">
             <p className="flex min-w-0 items-center gap-2 text-sm">
               <span className="font-mono font-semibold tabular-nums">
-                Trial {shown}/{config.trials}
+                Flash {shown}
+                {config.unlimited ? "" : `/${total}`}
               </span>
               <span className="font-mono text-xs tabular-nums text-muted-foreground">{clock(elapsedMs)}</span>
               {warmup && <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-muted-foreground">Not scored</span>}
             </p>
             <Lives lives={lives} flash={flash} />
           </div>
+
+          {config.unlimited && (
+            <div className="flex shrink-0 items-center justify-between gap-3 rounded-lg border border-border bg-card px-3 py-2 text-xs text-muted-foreground">
+              <span>{canFinish ? "Unlimited: play on, or finish and save." : `Unlimited: finish after ${MIN_SCOREABLE} scored flashes (${scored}/${MIN_SCOREABLE}).`}</span>
+              <Button size="sm" variant="outline" onClick={openFinish} disabled={!canFinish || dialogOpen}>
+                <Flag /> Finish
+              </Button>
+            </div>
+          )}
 
           <ResponseBar streams={config.streams} pressedMask={pressedMask} feedback={feedback} disabled={paused} onRespond={(stream, at) => respond(stream, at)} />
 
@@ -153,6 +179,20 @@ export function GameScreen({ config, seed, onFinish, onQuit }: { config: NBackCo
         {lives < LIVES ? `${lives} ${lives === 1 ? "life" : "lives"} left.` : ""}
         {feedback ? ` ${activeStreams(config).map((s) => `${s} ${feedback.results[s]?.correct ? "correct" : "wrong"}`).join(", ")}.` : ""}
       </p>
+
+      {confirmFinish && (
+        <ConfirmDialog
+          title="Finish this session?"
+          message={`Your ${evaluated} played ${evaluated === 1 ? "flash" : "flashes"} are scored and saved. The flash in progress is not counted.`}
+          confirmLabel="Finish and save"
+          cancelLabel="Keep playing"
+          onConfirm={() => {
+            setConfirmFinish(false);
+            if (!finishNow()) resume();
+          }}
+          onCancel={closeFinish}
+        />
+      )}
 
       {confirmQuit && (
         <ConfirmDialog

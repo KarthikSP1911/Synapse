@@ -8,6 +8,7 @@ import {
   MIN_SCOREABLE,
   STREAMS,
   STREAM_LABEL,
+  UNLIMITED_TRIALS,
   defaultTrialCount,
   type NBackConfig,
   type StreamId,
@@ -21,8 +22,11 @@ export const streamMode = (config: Pick<NBackConfig, "streams">): StreamMode => 
 /** The fewest trials a session of this n can have: the first n are not scored, and at least `MIN_SCOREABLE` must be. */
 export const minTrials = (n: number): number => n + MIN_SCOREABLE;
 
+/** How many trials the session is generated with: the chosen number, or the large fixed length of an unlimited session. */
+export const sessionTrials = (config: Pick<NBackConfig, "trials" | "unlimited">): number => (config.unlimited ? UNLIMITED_TRIALS : config.trials);
+
 /** Trials that count: all but the first n. */
-export const scoreableTrials = (config: Pick<NBackConfig, "n" | "trials">): number => Math.max(0, config.trials - config.n);
+export const scoreableTrials = (config: Pick<NBackConfig, "n" | "trials" | "unlimited">): number => Math.max(0, sessionTrials(config) - config.n);
 
 /** The config with a new n. When the trial count follows n it is moved too, and a count that is now too low is raised. */
 export function withN(config: NBackConfig, n: number): NBackConfig {
@@ -53,11 +57,11 @@ export function validateConfig(config: NBackConfig): { errors: ConfigIssue[]; wa
 
   const floor = minTrials(isIntInRange(config.n, LIMITS.n.min, LIMITS.n.max) ? config.n : LIMITS.n.min);
   if (!isIntInRange(config.trials, floor, LIMITS.trials.max)) {
-    bad("trials", `At n = ${config.n} a session needs ${floor} to ${LIMITS.trials.max} trials, so at least ${MIN_SCOREABLE} can be scored after the first ${config.n}.`);
+    bad("trials", `At n = ${config.n} a session needs ${floor} to ${LIMITS.trials.max} flashes, so at least ${MIN_SCOREABLE} can be scored after the first ${config.n}.`);
   }
   if (!isIntInRange(config.stimulusMs, LIMITS.stimulusMs.min, LIMITS.stimulusMs.max)) bad("stimulusMs", `The stimulus must show for ${LIMITS.stimulusMs.min} to ${LIMITS.stimulusMs.max} ms.`);
-  if (!isIntInRange(config.trialMs, LIMITS.trialMs.min, LIMITS.trialMs.max)) bad("trialMs", `Time per trial must be ${LIMITS.trialMs.min} to ${LIMITS.trialMs.max} ms.`);
-  else if (config.trialMs < config.stimulusMs + MIN_GAP_MS) bad("trialMs", `Time per trial must be at least ${config.stimulusMs + MIN_GAP_MS} ms: the stimulus (${config.stimulusMs} ms) plus a ${MIN_GAP_MS} ms gap.`);
+  if (!isIntInRange(config.trialMs, LIMITS.trialMs.min, LIMITS.trialMs.max)) bad("trialMs", `Time per flash must be ${LIMITS.trialMs.min} to ${LIMITS.trialMs.max} ms.`);
+  else if (config.trialMs < config.stimulusMs + MIN_GAP_MS) bad("trialMs", `Time per flash must be at least ${config.stimulusMs + MIN_GAP_MS} ms: the stimulus (${config.stimulusMs} ms) plus a ${MIN_GAP_MS} ms gap.`);
 
   if (errors.length === 0) {
     for (const stream of activeStreams(config)) {
@@ -82,8 +86,10 @@ type ParsedConfig = { ok: true; config: NBackConfig } | { ok: false; error: stri
 export function parseConfig(raw: unknown): ParsedConfig {
   if (!isObject(raw)) return { ok: false, error: "The settings must be an object." };
   const { streams, n, adaptive, grid, colors, letters, trials, autoTrials, stimulusMs, trialMs, feedback } = raw;
+  // Settings and sessions saved before this option existed have no `unlimited`: they were fixed-length.
+  const unlimited = raw.unlimited ?? false;
   if (!isObject(streams) || !STREAMS.every((s) => typeof streams[s] === "boolean")) return { ok: false, error: "Invalid streams." };
-  if (typeof adaptive !== "boolean" || typeof autoTrials !== "boolean" || typeof feedback !== "boolean") return { ok: false, error: "Invalid switch setting." };
+  if (typeof adaptive !== "boolean" || typeof autoTrials !== "boolean" || typeof unlimited !== "boolean" || typeof feedback !== "boolean") return { ok: false, error: "Invalid switch setting." };
   for (const [name, value] of Object.entries({ n, grid, colors, letters, trials, stimulusMs, trialMs })) {
     if (!Number.isInteger(value)) return { ok: false, error: `Invalid ${name}.` };
   }
@@ -96,6 +102,7 @@ export function parseConfig(raw: unknown): ParsedConfig {
     letters: letters as number,
     trials: trials as number,
     autoTrials,
+    unlimited,
     stimulusMs: stimulusMs as number,
     trialMs: trialMs as number,
     feedback,
@@ -124,6 +131,7 @@ export function readSettings(raw: unknown): NBackConfig {
     colors: int(raw.colors, LIMITS.colors.min, LIMITS.colors.max, DEFAULT_CONFIG.colors),
     letters: int(raw.letters, LIMITS.letters.min, LIMITS.letters.max, DEFAULT_CONFIG.letters),
     autoTrials,
+    unlimited: flag(raw.unlimited, DEFAULT_CONFIG.unlimited),
     trials: autoTrials ? defaultTrialCount(n) : int(raw.trials, minTrials(n), LIMITS.trials.max, defaultTrialCount(n)),
     stimulusMs: int(raw.stimulusMs, LIMITS.stimulusMs.min, LIMITS.stimulusMs.max, DEFAULT_CONFIG.stimulusMs),
     trialMs: int(raw.trialMs, LIMITS.trialMs.min, LIMITS.trialMs.max, DEFAULT_CONFIG.trialMs),

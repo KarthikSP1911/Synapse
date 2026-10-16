@@ -1,9 +1,9 @@
 import { createLocalHistory, type Stored } from "@/features/games/shared/lib/history/local";
 import { dataOrNull } from "@/lib/records";
-import { DEFAULT_ROUND, DEFAULT_ROUND_COUNT, parseSetup } from "./config";
+import { DEFAULT_SETUP, copyRound, parseSetup, type MindSprintSetup } from "./config";
 import { parseSessionData } from "./records";
 import { sessionGrants } from "./rewards";
-import type { RoundConfig, SessionData } from "./types";
+import type { SessionData } from "./types";
 
 /**
  * MindSprint history on this device (see `src/features/games/shared/lib/history/local.ts` for how it is kept and trimmed), plus the
@@ -33,10 +33,10 @@ export const mergeRemote = mindsprintHistory.mergeRemote;
 const SETUP_KEY = "mathz:mindsprint:setup";
 const SOUND_KEY = "mathz:mindsprint:sound";
 
-export const defaultSetup = (): RoundConfig[] => Array.from({ length: DEFAULT_ROUND_COUNT }, () => ({ ...DEFAULT_ROUND, operations: [...DEFAULT_ROUND.operations] }));
+export const defaultSetup = (): MindSprintSetup => ({ config: copyRound(DEFAULT_SETUP.config), rounds: DEFAULT_SETUP.rounds });
 
-/** The rounds the player last set up, or the defaults. */
-export function loadSetup(): RoundConfig[] {
+/** The settings and round count the player last used, or the defaults. */
+export function loadSetup(): MindSprintSetup {
   try {
     return parseSetup(JSON.parse(localStorage.getItem(SETUP_KEY) ?? "null")) ?? defaultSetup();
   } catch {
@@ -44,9 +44,9 @@ export function loadSetup(): RoundConfig[] {
   }
 }
 
-export function saveSetup(rounds: readonly RoundConfig[]): void {
+export function saveSetup(setup: MindSprintSetup): void {
   try {
-    localStorage.setItem(SETUP_KEY, JSON.stringify(rounds));
+    localStorage.setItem(SETUP_KEY, JSON.stringify(setup));
   } catch {
     // Remembering the setup is a convenience only.
   }

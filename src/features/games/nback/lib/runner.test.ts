@@ -371,6 +371,48 @@ describe("a session's lives and end", () => {
   });
 });
 
+describe("finishing an unlimited session", () => {
+  const long = (length: number) => quiet(length);
+
+  it("is refused until ten trials have been scored, then ends as completed with the trials that closed", () => {
+    const { host, runner, evaluations, result } = setup(long(50)); // n = 1: trial 0 is not scored
+    runner.start();
+    host.advanceTo(10 * TRIAL + 100); // ten trials closed: nine scored
+    assert.equal(runner.scoredTrials, 9);
+    assert.equal(runner.finishEarly(), false);
+    assert.equal(runner.status, "running");
+    host.advanceTo(11 * TRIAL + 700); // eleven closed (ten scored), the twelfth is under way
+    assert.equal(runner.scoredTrials, 10);
+    assert.equal(runner.finishEarly(), true);
+    assert.equal(runner.status, "finished");
+    assert.equal(result()?.outcome, "completed");
+    assert.equal(result()?.responses.length, 11, "the trial in progress is dropped");
+    assert.equal(result()?.durationMs, 11 * TRIAL);
+    assert.equal(evaluations.length, 11);
+    assert.equal(host.pending, 0);
+    host.advance(10 * TRIAL);
+    assert.equal(evaluations.length, 11, "nothing more happens");
+  });
+
+  it("works while paused, and leaves lives as they were", () => {
+    const { host, runner, result } = setup(long(50));
+    runner.start();
+    host.advanceTo(12 * TRIAL + 300);
+    runner.pause();
+    assert.equal(runner.finishEarly(), true);
+    assert.equal(result()?.responses.length, 12);
+    assert.equal(runner.livesRemaining, LIVES);
+  });
+
+  it("does nothing once the session is over or quit", () => {
+    const a = setup(long(50));
+    a.runner.start();
+    a.runner.quit();
+    assert.equal(a.runner.finishEarly(), false);
+    assert.equal(a.result(), null);
+  });
+});
+
 describe("quitting", () => {
   it("stops quietly: no result, no more events, no timers", () => {
     const { host, runner, views, evaluations, result } = setup(quiet(5));

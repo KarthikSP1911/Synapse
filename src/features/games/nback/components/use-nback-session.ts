@@ -134,6 +134,9 @@ export function useNBackSession({ config, seed, onFinish }: { config: NBackConfi
     return () => document.removeEventListener("visibilitychange", onVisibility);
   }, [pause]);
 
+  /** Ends an unlimited session with what has been played so far. False if too little has been scored yet. */
+  const finishNow = useCallback((): boolean => runnerRef.current?.finishEarly() ?? false, []);
+
   const respond = useCallback((stream: StreamId, timestamp?: number): ResponseStatus => runnerRef.current?.respond(stream, timestamp) ?? "ignored", []);
 
   const currentTrial = view.trial !== null ? trials[view.trial] : null;
@@ -154,5 +157,6 @@ export function useNBackSession({ config, seed, onFinish }: { config: NBackConfi
     pause,
     resume,
     respond,
+    finishNow,
   };
 }

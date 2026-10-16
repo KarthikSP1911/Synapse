@@ -1,6 +1,6 @@
 import { TrialClock } from "./clock";
 import { livesAfter, evaluateTrial } from "./scoring";
-import { STREAM_BIT, type NBackConfig, type SessionOutcome, type StreamId, type Trial, type TrialEvaluation } from "./types";
+import { MIN_SCOREABLE, STREAM_BIT, type NBackConfig, type SessionOutcome, type StreamId, type Trial, type TrialEvaluation } from "./types";
 
 /**
  * Runs the trials of one session: lights each stimulus on schedule, takes the player's responses, evaluates each
@@ -126,6 +126,25 @@ export class SessionRunner {
     const elapsed = this.clock.elapsedAt(this.host.now());
     if (elapsed !== null) this.setView({ trial: this.clock.trialAt(elapsed), stimulusVisible: this.clock.stimulusVisibleAt(elapsed) });
     this.advance();
+  }
+
+  /** Trials evaluated so far that count towards the score (everything after the first n). */
+  get scoredTrials(): number {
+    return this.evaluations.filter((e) => e.scoreable).length;
+  }
+
+  /**
+   * The player ends an unlimited session. It finishes as completed with the trials that have closed; the one in
+   * progress is dropped, not scored. Refused (false) until `MIN_SCOREABLE` trials have been scored, so a session
+   * that has said next to nothing cannot be saved or rewarded.
+   */
+  finishEarly(): boolean {
+    if (this.state !== "running" && this.state !== "paused") return false;
+    if (this.state === "running") this.runDueEvents();
+    if (this.state !== "running" && this.state !== "paused") return false; // the last life went in the trials that were due
+    if (this.scoredTrials < MIN_SCOREABLE) return false;
+    this.finish("completed");
+    return true;
   }
 
   /** Stops without a result. The caller discards the session. */

@@ -53,15 +53,15 @@ export function TutorialDialog({ confirmLabel, onConfirm, onCancel }: { confirmL
           <span className="font-medium text-foreground">1. Watch.</span> One cell lights up at a time. It can also change color and show a letter, depending on the streams you chose.
         </li>
         <li>
-          <span className="font-medium text-foreground">2. Compare with n steps back.</span> If what you see now is the same as it was <em>n</em> trials ago, press that stream&apos;s button (or its key). If not, do nothing. In a 2-back:
+          <span className="font-medium text-foreground">2. Compare with n steps back.</span> If what you see now is the same as it was <em>n</em> flashes ago, press that stream&apos;s button (or its key). If not, do nothing. In a 2-back:
           <div className="mt-3 flex items-start justify-center gap-3 rounded-lg bg-muted p-3">
-            <MiniBoard lit={0} label="Trial 1" />
-            <MiniBoard lit={4} label="Trial 2" />
-            <MiniBoard lit={0} label="Trial 3: same as 2 back. Press!" match />
+            <MiniBoard lit={0} label="Flash 1" />
+            <MiniBoard lit={4} label="Flash 2" />
+            <MiniBoard lit={0} label="Flash 3: same as 2 back. Press!" match />
           </div>
         </li>
         <li>
-          <span className="font-medium text-foreground">3. Mind your lives.</span> You have {LIVES} hearts. A trial with a missed match or a press with no match costs one heart, however many streams were wrong. The first <em>n</em> trials are only for watching and never cost a heart. No hearts left ends the session.
+          <span className="font-medium text-foreground">3. Mind your lives.</span> You have {LIVES} hearts. A flash with a missed match or a press with no match costs one heart, however many streams were wrong. The first <em>n</em> flashes are only for watching and never cost a heart. No hearts left ends the session.
         </li>
       </ol>
       <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">

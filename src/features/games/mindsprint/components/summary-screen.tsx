@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { Page, PageHeader, StatTile } from "@/components/layout/page-header";
 import { RecordBanner, ResultActions, SaveStatus, type SaveState } from "@/features/games/shared/components/result-parts";
 import { formatSeconds } from "@/features/games/shared/lib/format";
-import { LevelBadge } from "@/features/games/mindsprint/components/round-editor";
+import { LevelBadge } from "@/features/games/mindsprint/components/level-badge";
 import { RoundResult, VerdictLabel, shownAnswer } from "@/features/games/mindsprint/components/round-result";
 import { displayNumber } from "@/features/games/mindsprint/lib/arithmetic";
 import { scoreSession } from "@/features/games/mindsprint/lib/scoring";

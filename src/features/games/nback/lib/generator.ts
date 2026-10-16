@@ -1,4 +1,5 @@
 import { seededRng, type Rng } from "@/lib/random";
+import { sessionTrials } from "./config";
 import { fixedCell, domainSize } from "./stimuli";
 import { MATCH_RATE, STREAMS, type NBackConfig, type StreamId, type Trial } from "./types";
 
@@ -35,7 +36,7 @@ export interface GenerateParams {
 
 export const paramsFromConfig = (config: NBackConfig, seed: number): GenerateParams => ({
   seed,
-  trials: config.trials,
+  trials: sessionTrials(config),
   n: config.n,
   streams: config.streams,
   grid: config.grid,

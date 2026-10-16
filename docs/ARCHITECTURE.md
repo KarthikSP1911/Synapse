@@ -235,7 +235,7 @@ A failure that is only a nicety (the home page's progress summaries, the profile
 
 ## N-Back
 
-A working-memory game (`games/nback/lib`, `components`; route `/games/n-back`, table `nback_sessions`, upload `/api/sync/nback`). The engine has no React in it.
+A working-memory game (the screens say "flashes"; the code and saved data still say "trials") (`games/nback/lib`, `components`; route `/games/n-back`, table `nback_sessions`, upload `/api/sync/nback`). The engine has no React in it.
 
 - **Generator** (`generator.ts`): from a seed and the settings, each active stream (position, color, letter) is generated on its own random stream, so turning one stream on or off never changes another. About 25% (15-35%) of the scoreable trials match; the first n never do; no value three times in a row; non-matches avoid the n-1 and n+1 look-alikes when the value set allows. The match flags are read from the generated values and stored on each `Trial`, so scoring never looks at the screen. `GENERATOR_VERSION` must be bumped if its output ever changes.
 - **Runner** (`runner.ts`, `clock.ts`): a trial is a window `[i * trialMs, (i + 1) * trialMs)` of *active* time (pauses take none). Every event is placed on that absolute clock; a timer only wakes the runner, which runs whatever is due, so late timers cannot drift the schedule. A response is placed by its own event timestamp, once per stream per trial, and refused once its trial has been evaluated. Each trial is evaluated exactly once when its window closes; one error in any stream costs exactly one life, the first n trials never do, and the session stops right after the trial that costs the fifth life. The React hook (`use-nback-session.ts`) only mirrors the runner's events.
