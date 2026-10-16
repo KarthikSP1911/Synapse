@@ -1,7 +1,7 @@
 import { Check, Minus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Calculation } from "@/features/games/mindsprint/components/calculation";
-import { LevelBadge } from "@/features/games/mindsprint/components/round-editor";
+import { LevelBadge } from "@/features/games/mindsprint/components/level-badge";
 import { displayNumber } from "@/features/games/mindsprint/lib/arithmetic";
 import type { RoundOutcome } from "@/features/games/mindsprint/lib/scoring";
 import type { PlayedRound } from "@/features/games/mindsprint/lib/types";

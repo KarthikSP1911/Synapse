@@ -1,7 +1,7 @@
 import { beforeEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { checkAnswer, checkSequence, displayCalculation, evaluateSequence, parseAnswerText, sanitizeAnswer } from "./arithmetic";
-import { DEFAULT_ROUND, PRESETS, difficultyLevel, difficultyMultiplier, parseRoundConfig, parseSetup } from "./config";
+import { DEFAULT_ROUND, DEFAULT_ROUND_COUNT, PRESETS, difficultyLevel, difficultyMultiplier, parseRoundConfig, parseSetup, presetOf, roundsOf } from "./config";
 import { seededRng } from "@/lib/random";
 import { GenerationError, generateRound, generateSession } from "./generate";
 import { parseSessionData } from "./records";
@@ -155,7 +155,7 @@ describe("generator", () => {
   it("builds a valid sequence for every preset, every time", () => {
     for (const preset of PRESETS) {
       for (let seed = 1; seed <= 150; seed++) {
-        const round = generateRound(preset.round, seededRng(seed * 31 + preset.rounds));
+        const round = generateRound(preset.round, seededRng(seed * 31 + preset.round.flashes));
         assert.equal(checkSequence(round.config, round.flashes), null, `${preset.id} seed ${seed}: ${JSON.stringify(round.flashes)}`);
         assert.ok(evaluateSequence(round.flashes).ok);
       }
@@ -242,6 +242,23 @@ describe("generator", () => {
   });
 });
 
+describe("setup", () => {
+  it("is one set of settings used by every round", () => {
+    const rounds = roundsOf({ config: PRESETS[1].round, rounds: 4 });
+    assert.equal(rounds.length, 4);
+    for (const r of rounds) assert.deepEqual(r, PRESETS[1].round);
+    rounds[0].operations.push("divide");
+    assert.deepEqual(rounds[1].operations, PRESETS[1].round.operations, "rounds do not share their lists");
+  });
+
+  it("names the preset the settings are exactly, and calls anything else custom", () => {
+    for (const preset of PRESETS) assert.equal(presetOf(preset.round), preset.id);
+    assert.equal(presetOf({ ...PRESETS[0].round, flashes: 5 }), "custom");
+    assert.equal(presetOf({ ...PRESETS[2].round, operations: ["divide", "multiply", "subtract", "add"] }), "hard", "the order of the operations does not matter");
+    assert.equal(presetOf({ ...PRESETS[2].round, operations: ["add"] }), "custom");
+  });
+});
+
 describe("config", () => {
   it("accepts every preset and the default", () => {
     for (const preset of PRESETS) assert.equal(parseRoundConfig(preset.round).ok, true, preset.id);
@@ -267,6 +284,12 @@ describe("config", () => {
     for (const item of bad) assert.equal(parseRoundConfig(item).ok, false, JSON.stringify(item));
     assert.equal(parseSetup([]), null);
     assert.equal(parseSetup(Array.from({ length: 21 }, () => DEFAULT_ROUND)), null);
+    assert.equal(parseSetup({ config: DEFAULT_ROUND, rounds: 0 }), null);
+    assert.equal(parseSetup({ config: DEFAULT_ROUND, rounds: 21 }), null);
+    assert.equal(parseSetup({ config: { ...DEFAULT_ROUND, digits: 9 }, rounds: 5 }), null);
+    assert.equal(parseSetup({ rounds: 5 }), null);
+    assert.equal(parseSetup(null), null);
+    assert.deepEqual(parseSetup({ config: DEFAULT_ROUND, rounds: 20 }), { config: DEFAULT_ROUND, rounds: 20 });
   });
 
   it("puts operations in a fixed order without repeats", () => {
@@ -530,12 +553,17 @@ describe("device storage", () => {
     storage.setItem("mathz:guest:v1:mindsprint", JSON.stringify([make(1), { clientId: "bad", rounds: [] }]));
     assert.equal(loadHistory(guest).length, 1);
     storage.setItem("mathz:mindsprint:setup", "[]");
-    assert.equal(loadSetup().length, 5);
+    assert.deepEqual(loadSetup(), { config: DEFAULT_ROUND, rounds: DEFAULT_ROUND_COUNT });
   });
 
   it("remembers the setup", () => {
-    saveSetup([PRESETS[3].round, PRESETS[0].round]);
-    assert.deepEqual(loadSetup(), [PRESETS[3].round, PRESETS[0].round]);
+    saveSetup({ config: PRESETS[3].round, rounds: 8 });
+    assert.deepEqual(loadSetup(), { config: PRESETS[3].round, rounds: 8 });
+  });
+
+  it("reads a setup saved as a list of rounds by taking the first round's settings and the number of rounds", () => {
+    storage.setItem("mathz:mindsprint:setup", JSON.stringify([PRESETS[1].round, PRESETS[0].round, PRESETS[3].round]));
+    assert.deepEqual(loadSetup(), { config: PRESETS[1].round, rounds: 3 });
   });
 
   it("survives storage that refuses to write", () => {

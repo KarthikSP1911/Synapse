@@ -1,43 +1,38 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { ArrowDown, ArrowRight, ArrowUp, ChevronDown, Copy, Plus, Trash2 } from "lucide-react";
+import { useEffect, useId, useMemo, useState } from "react";
+import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Stepper } from "@/components/form/number-controls";
-import { Switch } from "@/components/form/choice-controls";
-import { LevelBadge, RoundEditor } from "@/features/games/mindsprint/components/round-editor";
-import { PRESETS, describeRound, difficultyMultiplier, type Preset } from "@/features/games/mindsprint/lib/config";
+import { Slider, Stepper } from "@/components/form/number-controls";
+import { Chip, Switch } from "@/components/form/choice-controls";
+import { LevelBadge } from "@/features/games/mindsprint/components/level-badge";
+import { PRESETS, copyRound, difficultyMultiplier, presetOf, roundsOf, type PresetId } from "@/features/games/mindsprint/lib/config";
 import { formatApproxDuration } from "@/features/games/shared/lib/format";
 import { pointsFor } from "@/features/games/mindsprint/lib/scoring";
 import { defaultSetup, loadSetup, saveSetup } from "@/features/games/mindsprint/lib/storage";
 import { COUNTDOWN_FROM, COUNT_STEP_MS, GO_MS } from "@/lib/timeline";
-import { LIMITS, type RoundConfig } from "@/features/games/mindsprint/lib/types";
+import { LIMITS, OPERATIONS, OPERATION_LABEL, OPERATION_SYMBOL, type Operation, type RoundConfig } from "@/features/games/mindsprint/lib/types";
 
-interface Draft {
-  id: number;
-  config: RoundConfig;
-}
+const seconds = (ms: number) => `${(ms / 1000).toFixed(1)} s`;
 
-/** Ids only have to be unique among the rounds on screen, so a counter outside the component is enough. */
-let nextDraftId = 1;
-const makeDrafts = (configs: readonly RoundConfig[]): Draft[] => configs.map((config) => ({ id: nextDraftId++, config: copyOf(config) }));
+const DIFFICULTY_LABEL: Record<PresetId | "custom", string> = { easy: "Easy", medium: "Medium", hard: "Hard", expert: "Expert", custom: "Custom" };
+const DIFFICULTY_ORDER: (PresetId | "custom")[] = ["easy", "medium", "hard", "expert", "custom"];
 
-const copyOf = (config: RoundConfig): RoundConfig => ({ ...config, operations: [...config.operations] });
-
-/** Rough length of a session in seconds, for the summary: countdown, flashes and a few seconds to answer each round. */
-function estimateSeconds(rounds: readonly RoundConfig[]): number {
+/** Rough length of a session in seconds, for the summary: a countdown, the flashes and a few seconds to answer, for every round. */
+function estimateSeconds(config: RoundConfig, rounds: number): number {
   const ANSWER_SECONDS = 6;
-  return rounds.reduce((sum, r) => sum + (COUNTDOWN_FROM * COUNT_STEP_MS + GO_MS + r.flashes * (r.displayMs + r.gapMs)) / 1000 + ANSWER_SECONDS, 0);
+  return rounds * ((COUNTDOWN_FROM * COUNT_STEP_MS + GO_MS + config.flashes * (config.displayMs + config.gapMs)) / 1000 + ANSWER_SECONDS);
 }
-
 
 export interface SetupProblem {
   message: string;
-  /** Zero-based index of the round to open, when the problem is in one round. */
-  round?: number;
 }
 
+/**
+ * One set of settings for the whole session, like Number Recall: pick a difficulty or change anything yourself
+ * (which makes it Custom), and say how many rounds to play. Every round uses the same settings.
+ */
 export function SetupScreen({
   sound,
   onSoundChange,
@@ -51,193 +46,186 @@ export function SetupScreen({
   starting: boolean;
   onStart: (rounds: RoundConfig[]) => void;
 }) {
-  const [drafts, setDrafts] = useState<Draft[]>(() => makeDrafts(defaultSetup()));
-  const [openId, setOpenId] = useState<number | null>(null);
+  const [config, setConfig] = useState<RoundConfig>(() => defaultSetup().config);
+  const [rounds, setRounds] = useState(() => defaultSetup().rounds);
+  /** Custom was picked on purpose, even though the settings happen to equal a preset. */
+  const [pickedCustom, setPickedCustom] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const opsLabelId = useId();
 
   // The remembered setup lives in localStorage, so it is read after mount to keep the server and first client render identical.
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDrafts(makeDrafts(loadSetup()));
+      const saved = loadSetup();
+      setConfig(saved.config);
+      setRounds(saved.rounds);
       setLoaded(true);
     }, 0);
     return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
-    if (loaded) saveSetup(drafts.map((d) => d.config));
-  }, [drafts, loaded]);
+    if (loaded) saveSetup({ config, rounds });
+  }, [config, rounds, loaded]);
 
-  // A round the generator rejected is opened so the problem can be fixed in place (state adjusted while rendering, as React advises for reacting to a changed prop).
-  const [seenProblem, setSeenProblem] = useState<SetupProblem | null>(null);
-  if (problem !== seenProblem) {
-    setSeenProblem(problem);
-    const target = problem?.round === undefined ? undefined : drafts[problem.round];
-    if (target) setOpenId(target.id);
-  }
+  const difficulty = pickedCustom ? "custom" : presetOf(config);
+  const multiplier = difficultyMultiplier(config);
+  const totalPoints = useMemo(() => rounds * pointsFor(multiplier), [rounds, multiplier]);
 
-  const configs = useMemo(() => drafts.map((d) => d.config), [drafts]);
-  const totalPoints = useMemo(() => configs.reduce((sum, c) => sum + pointsFor(difficultyMultiplier(c)), 0), [configs]);
-
-  const update = (id: number, config: RoundConfig) => setDrafts((list) => list.map((d) => (d.id === id ? { ...d, config } : d)));
-
-  const duplicate = (index: number) =>
-    setDrafts((list) => {
-      if (list.length >= LIMITS.rounds.max) return list;
-      const copy: Draft = { id: nextDraftId++, config: copyOf(list[index].config) };
-      return [...list.slice(0, index + 1), copy, ...list.slice(index + 1)];
-    });
-
-  const remove = (id: number) => setDrafts((list) => (list.length > LIMITS.rounds.min ? list.filter((d) => d.id !== id) : list));
-
-  const move = (index: number, by: -1 | 1) =>
-    setDrafts((list) => {
-      const target = index + by;
-      if (target < 0 || target >= list.length) return list;
-      const next = [...list];
-      [next[index], next[target]] = [next[target], next[index]];
-      return next;
-    });
-
-  const setRoundCount = (count: number) =>
-    setDrafts((list) => {
-      if (count < list.length) return list.slice(0, count);
-      const extra = Array.from({ length: count - list.length }, () => ({ id: nextDraftId++, config: copyOf(list[list.length - 1].config) }));
-      return [...list, ...extra];
-    });
-
-  const applyPreset = (preset: Preset) => {
-    setDrafts(makeDrafts(Array.from({ length: preset.rounds }, () => preset.round)));
-    setOpenId(null);
+  /** Any change to the settings themselves leaves the presets behind: the difficulty becomes whatever they now amount to. */
+  const edit = (change: Partial<RoundConfig>) => {
+    setConfig((current) => ({ ...current, ...change }));
+    setPickedCustom(false);
   };
 
-  const applyToAll = (config: RoundConfig) => setDrafts((list) => list.map((d) => ({ ...d, config: copyOf(config) })));
+  const chooseDifficulty = (next: PresetId | "custom") => {
+    if (next === "custom") {
+      setPickedCustom(true);
+      return;
+    }
+    // A preset replaces the settings of the numbers; how many rounds to play is the player's own choice and stays.
+    const preset = PRESETS.find((p) => p.id === next);
+    if (preset) setConfig(copyRound(preset.round));
+    setPickedCustom(false);
+  };
+
+  const toggleOperation = (op: Operation) => {
+    if (config.operations.includes(op)) {
+      // At least one operation has to stay on.
+      if (config.operations.length > 1) edit({ operations: config.operations.filter((o) => o !== op) });
+    } else {
+      edit({ operations: OPERATIONS.filter((o) => o === op || config.operations.includes(o)) });
+    }
+  };
+
+  const activePreset = PRESETS.find((p) => p.id === difficulty);
 
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
       <div className="space-y-6">
-        <section className="rounded-xl border border-border bg-card p-5 shadow-card" aria-labelledby="ms-presets">
-          <h2 id="ms-presets" className="text-[15px] font-semibold tracking-tight">
-            Start from a preset
+        <section className="rounded-xl border border-border bg-card p-5 shadow-card" aria-labelledby="ms-settings">
+          <h2 id="ms-settings" className="text-[15px] font-semibold tracking-tight">
+            Settings
           </h2>
-          <p className="mt-0.5 text-sm text-muted-foreground">Replaces all rounds. You can still change every round afterwards.</p>
-          <div className="mt-4 grid grid-cols-2 gap-2 lg:grid-cols-4">
-            {PRESETS.map((preset) => (
-              <button
-                key={preset.id}
-                type="button"
-                onClick={() => applyPreset(preset)}
-                className={cn(
-                  "flex flex-col items-start gap-1 rounded-lg border border-border bg-background p-3 text-left transition-[color,background-color,border-color,transform] duration-150 active:scale-[0.98]",
-                  "hover:border-input hover:bg-accent/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                )}
-              >
-                <span className="flex w-full items-center justify-between gap-2">
-                  <span className="text-sm font-semibold">{preset.label}</span>
-                  <LevelBadge config={preset.round} />
-                </span>
-                <span className="text-xs leading-snug text-muted-foreground">{preset.description}</span>
-                <span className="mt-1 font-mono text-[11px] text-muted-foreground">{preset.rounds} rounds</span>
-              </button>
-            ))}
-          </div>
-        </section>
 
-        <section className="rounded-xl border border-border bg-card p-5 shadow-card" aria-labelledby="ms-rounds">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <h2 id="ms-rounds" className="text-[15px] font-semibold tracking-tight">
-                Rounds
-              </h2>
-              <p className="mt-0.5 text-sm text-muted-foreground">Each round has its own settings. Open one to edit it.</p>
+          <div className="mt-4">
+            <p id="ms-difficulty" className="text-sm font-medium">
+              Difficulty
+            </p>
+            <div role="group" aria-labelledby="ms-difficulty" className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-5">
+              {DIFFICULTY_ORDER.map((d) => (
+                <Chip key={d} active={difficulty === d} onClick={() => chooseDifficulty(d)} className="px-1 text-[13px]">
+                  {DIFFICULTY_LABEL[d]}
+                </Chip>
+              ))}
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={drafts.length >= LIMITS.rounds.max}
-              onClick={() => {
-                const last = drafts[drafts.length - 1];
-                const added: Draft = { id: nextDraftId++, config: copyOf(last.config) };
-                setDrafts((list) => [...list, added]);
-                setOpenId(added.id);
-              }}
-            >
-              <Plus /> Add round
-            </Button>
+            <p className="mt-2 text-xs text-muted-foreground">
+              {activePreset ? `${activePreset.description} ` : ""}Easy to Expert set the numbers for every round. Changing any of them yourself switches to Custom.
+            </p>
           </div>
 
-          <ol className="mt-4 space-y-2">
-            {drafts.map((draft, index) => {
-              const open = openId === draft.id;
-              const failing = problem?.round === index;
-              const panelId = `ms-round-panel-${draft.id}`;
-              return (
-                <li key={draft.id} className={cn("rounded-lg border bg-background", failing ? "border-destructive" : "border-border")}>
-                  <div className="flex flex-wrap items-center gap-x-1 p-1.5 pl-3">
-                    <button
-                      type="button"
-                      aria-expanded={open}
-                      aria-controls={open ? panelId : undefined}
-                      onClick={() => setOpenId(open ? null : draft.id)}
-                      className="flex min-w-[12rem] flex-1 items-center gap-3 rounded-md py-1.5 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                    >
-                      <span className="grid size-7 shrink-0 place-items-center rounded-md bg-secondary font-mono text-xs font-semibold tabular-nums">{index + 1}</span>
-                      <span className="min-w-0 flex-1">
-                        <span className="flex items-center gap-2 text-sm font-medium">
-                          Round {index + 1} <LevelBadge config={draft.config} />
-                        </span>
-                        <span className="block truncate text-xs text-muted-foreground">{describeRound(draft.config)}</span>
-                      </span>
-                      <ChevronDown className={cn("mr-1 size-4 shrink-0 text-muted-foreground transition-transform duration-150", open && "rotate-180")} aria-hidden />
-                    </button>
-                    <div className="ml-auto flex shrink-0 items-center">
-                      <Button variant="ghost" size="icon-sm" aria-label={`Move round ${index + 1} up`} disabled={index === 0} onClick={() => move(index, -1)}>
-                        <ArrowUp />
-                      </Button>
-                      <Button variant="ghost" size="icon-sm" aria-label={`Move round ${index + 1} down`} disabled={index === drafts.length - 1} onClick={() => move(index, 1)}>
-                        <ArrowDown />
-                      </Button>
-                      <Button variant="ghost" size="icon-sm" aria-label={`Duplicate round ${index + 1}`} disabled={drafts.length >= LIMITS.rounds.max} onClick={() => duplicate(index)}>
-                        <Copy />
-                      </Button>
-                      <Button variant="ghost" size="icon-sm" aria-label={`Remove round ${index + 1}`} disabled={drafts.length <= LIMITS.rounds.min} onClick={() => remove(draft.id)}>
-                        <Trash2 />
-                      </Button>
-                    </div>
-                  </div>
-                  {open && (
-                    <div id={panelId} className="animate-in fade-in border-t border-border p-4 duration-150">
-                      <RoundEditor config={draft.config} onChange={(config) => update(draft.id, config)} />
-                      {drafts.length > 1 && (
-                        <Button variant="outline" size="sm" className="mt-4" onClick={() => applyToAll(draft.config)}>
-                          Use these settings for all rounds
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ol>
+          <div className="mt-6 grid gap-6 border-t border-border pt-5 sm:grid-cols-2">
+            <Stepper label="Rounds" hint="How many to play" value={rounds} min={LIMITS.rounds.min} max={LIMITS.rounds.max} onChange={setRounds} />
+            <Stepper label="Numbers per round" hint="How many numbers flash" value={config.flashes} min={LIMITS.flashes.min} max={LIMITS.flashes.max} onChange={(flashes) => edit({ flashes })} />
+            <Stepper label="Digits per number" hint="Size of each number" value={config.digits} min={LIMITS.digits.min} max={LIMITS.digits.max} onChange={(digits) => edit({ digits })} />
+          </div>
+
+          <div className="mt-6">
+            <p className="text-sm font-medium" id={opsLabelId}>
+              Operations
+            </p>
+            <div role="group" aria-labelledby={opsLabelId} className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {OPERATIONS.map((op) => {
+                const active = config.operations.includes(op);
+                return (
+                  <button
+                    key={op}
+                    type="button"
+                    aria-pressed={active}
+                    aria-label={OPERATION_LABEL[op]}
+                    onClick={() => toggleOperation(op)}
+                    className={cn(
+                      "flex h-11 items-center justify-center gap-2 rounded-lg border text-sm font-medium transition-[color,background-color,border-color,transform] duration-150 active:scale-[0.98]",
+                      "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                      active ? "border-foreground bg-foreground text-background" : "border-border bg-background text-muted-foreground hover:border-input hover:bg-accent hover:text-foreground"
+                    )}
+                  >
+                    <span aria-hidden className="font-mono text-lg leading-none">
+                      {OPERATION_SYMBOL[op]}
+                    </span>
+                    <span className="text-[13px]">{OPERATION_LABEL[op]}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Numbers are combined left to right, so 20 × 3 − 5 means (20 × 3) − 5 = 55.
+              {config.operations.includes("divide") && " Divisions always come out exact."}
+            </p>
+          </div>
+
+          <div className="mt-6 grid gap-6 sm:grid-cols-2">
+            <Slider
+              label="Display time"
+              hint="How long each number stays on screen"
+              value={config.displayMs}
+              min={LIMITS.displayMs.min}
+              max={LIMITS.displayMs.max}
+              step={LIMITS.displayMs.step}
+              onChange={(displayMs) => edit({ displayMs })}
+              format={seconds}
+            />
+            <Slider
+              label="Delay between numbers"
+              hint="Blank time before the next number"
+              value={config.gapMs}
+              min={LIMITS.gapMs.min}
+              max={LIMITS.gapMs.max}
+              step={LIMITS.gapMs.step}
+              onChange={(gapMs) => edit({ gapMs })}
+              format={seconds}
+            />
+          </div>
+
+          <div className="mt-6 grid gap-5 border-t border-border pt-5">
+            <Switch
+              label="Negative numbers"
+              hint={config.allowNegative ? "Numbers and totals can go below zero" : "Totals never go below zero"}
+              checked={config.allowNegative}
+              onChange={(allowNegative) => edit({ allowNegative })}
+            />
+            <Switch
+              label="Decimal numbers"
+              hint={config.decimals ? "Numbers and totals can have decimals" : "Whole numbers only"}
+              checked={config.decimals}
+              onChange={(decimals) => edit({ decimals })}
+            />
+            {config.decimals && (
+              <Stepper label="Decimal places" hint="At most, for any number or total" value={config.decimalPlaces} min={LIMITS.decimalPlaces.min} max={LIMITS.decimalPlaces.max} onChange={(decimalPlaces) => edit({ decimalPlaces })} />
+            )}
+          </div>
         </section>
       </div>
 
       <aside className="rounded-xl border border-border bg-card p-5 shadow-card lg:sticky lg:top-20" aria-label="Session">
         <h2 className="text-[15px] font-semibold tracking-tight">Session</h2>
-        <div className="mt-4 space-y-4">
-          <Stepper label="Rounds" value={drafts.length} min={LIMITS.rounds.min} max={LIMITS.rounds.max} onChange={setRoundCount} />
-          <Switch
-            label="Sound"
-            hint="Countdown, start and result cues"
-            checked={sound}
-            onChange={onSoundChange}
-          />
+        <div className="mt-4">
+          <Switch label="Sound" hint="Countdown, start and result cues" checked={sound} onChange={onSoundChange} />
         </div>
 
         <dl className="mt-5 space-y-2 border-t border-border pt-4 text-sm">
+          <div className="flex items-center justify-between gap-4">
+            <dt className="text-muted-foreground">Difficulty</dt>
+            <dd className="flex items-center gap-2 font-medium">
+              {DIFFICULTY_LABEL[difficulty]}
+              {difficulty === "custom" && <LevelBadge config={config} />}
+            </dd>
+          </div>
           <div className="flex justify-between gap-4">
             <dt className="text-muted-foreground">Rounds</dt>
-            <dd className="font-mono font-medium tabular-nums">{drafts.length}</dd>
+            <dd className="font-mono font-medium tabular-nums">
+              {rounds} × {config.flashes} numbers
+            </dd>
           </div>
           <div className="flex justify-between gap-4">
             <dt className="text-muted-foreground">Top score</dt>
@@ -245,7 +233,7 @@ export function SetupScreen({
           </div>
           <div className="flex justify-between gap-4">
             <dt className="text-muted-foreground">Length</dt>
-            <dd className="font-medium">{formatApproxDuration(estimateSeconds(configs))}</dd>
+            <dd className="font-medium">{formatApproxDuration(estimateSeconds(config, rounds))}</dd>
           </div>
         </dl>
 
@@ -255,7 +243,7 @@ export function SetupScreen({
           </p>
         )}
 
-        <Button size="xl" className="mt-5 w-full" disabled={starting || !loaded} onClick={() => onStart(configs)}>
+        <Button size="xl" className="mt-5 w-full" disabled={starting || !loaded} onClick={() => onStart(roundsOf({ config, rounds }))}>
           {starting ? (
             <>
               <span className="size-4 animate-spin rounded-full border-2 border-primary-foreground/30 border-t-primary-foreground" />
@@ -273,4 +261,3 @@ export function SetupScreen({
     </div>
   );
 }
-

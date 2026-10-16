@@ -112,7 +112,8 @@ export default function MindsprintApp() {
           setView("playing");
         } catch (error) {
           if (!(error instanceof GenerationError)) throw error;
-          setProblem({ message: error.message, round: error.round });
+          // Every round has the same settings, so which round failed adds nothing.
+          setProblem({ message: error.message.replace(/^Round \d+: /, "") });
           setView("setup");
         } finally {
           setStarting(false);
