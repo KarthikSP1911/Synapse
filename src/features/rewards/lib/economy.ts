@@ -26,7 +26,7 @@ export interface Economy {
   };
   mindsprint: RoundGame;
   recall: RoundGame;
-  /** Sudoku, Queens, Zip and Patches: once, for a solved puzzle. A revealed or abandoned one earns nothing. */
+  /** Sudoku, Queens, Zip and Patches: once, for a solved puzzle. A revealed or abandoned one earns nothing. N-Back pays the same table, once for a session played to the end (never for Game Over), by the difficulty its settings amount to. */
   puzzle: Record<PuzzleDifficulty, number>;
   game2048: {
     /**

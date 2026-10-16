@@ -87,9 +87,14 @@ export function roundGameGrants(
 // Puzzles and 2048
 // ---------------------------------------------------------------------------
 
-const PUZZLE_LABEL = { sudoku: "Sudoku", queens: "Queens", zip: "Zip", patches: "Patches" } as const;
+const PUZZLE_LABEL = { sudoku: "Sudoku", queens: "Queens", zip: "Zip", patches: "Patches", nback: "N-Back" } as const;
+/** What was done to earn it: a puzzle is solved, an N-Back session is completed. */
+const PUZZLE_DONE: Record<keyof typeof PUZZLE_LABEL, string> = { sudoku: "solved", queens: "solved", zip: "solved", patches: "solved", nback: "completed" };
 
-/** Coins for a solved Sudoku, Queens, Zip or Patches puzzle, by difficulty. Once per game id (restarting keeps the id). */
+/**
+ * Coins for a solved Sudoku, Queens, Zip or Patches puzzle, or an N-Back session played to the end, by difficulty.
+ * Once per game id (restarting keeps the id). `completed` is false for a revealed or abandoned puzzle and for an N-Back Game Over.
+ */
 export function puzzleGrants(
   game: keyof typeof PUZZLE_LABEL,
   session: { clientId: string; completed: boolean; difficulty: PuzzleDifficulty; endedAt: number },
@@ -99,7 +104,7 @@ export function puzzleGrants(
   const amount = economy.puzzle[session.difficulty];
   if (!(amount > 0)) return [];
   const level = session.difficulty[0].toUpperCase() + session.difficulty.slice(1);
-  return [{ key: `${game}:${session.clientId}`, amount, reason: `${level} ${PUZZLE_LABEL[game]} solved`, ref: session.clientId, at: session.endedAt }];
+  return [{ key: `${game}:${session.clientId}`, amount, reason: `${level} ${PUZZLE_LABEL[game]} ${PUZZLE_DONE[game]}`, ref: session.clientId, at: session.endedAt }];
 }
 
 /** Coins for the highest tile of a 2048 run: the largest threshold at or below it. Zero below the first threshold. */

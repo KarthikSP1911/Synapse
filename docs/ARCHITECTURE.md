@@ -45,7 +45,7 @@ features/
     lib/practice/           session rules: selection, spaced repetition, item stats, request validation
     server/                 attempts.ts, mistakes.ts (DB access)
   games/
-    mindsprint/ recall/ sudoku/ game2048/ queens/ zip/ patches/
+    mindsprint/ recall/ sudoku/ game2048/ queens/ zip/ patches/ nback/
                             each: components/ (setup, game, result screens, stats panel, app shell)
                                   lib/ (engine, config, scoring, records.ts, storage.ts, sync.ts, types.ts)
     shared/                 what every game reuses
@@ -232,3 +232,14 @@ The logger, the reference scheme and what each layer does on failure are describ
 | Actions | `features/auth/server/auth-actions.ts` | failures become a form message with a reference |
 
 A failure that is only a nicety (the home page's progress summaries, the profile's wallet, the time zone saved at login, claiming old data for the first account) is logged and the page or action carries on without it.
+
+## N-Back
+
+A working-memory game (`games/nback/lib`, `components`; route `/games/n-back`, table `nback_sessions`, upload `/api/sync/nback`). The engine has no React in it.
+
+- **Generator** (`generator.ts`): from a seed and the settings, each active stream (position, color, letter) is generated on its own random stream, so turning one stream on or off never changes another. About 25% (15-35%) of the scoreable trials match; the first n never do; no value three times in a row; non-matches avoid the n-1 and n+1 look-alikes when the value set allows. The match flags are read from the generated values and stored on each `Trial`, so scoring never looks at the screen. `GENERATOR_VERSION` must be bumped if its output ever changes.
+- **Runner** (`runner.ts`, `clock.ts`): a trial is a window `[i * trialMs, (i + 1) * trialMs)` of *active* time (pauses take none). Every event is placed on that absolute clock; a timer only wakes the runner, which runs whatever is due, so late timers cannot drift the schedule. A response is placed by its own event timestamp, once per stream per trial, and refused once its trial has been evaluated. Each trial is evaluated exactly once when its window closes; one error in any stream costs exactly one life, the first n trials never do, and the session stops right after the trial that costs the fifth life. The React hook (`use-nback-session.ts`) only mirrors the runner's events.
+- **Records** (`records.ts`): a saved session is `{ config, seed, generator, responses[] (a stream mask per trial), outcome, durationMs }`. The server (and every read) rebuilds the sequence from the seed and replays the responses through the same scorer, so lives, outcome, accuracy and points are never trusted from the client; the time played must match the trials played. Quit sessions are never saved.
+- **Rewards** (`difficulty.ts`, `rewards.ts`): the setup's load (n + 2 per extra stream + 1 for a 5x5+ board with Position + up to 2 for fast trials) maps to easy/medium/hard/expert and pays `ECONOMY.puzzle`, once per session id, only for a completed session. A completed session is a streak day; Game Over is not.
+- **Adaptive n** (`adaptive.ts`): >= 80% up, < 50% down, a Game Over counts as failed (n - 1). Computed from exact accuracy, applied to the next session only.
+- **Not verified in a browser** when this was written: the unit tests (`nback.test.ts`, `runner.test.ts`) cover the engine, runner timing with a fake clock, records, rewards, streaks and storage; the screens were type-checked, linted and built only.

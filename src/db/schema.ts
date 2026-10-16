@@ -409,6 +409,43 @@ export const patchesSessions = pgTable(
 );
 
 /**
+ * Finished N-Back sessions of a signed-in user (played to the end, or ended by Game Over; a quit session is never
+ * saved). `config`, `seed`, `generator` and `responses` are the record (see `src/features/games/nback/lib/records.ts`):
+ * the server rebuilds the sequence from the seed and replays the responses, so the other columns are copies of what
+ * that works out to, kept for listing and aggregating.
+ */
+export const nbackSessions = pgTable(
+  "nback_sessions",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    /** The browser's random id for the session; unique per user, which makes uploads idempotent. */
+    clientId: varchar("client_id", { length: 64 }).notNull(),
+    outcome: varchar("outcome", { length: 10 }).notNull(), // completed | gameover
+    config: jsonb("config").$type<unknown>().notNull(),
+    seed: integer("seed").notNull(),
+    generator: integer("generator").notNull(),
+    responses: jsonb("responses").$type<number[]>().notNull(),
+    durationMs: integer("duration_ms").notNull(),
+    n: integer("n").notNull(),
+    streamCount: integer("stream_count").notNull(), // 1 single, 2 dual, 3 triple
+    trialsPlayed: integer("trials_played").notNull(),
+    livesLeft: integer("lives_left").notNull(),
+    accuracy: integer("accuracy").notNull(), // overall, percent rounded, 0-100
+    score: integer("score").notNull(),
+    startedAt: timestamp("started_at").notNull(),
+    endedAt: timestamp("ended_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("nback_sessions_user_client_idx").on(table.userId, table.clientId),
+    index("nback_sessions_user_ended_idx").on(table.userId, table.endedAt),
+  ]
+);
+
+/**
  * A user's coins and Streak Shields (the running totals; the ledger below is the record). The totals change only in the
  * same statement that appends a ledger row (see `src/features/rewards/server/wallet.ts`), and the CHECK constraints refuse
  * a negative balance or shield count whatever the application does.

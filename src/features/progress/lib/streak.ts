@@ -29,6 +29,9 @@ export const queensCounts = (session: { completed: boolean }): boolean => sessio
 export const zipCounts = (session: { completed: boolean }): boolean => session.completed;
 export const patchesCounts = (session: { completed: boolean }): boolean => session.completed;
 
+/** An N-Back session counts when it was played to the end. Game Over, a quit session and opening the game do not. */
+export const nbackCounts = (session: { outcome: string }): boolean => session.outcome === "completed";
+
 export const game2048Counts =(session: { gameOver: boolean; reached2048: boolean; moves: number }): boolean =>
   session.gameOver || session.reached2048 || session.moves >= MIN_2048_MOVES;
 

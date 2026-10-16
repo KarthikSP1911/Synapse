@@ -48,6 +48,7 @@ const PAGE_PATHS = new Set([
   "/games/queens",
   "/games/zip",
   "/games/patches",
+  "/games/n-back",
   "/progress",
   "/tables",
   "/settings",

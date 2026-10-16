@@ -19,6 +19,8 @@ import { computeStats as computeZipStats } from "@/features/games/zip/lib/stats"
 import { loadGame as loadZipGame, loadHistory as loadZipHistory } from "@/features/games/zip/lib/storage";
 import { computeStats as computePatchesStats } from "@/features/games/patches/lib/stats";
 import { loadGame as loadPatchesGame, loadHistory as loadPatchesHistory } from "@/features/games/patches/lib/storage";
+import { computeStats as computeNbackStats, hubSummary as nbackSummary } from "@/features/games/nback/lib/stats";
+import { loadHistory as loadNbackHistory } from "@/features/games/nback/lib/storage";
 import { DIFFICULTIES } from "@/features/games/shared/lib/puzzle-session";
 import { loadGuestData } from "@/features/offline/lib/guest/storage";
 import { SKILL_META, SKILL_ORDER } from "@/features/skills/lib/meta";
@@ -77,6 +79,7 @@ interface GameProgress {
   queens: string | null;
   zip: string | null;
   patches: string | null;
+  nback: string | null;
 }
 
 /** "Best score 1,234" over every difficulty, or a note when nothing has been solved yet; null when never played. */
@@ -89,7 +92,7 @@ function puzzleProgress(stats: { attempted: number; byDifficulty: Record<(typeof
 
 function useGameProgress(): GameProgress {
   const store = useLocalStore();
-  const [progress, setProgress] = useState<GameProgress>({ mindsprint: null, recall: null, sudoku: null, game2048: null, queens: null, zip: null, patches: null });
+  const [progress, setProgress] = useState<GameProgress>({ mindsprint: null, recall: null, sudoku: null, game2048: null, queens: null, zip: null, patches: null, nback: null });
 
   useEffect(() => {
     if (!store) return;
@@ -109,6 +112,7 @@ function useGameProgress(): GameProgress {
         queens: puzzleProgress(computeQueensStats(loadQueensHistory(store), queensSaved?.difficulty ?? null), queensSaved !== null),
         zip: puzzleProgress(computeZipStats(loadZipHistory(store), zipSaved?.difficulty ?? null), zipSaved !== null),
         patches: puzzleProgress(computePatchesStats(loadPatchesHistory(store), patchesSaved?.difficulty ?? null), patchesSaved !== null),
+        nback: nbackSummary(computeNbackStats(loadNbackHistory(store))),
         game2048: best2048 > 0 ? `Best ${best2048.toLocaleString()} · tile ${games2048.bestTile || "—"}` : load2048Game(store) ? "Game in progress" : games2048.gamesPlayed > 0 ? "No score yet" : null,
         sudoku: unfinished ? `${DIFFICULTY_LABEL[unfinished.difficulty]} game in progress` : solved > 0 ? `${solved.toLocaleString()} solved · ${Math.floor((solved * 100) / sudokuGames.length)}% completed` : sudokuGames.length > 0 ? "No puzzle solved yet" : null,
         mindsprint: scores.length > 0 ? `Best score ${Math.max(...scores).toLocaleString()}` : null,
@@ -136,6 +140,7 @@ function GamesRow() {
         <HubCard href="/games/queens" title="Queens" accent="queens" description="Place queens using logic so every row, column and colored region satisfies the rules." progress={progress.queens ?? "Not played yet"} />
         <HubCard href="/games/zip" title="Zip" accent="zip" description="Connect numbered checkpoints with one continuous path that fills the entire grid." progress={progress.zip ?? "Not played yet"} />
         <HubCard href="/games/patches" title="Patches" accent="patches" description="Divide the grid into patches that each hold one clue and match its area and shape." progress={progress.patches ?? "Not played yet"} />
+        <HubCard href="/games/n-back" title="N-Back" accent="nback" description="Spot when a position, color or letter matches the one from n steps back." progress={progress.nback ?? "Not played yet"} />
       </div>
     </section>
   );
