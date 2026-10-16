@@ -4,11 +4,12 @@ import { loadGuestData } from "@/features/offline/lib/guest/storage";
 import { game2048History } from "@/features/games/game2048/lib/storage";
 import { mindsprintHistory } from "@/features/games/mindsprint/lib/storage";
 import { recallHistory } from "@/features/games/recall/lib/storage";
+import { nbackHistory } from "@/features/games/nback/lib/storage";
 import { patchesHistory } from "@/features/games/patches/lib/storage";
 import { queensHistory } from "@/features/games/queens/lib/storage";
 import { sudokuHistory } from "@/features/games/sudoku/lib/storage";
 import { zipHistory } from "@/features/games/zip/lib/storage";
-import { activityDayKeys, browserTimeZone, countsAsAnswer, game2048Counts, patchesCounts, queensCounts, sudokuCounts, zipCounts } from "@/features/progress/lib/streak";
+import { activityDayKeys, browserTimeZone, countsAsAnswer, game2048Counts, nbackCounts, patchesCounts, queensCounts, sudokuCounts, zipCounts } from "@/features/progress/lib/streak";
 
 /**
  * The activity saved on this device, for streaks: practice answers and the finished games of every kind, whether the
@@ -29,6 +30,7 @@ export function localActivityTimes(store: LocalStore): number[] {
   for (const session of queensHistory.load(store)) if (queensCounts(session)) times.push(session.endedAt);
   for (const session of zipHistory.load(store)) if (zipCounts(session)) times.push(session.endedAt);
   for (const session of patchesHistory.load(store)) if (patchesCounts(session)) times.push(session.endedAt);
+  for (const session of nbackHistory.load(store)) if (nbackCounts(session)) times.push(session.endedAt);
   return times;
 }
 

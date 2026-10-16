@@ -10,6 +10,7 @@ import { pendingCountFor as sudokuPendingFor, syncSudoku } from "@/features/game
 import { pendingCountFor as queensPendingFor, syncQueens } from "@/features/games/queens/lib/sync";
 import { pendingCountFor as zipPendingFor, syncZip } from "@/features/games/zip/lib/sync";
 import { pendingCountFor as patchesPendingFor, syncPatches } from "@/features/games/patches/lib/sync";
+import { pendingCountFor as nbackPendingFor, syncNback } from "@/features/games/nback/lib/sync";
 import { pendingCountFor, syncUser } from "@/features/offline/lib/sync/client";
 import { setSyncStatus } from "@/features/offline/lib/sync/status";
 import { onWalletEvent } from "@/features/rewards/lib/wallet-store";
@@ -127,7 +128,7 @@ export function SyncManager() {
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
 
     // MindSprint sessions wait for upload just like practice sessions do.
-    const countPending = () => pendingCountFor(userId) + mindsprintPendingFor(userId) + recallPendingFor(userId) + sudokuPendingFor(userId) + game2048PendingFor(userId) + queensPendingFor(userId) + zipPendingFor(userId) + patchesPendingFor(userId);
+    const countPending = () => pendingCountFor(userId) + mindsprintPendingFor(userId) + recallPendingFor(userId) + sudokuPendingFor(userId) + game2048PendingFor(userId) + queensPendingFor(userId) + zipPendingFor(userId) + patchesPendingFor(userId) + nbackPendingFor(userId);
     const refreshPending = () => setSyncStatus({ pending: countPending() });
 
     const run = async () => {
@@ -147,6 +148,7 @@ export function SyncManager() {
         const queens = queensPendingFor(userId) > 0 ? await syncQueens(userId) : null;
         const zip = zipPendingFor(userId) > 0 ? await syncZip(userId) : null;
         const patches = patchesPendingFor(userId) > 0 ? await syncPatches(userId) : null;
+        const nback = nbackPendingFor(userId) > 0 ? await syncNback(userId) : null;
         // Last, so the coins the uploads above earned are already on the account when the wallet is settled.
         const wallet = walletSyncDue(userId) ? await syncWallet(userId) : null;
         running = false;
@@ -167,9 +169,11 @@ export function SyncManager() {
                       ? zip
                       : patches && !patches.ok
                         ? patches
-                        : wallet && !wallet.ok
-                          ? wallet
-                          : practice;
+                        : nback && !nback.ok
+                          ? nback
+                          : wallet && !wallet.ok
+                            ? wallet
+                            : practice;
         failures = result.ok ? 0 : failures + 1;
         setSyncStatus({ syncing: false, failed: !result.ok && result.reason !== "signed-out", pending: countPending() });
         clearTimeout(retryTimer);

@@ -1255,6 +1255,80 @@ html.play-focus body {
 }
 
 /*
+  N-Back. The board is a square of cells; at most one is lit, with the trial's colour and letter. The stimulus has no
+  transition at all: it appears and disappears in the frame the runner says so. The letter is sized from the board's
+  own width (the board is a size container), so a 6 x 6 board stays legible down to 320 px. The gap and padding
+  mirror src/features/games/nback/lib/geometry.ts.
+*/
+.nb-board {
+  container-type: inline-size;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--secondary);
+}
+.nb-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--nb-n), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--nb-n), minmax(0, 1fr));
+  gap: var(--nb-gap);
+  width: 100%;
+  height: 100%;
+}
+.nb-cell {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: clamp(4px, 14%, 10px);
+  background: var(--background);
+}
+/* The ring is inside the cell, so it needs no room of its own and the lit cell reads on any fill, yellow included. */
+.nb-cell[data-lit] {
+  border-color: var(--foreground);
+  outline: 2px solid var(--foreground);
+  outline-offset: -3px;
+}
+.nb-letter {
+  font-size: calc((100cqw - var(--nb-gap) * (var(--nb-n) - 1)) / var(--nb-n) * 0.56);
+  font-weight: 700;
+  line-height: 1;
+  user-select: none;
+}
+.nb-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  border-radius: 14px;
+  background: color-mix(in oklab, var(--background) 80%, transparent);
+  backdrop-filter: blur(2px);
+}
+.nb-response {
+  -webkit-tap-highlight-color: transparent;
+}
+/* A life that was just lost pulses once; the heart is already drawn empty, so the flash adds nothing the shape does not say. */
+@keyframes nb-heart-lose {
+  0% { transform: scale(1.5); }
+  100% { transform: scale(1); }
+}
+.nb-heart[data-flash="true"] {
+  animation: nb-heart-lose 0.45s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .nb-heart[data-flash="true"] {
+    animation: none;
+  }
+}
+/* End of N-Back. */
+
+/*
   Patches board. `--pt` (the game's lime) is set inline from lib/accent.ts and `--ptn` is the number of columns, which
   sizes badges and labels from the board's width (cqw), so the board scales from a 320px phone to a desktop.
 
