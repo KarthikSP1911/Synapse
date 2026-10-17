@@ -3,6 +3,7 @@
 import { useId } from "react";
 import { Minus, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { HelpTip } from "@/components/form/help-tip";
 
 const stepButton = cn(
   "grid size-9 place-items-center rounded-md border border-border bg-background text-foreground transition-[background-color,transform] duration-150 pointer-coarse:size-11",
@@ -14,6 +15,7 @@ const stepButton = cn(
 export function Stepper({
   label,
   hint,
+  note,
   value,
   min,
   max,
@@ -21,7 +23,10 @@ export function Stepper({
   format = String,
 }: {
   label: string;
+  /** Explanation shown only when the "?" is opened. */
   hint?: string;
+  /** A line that is always visible, for anything that changes the rules. */
+  note?: string;
   value: number;
   min: number;
   max: number;
@@ -32,10 +37,13 @@ export function Stepper({
   return (
     <div role="group" aria-labelledby={id} className="flex items-center justify-between gap-4">
       <div className="min-w-0">
-        <p id={id} className="text-sm font-medium">
-          {label}
-        </p>
-        {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+        <div className="flex items-center gap-0.5">
+          <p id={id} className="text-sm font-medium">
+            {label}
+          </p>
+          {hint && <HelpTip label={label}>{hint}</HelpTip>}
+        </div>
+        {note && <p className="text-xs text-muted-foreground">{note}</p>}
       </div>
       <div className="flex shrink-0 items-center gap-2">
         <button type="button" className={stepButton} aria-label={`Decrease ${label.toLowerCase()}`} disabled={value <= min} onClick={() => onChange(Math.max(min, value - 1))}>
@@ -56,6 +64,7 @@ export function Stepper({
 export function Slider({
   label,
   hint,
+  note,
   value,
   min,
   max,
@@ -64,7 +73,10 @@ export function Slider({
   format,
 }: {
   label: string;
+  /** Explanation shown only when the "?" is opened. */
   hint?: string;
+  /** A line that is always visible, for anything that changes the rules. */
+  note?: string;
   value: number;
   min: number;
   max: number;
@@ -75,10 +87,13 @@ export function Slider({
   const id = useId();
   return (
     <div className="space-y-2">
-      <div className="flex items-baseline justify-between gap-4">
-        <label htmlFor={id} className="text-sm font-medium">
-          {label}
-        </label>
+      <div className="flex items-center justify-between gap-4">
+        <span className="flex items-center gap-0.5">
+          <label htmlFor={id} className="text-sm font-medium">
+            {label}
+          </label>
+          {hint && <HelpTip label={label}>{hint}</HelpTip>}
+        </span>
         <span className="font-mono text-sm font-semibold tabular-nums">{format(value)}</span>
       </div>
       <input
@@ -92,7 +107,7 @@ export function Slider({
         onChange={(e) => onChange(Number(e.target.value))}
         className="h-6 w-full cursor-pointer accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       />
-      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+      {note && <p className="text-xs text-muted-foreground">{note}</p>}
     </div>
   );
 }

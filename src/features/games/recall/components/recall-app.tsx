@@ -200,8 +200,6 @@ export default function RecallApp() {
           config={setups[mode]}
           onMode={changeMode}
           onChange={changeConfig}
-          sound={soundOn}
-          onSoundChange={changeSound}
           starting={starting}
           onStart={start}
         />

@@ -5,7 +5,8 @@ import { join } from "node:path";
 import { COUNT_STEP_MS, GO_MS, type Timers } from "@/lib/timeline";
 import { isNavActive } from "@/lib/nav";
 import { countdownLength, runCountdown, startAfterCountdown, type CountdownStep } from "./practice-countdown";
-import { PRACTICE_SOUND_KEY, loadPracticeSound, savePracticeSound } from "./practice-sound";
+import { SOUND_KEY } from "@/lib/sound-preference";
+import { loadPracticeSound, savePracticeSound } from "./practice-sound";
 import { SKILL_PATHS, legacySkillRedirect, parseSkillParam, skillHref } from "../routes";
 import { SKILLS } from "../types";
 
@@ -143,14 +144,17 @@ describe("practice sound preference", () => {
     assert.equal(loadPracticeSound(), true);
   });
 
-  it("is kept apart from the games' sound setting", () => {
-    assert.notEqual(PRACTICE_SOUND_KEY, "mathz:mindsprint:sound");
-    storage.setItem("mathz:mindsprint:sound", "off");
-    assert.equal(loadPracticeSound(), true);
+  it("is one setting for practice and the games, and keeps a mute chosen before they were joined", () => {
     savePracticeSound(false);
-    assert.equal(storage.getItem("mathz:mindsprint:sound"), "off");
-    storage.setItem("mathz:mindsprint:sound", "on");
+    assert.equal(storage.getItem(SOUND_KEY), "off");
     assert.equal(loadPracticeSound(), false);
+    // A device that only ever muted one area (the old per-area keys) stays muted until the new setting is saved.
+    const old = new MemoryStorage();
+    old.setItem("mathz:mindsprint:sound", "off");
+    (globalThis as { localStorage?: unknown }).localStorage = old;
+    assert.equal(loadPracticeSound(), false);
+    savePracticeSound(true);
+    assert.equal(loadPracticeSound(), true);
   });
 
   it("survives storage that throws", () => {

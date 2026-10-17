@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { Check } from "lucide-react";
+import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Chip, ExercisePicker } from "@/components/form/choice-controls";
+import { Chip, ExercisePicker, Switch } from "@/components/form/choice-controls";
+import { loadSoundPreference, saveSoundPreference } from "@/lib/sound-preference";
 import {
   CONFIGURABLE_SKILLS,
   DEFAULT_SETTINGS,
@@ -108,6 +110,57 @@ const timeLimits = [
 const exerciseOptions = (skill: ConfigurableSkill) =>
   EXERCISE_TYPES[skill].map((value) => ({ value, ...EXERCISE_META[skill][value] }));
 
+const THEMES = [
+  { value: "system", label: "System" },
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
+] as const;
+
+/** Sound and theme apply at once and are shared by every skill and game, so they are only here and not on the setup screens. */
+const subscribeNothing = () => () => {};
+
+function AppearanceAndSound() {
+  const { theme, setTheme } = useTheme();
+  // The saved theme is only known in the browser, so the chosen one is marked after mounting to keep the first render identical to the server's.
+  const mounted = useSyncExternalStore(subscribeNothing, () => true, () => false);
+  const [sound, setSound] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setSound(loadSoundPreference()), 0);
+    return () => clearTimeout(timer);
+  }, []);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Sound and theme</CardTitle>
+        <CardDescription>For the whole app. These apply as soon as you change them.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <Switch
+          label="Sound"
+          hint="Countdown, start and result cues in practice and in the games. You can also mute from inside a game."
+          checked={sound}
+          onChange={(next) => {
+            setSound(next);
+            saveSoundPreference(next);
+          }}
+        />
+        <div className="space-y-3 border-t border-border pt-6">
+          <p className="text-sm font-medium">Theme</p>
+          <div className="grid max-w-sm grid-cols-3 gap-2" role="group" aria-label="Theme">
+            {THEMES.map(({ value, label }) => (
+              <Chip key={value} active={mounted && theme === value} onClick={() => setTheme(value)}>
+                {label}
+              </Chip>
+            ))}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function SettingsForm() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [status, setStatus] = useState<"idle" | "saved" | "failed">("idle");
@@ -125,6 +178,8 @@ export default function SettingsForm() {
 
   return (
     <div className="space-y-6">
+      <AppearanceAndSound />
+
       <Card>
         <CardHeader>
           <CardTitle>Training behaviour</CardTitle>

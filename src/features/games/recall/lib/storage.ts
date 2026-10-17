@@ -27,7 +27,6 @@ export const saveSession = recallHistory.save;
 
 const SETUP_KEY = "mathz:recall:setup";
 const MODE_KEY = "mathz:recall:mode";
-const SOUND_KEY = "mathz:recall:sound";
 
 export const defaultSetups = (): Record<RecallMode, RecallConfig> => ({ single: defaultConfig("single"), pair: defaultConfig("pair") });
 
@@ -73,18 +72,4 @@ export function saveMode(mode: RecallMode): void {
   }
 }
 
-export function loadSound(): boolean {
-  try {
-    return localStorage.getItem(SOUND_KEY) !== "off";
-  } catch {
-    return true;
-  }
-}
-
-export function saveSound(enabled: boolean): void {
-  try {
-    localStorage.setItem(SOUND_KEY, enabled ? "on" : "off");
-  } catch {
-    // Remembering the choice is a convenience only.
-  }
-}
+export { loadSoundPreference as loadSound, saveSoundPreference as saveSound } from "@/lib/sound-preference";

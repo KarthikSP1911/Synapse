@@ -31,7 +31,6 @@ export const mergeRemote = mindsprintHistory.mergeRemote;
 // ---------------------------------------------------------------------------
 
 const SETUP_KEY = "mathz:mindsprint:setup";
-const SOUND_KEY = "mathz:mindsprint:sound";
 
 export const defaultSetup = (): MindSprintSetup => ({ config: copyRound(DEFAULT_SETUP.config), rounds: DEFAULT_SETUP.rounds });
 
@@ -52,18 +51,4 @@ export function saveSetup(setup: MindSprintSetup): void {
   }
 }
 
-export function loadSound(): boolean {
-  try {
-    return localStorage.getItem(SOUND_KEY) !== "off";
-  } catch {
-    return true;
-  }
-}
-
-export function saveSound(enabled: boolean): void {
-  try {
-    localStorage.setItem(SOUND_KEY, enabled ? "on" : "off");
-  } catch {
-    // Remembering the choice is a convenience only.
-  }
-}
+export { loadSoundPreference as loadSound, saveSoundPreference as saveSound } from "@/lib/sound-preference";

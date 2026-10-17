@@ -1,16 +1,18 @@
 "use client";
 
-import { ArrowRight, CircleAlert, CircleHelp, TriangleAlert } from "lucide-react";
+import { CircleAlert, CircleHelp, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Slider, Stepper } from "@/components/form/number-controls";
 import { Switch } from "@/components/form/choice-controls";
-import { ECONOMY } from "@/features/rewards/lib/economy";
-import { formatApproxDuration } from "@/features/games/shared/lib/format";
-import { activeStreams, minTrials, scoreableTrials, streamMode, validateConfig, withN } from "@/features/games/nback/lib/config";
-import { difficultyOf } from "@/features/games/nback/lib/difficulty";
+import { HelpTip } from "@/components/form/help-tip";
+import { PresetRow, SettingsStatus, SetupLayout, StartButton, type PresetOption } from "@/components/setup/setup-layout";
+import { minTrials, scoreableTrials, validateConfig, withN } from "@/features/games/nback/lib/config";
 import { STREAM_KEY } from "@/features/games/nback/lib/keys";
-import { ADAPT_DOWN_PERCENT, ADAPT_UP_PERCENT, LIMITS, LIVES, MIN_GAP_MS, MIN_SCOREABLE, MODE_LABEL, STREAMS, STREAM_LABEL, defaultTrialCount, type NBackConfig, type StreamId } from "@/features/games/nback/lib/types";
+import { MODE_PRESETS, modeOf, presetStreams, summarizeConfig, type ModePresetId } from "@/features/games/nback/lib/summary";
+import { sameValue } from "@/lib/same-value";
+import { activeStreams } from "@/features/games/nback/lib/config";
+import { ADAPT_DOWN_PERCENT, ADAPT_UP_PERCENT, DEFAULT_CONFIG, LIMITS, LIVES, MIN_GAP_MS, MIN_SCOREABLE, STREAMS, STREAM_LABEL, defaultTrialCount, type NBackConfig, type StreamId } from "@/features/games/nback/lib/types";
 
 const STREAM_HELP: Record<StreamId, string> = {
   position: "Which cell lights up.",
@@ -20,26 +22,19 @@ const STREAM_HELP: Record<StreamId, string> = {
 
 const seconds = (ms: number) => `${(ms / 1000).toFixed(ms % 1000 === 0 ? 0 : ms % 100 === 0 ? 1 : 2)} s`;
 
-const DIFFICULTY_NAME = { easy: "Easy", medium: "Medium", hard: "Hard", expert: "Expert" } as const;
+const MODE_OPTIONS: readonly PresetOption<ModePresetId>[] = [
+  ...MODE_PRESETS.map((p) => ({ id: p.id, label: p.label, detail: p.detail, description: p.description })),
+  { id: "custom", label: "Custom", description: "Any other mix of streams. Choose them under Customize." },
+];
 
-function Section({ id, title, hint, children }: { id: string; title: string; hint?: string; children: React.ReactNode }) {
+function Group({ title, help, children }: { title: string; help?: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-xl border border-border bg-card p-5 shadow-card" aria-labelledby={id}>
-      <h2 id={id} className="text-[15px] font-semibold tracking-tight">
-        {title}
-      </h2>
-      {hint && <p className="mt-0.5 text-sm text-muted-foreground">{hint}</p>}
+    <div className="space-y-4">
+      <div className="flex items-center gap-0.5">
+        <h3 className="text-sm font-semibold tracking-tight">{title}</h3>
+        {help && <HelpTip label={title}>{help}</HelpTip>}
+      </div>
       {children}
-    </section>
-  );
-}
-
-/** A control that only means something while its stream is on. */
-function WhenOn({ on, reason, children }: { on: boolean; reason: string; children: React.ReactNode }) {
-  return (
-    <div className={cn(!on && "opacity-50")} inert={!on} title={on ? undefined : reason}>
-      {children}
-      {!on && <p className="mt-1 text-xs text-muted-foreground">{reason}</p>}
     </div>
   );
 }
@@ -60,8 +55,8 @@ export function SetupScreen({
   const { errors, warnings } = validateConfig(config);
   const canStart = errors.length === 0 && !starting;
   const streams = activeStreams(config);
+  const mode = modeOf(config);
   const edit = (change: Partial<NBackConfig>) => onChange({ ...config, ...change });
-  const reward = ECONOMY.puzzle[difficultyOf(config)];
 
   const toggle = (stream: StreamId) => {
     // One stream always stays on.
@@ -72,85 +67,74 @@ export function SetupScreen({
   /** A new stimulus time also pulls the flash time up with it, so the stimulus never outlasts the flash. */
   const setStimulus = (stimulusMs: number) => edit({ stimulusMs, trialMs: Math.max(config.trialMs, stimulusMs + MIN_GAP_MS) });
 
-  const startButton = (
-    <Button size="xl" className="w-full" disabled={!canStart} onClick={() => onStart(config)}>
-      Start N-Back
-      <ArrowRight />
-    </Button>
-  );
+  const startButton = <StartButton label="Start N-Back" disabled={!canStart} onClick={() => onStart(config)} />;
 
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
-      <div className="space-y-6">
-        <Section id="nb-streams" title="Streams" hint="What you track. Turn on one for a single n-back, two for dual, three for triple.">
-          <div role="group" aria-label="Streams" className="mt-4 grid gap-2 sm:grid-cols-3">
-            {STREAMS.map((stream) => {
-              const on = config.streams[stream];
-              return (
-                <button
-                  key={stream}
-                  type="button"
-                  aria-pressed={on}
-                  onClick={() => toggle(stream)}
-                  className={cn(
-                    "flex flex-col items-start gap-1 rounded-xl border p-4 text-left transition-[color,background-color,border-color,transform] duration-150 active:scale-[0.98]",
-                    "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-                    on ? "border-foreground bg-card ring-1 ring-foreground" : "border-border bg-background hover:border-input hover:bg-accent/60"
-                  )}
-                >
-                  <span className="flex w-full items-center justify-between gap-2 text-[15px] font-semibold tracking-tight">
-                    {STREAM_LABEL[stream]}
-                    <span aria-hidden className={cn("grid size-5 place-items-center rounded-[5px] border text-[11px] leading-none", on ? "border-foreground bg-foreground text-background" : "border-input")}>
-                      {on ? "✓" : ""}
+    <SetupLayout
+      status={<SettingsStatus changed={!sameValue(config, DEFAULT_CONFIG)} onReset={() => onChange(DEFAULT_CONFIG)} />}
+      quick={
+        <div className="space-y-5">
+          <PresetRow label="Mode" options={MODE_OPTIONS} value={mode} onChange={(next) => next !== "custom" && edit({ streams: presetStreams(next) })} />
+          <Stepper
+            label="n"
+            hint={`Match against the stimulus ${config.n} ${config.n === 1 ? "flash" : "flashes"} back`}
+            value={config.n}
+            min={LIMITS.n.min}
+            max={LIMITS.n.max}
+            onChange={(n) => onChange(withN(config, n))}
+          />
+        </div>
+      }
+      customized={mode === "custom"}
+      customize={
+        <>
+          <Group title="Streams" help="What you track. Turn on one for a single n-back, two for dual, three for triple.">
+            <div role="group" aria-label="Streams" className="grid gap-2 sm:grid-cols-3">
+              {STREAMS.map((stream) => {
+                const on = config.streams[stream];
+                return (
+                  <button
+                    key={stream}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => toggle(stream)}
+                    className={cn(
+                      "flex flex-col items-start gap-1 rounded-xl border p-4 text-left transition-[color,background-color,border-color,transform] duration-150 active:scale-[0.98]",
+                      "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                      on ? "border-foreground bg-card ring-1 ring-foreground" : "border-border bg-background hover:border-input hover:bg-accent/60"
+                    )}
+                  >
+                    <span className="flex w-full items-center justify-between gap-2 text-[15px] font-semibold tracking-tight">
+                      {STREAM_LABEL[stream]}
+                      <span aria-hidden className={cn("grid size-5 place-items-center rounded-[5px] border text-[11px] leading-none", on ? "border-foreground bg-foreground text-background" : "border-input")}>
+                        {on ? "✓" : ""}
+                      </span>
                     </span>
-                  </span>
-                  <span className="text-xs text-muted-foreground">{STREAM_HELP[stream]}</span>
-                  <span className="mt-1 text-xs text-muted-foreground">
-                    Key <kbd className="rounded border border-border px-1 font-mono text-[11px]">{STREAM_KEY[stream]}</kbd>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </Section>
+                    <span className="text-xs text-muted-foreground">{STREAM_HELP[stream]}</span>
+                    <span className="mt-1 text-xs text-muted-foreground">
+                      Key <kbd className="rounded border border-border px-1 font-mono text-[11px]">{STREAM_KEY[stream]}</kbd>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </Group>
 
-        <Section id="nb-level" title="Level">
-          <div className="mt-4 grid gap-6">
-            <Stepper
-              label="n"
-              hint={`Match against the stimulus ${config.n} ${config.n === 1 ? "flash" : "flashes"} back`}
-              value={config.n}
-              min={LIMITS.n.min}
-              max={LIMITS.n.max}
-              onChange={(n) => onChange(withN(config, n))}
-            />
-            <Switch
-              label="Adaptive n"
-              hint={`After a session n goes up at ${ADAPT_UP_PERCENT}% accuracy or better and down below ${ADAPT_DOWN_PERCENT}%. A Game Over lowers it by one. It never changes during a session.`}
-              checked={config.adaptive}
-              onChange={(adaptive) => edit({ adaptive })}
-            />
-          </div>
-        </Section>
+          <Group title="Board and stimuli">
+            <div className="grid gap-6 sm:grid-cols-2">
+              {/* Each of these only exists while its stream is on. */}
+              {config.streams.position && <Stepper label="Board size" hint="Cells per side" value={config.grid} min={LIMITS.grid.min} max={LIMITS.grid.max} onChange={(grid) => edit({ grid })} format={(v) => `${v}×${v}`} />}
+              {config.streams.color && <Stepper label="Colors" hint="How many in play" value={config.colors} min={LIMITS.colors.min} max={LIMITS.colors.max} onChange={(colors) => edit({ colors })} />}
+              {config.streams.letter && <Stepper label="Letters" hint="How many in play" value={config.letters} min={LIMITS.letters.min} max={LIMITS.letters.max} onChange={(letters) => edit({ letters })} />}
+            </div>
+            {!config.streams.position && <p className="text-xs text-muted-foreground">With Position off the stimulus always appears in the middle cell.</p>}
+          </Group>
 
-        <Section id="nb-board" title="Board and stimuli">
-          <div className="mt-4 grid gap-6 sm:grid-cols-2">
-            <Stepper label="Board size" hint="Cells per side" value={config.grid} min={LIMITS.grid.min} max={LIMITS.grid.max} onChange={(grid) => edit({ grid })} format={(v) => `${v}×${v}`} />
-            <WhenOn on={config.streams.color} reason="Turn on Color to use colors.">
-              <Stepper label="Colors" hint="How many in play" value={config.colors} min={LIMITS.colors.min} max={LIMITS.colors.max} onChange={(colors) => edit({ colors })} />
-            </WhenOn>
-            <WhenOn on={config.streams.letter} reason="Turn on Letter to use letters.">
-              <Stepper label="Letters" hint="How many in play" value={config.letters} min={LIMITS.letters.min} max={LIMITS.letters.max} onChange={(letters) => edit({ letters })} />
-            </WhenOn>
-          </div>
-          {!config.streams.position && <p className="mt-4 text-xs text-muted-foreground">With Position off the stimulus always appears in the middle cell.</p>}
-        </Section>
-
-        <Section id="nb-timing" title="Timing">
-          <div className="mt-4 grid gap-6">
+          <Group title="Timing">
             <Switch
               label="Unlimited flashes"
-              hint={`No set length. You play until you run out of ${LIVES} lives, or finish when you choose (after ${MIN_SCOREABLE} scored flashes). Finishing saves a completed session; Game Over does not.`}
+              hint={`No set length. You play until you run out of ${LIVES} lives, or finish when you choose (after ${MIN_SCOREABLE} scored flashes).`}
+              note="Finishing saves a completed session; Game Over does not."
               checked={config.unlimited}
               onChange={(unlimited) => edit({ unlimited })}
             />
@@ -189,21 +173,27 @@ export function SetupScreen({
                 format={seconds}
               />
             </div>
-          </div>
-        </Section>
+          </Group>
 
-        <Section id="nb-feedback" title="Feedback">
-          <div className="mt-4">
+          <Group title="Difficulty and feedback">
+            <Switch
+              label="Adaptive n"
+              hint={`After a session n goes up at ${ADAPT_UP_PERCENT}% accuracy or better and down below ${ADAPT_DOWN_PERCENT}%. A Game Over lowers it by one. It never changes during a session.`}
+              checked={config.adaptive}
+              onChange={(adaptive) => edit({ adaptive })}
+            />
             <Switch
               label="Per-flash feedback"
               hint="Mark each stream right or wrong after every flash. Off, it plays like a test and everything shows at the end. Your hearts update either way."
               checked={config.feedback}
               onChange={(feedback) => edit({ feedback })}
             />
-          </div>
-        </Section>
-
-        {(errors.length > 0 || warnings.length > 0) && (
+          </Group>
+        </>
+      }
+      summary={summarizeConfig(config)}
+      problems={
+        (errors.length > 0 || warnings.length > 0) && (
           <ul className="space-y-2" aria-label="Settings problems">
             {errors.map((issue) => (
               <li key={issue.message} role="alert" className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive-soft px-4 py-3 text-sm text-destructive">
@@ -218,40 +208,18 @@ export function SetupScreen({
               </li>
             ))}
           </ul>
-        )}
-
-        {/* On phones the Start button stays on screen above the tab bar. */}
-        <div className="sdk-start-bar -mx-5 border-t border-border bg-background/90 px-5 py-3 backdrop-blur-md sm:-mx-6 sm:px-6 lg:hidden">{startButton}</div>
-      </div>
-
-      <aside className="rounded-xl border border-border bg-card p-5 shadow-card lg:sticky lg:top-20" aria-label="Session">
-        <h2 className="text-[15px] font-semibold tracking-tight">Session</h2>
-        <dl className="mt-4 space-y-2 text-sm">
-          <Row label="Mode" value={`${MODE_LABEL[streamMode(config)]} · ${streams.map((s) => STREAM_LABEL[s]).join(" + ")}`} />
-          <Row label="n" value={`${config.n}${config.adaptive ? " (adaptive)" : ""}`} />
-          <Row label="Board" value={`${config.grid}×${config.grid}`} />
-          <Row label="Flashes" value={config.unlimited ? "Unlimited" : `${config.trials} (${scoreableTrials(config)} scored)`} />
-          <Row label="Length" value={config.unlimited ? "Until Game Over or you finish" : formatApproxDuration((config.trials * config.trialMs) / 1000 + 3)} />
-          <Row label="Lives" value={`${LIVES}`} />
-          <Row label="Reward" value={`${reward} coins · ${DIFFICULTY_NAME[difficultyOf(config)]}`} />
-        </dl>
-        <div className="mt-5 hidden lg:block">{startButton}</div>
-        <p className="mt-3 text-center text-xs text-muted-foreground">
-          Run out of {LIVES} lives and the session ends. Coins are paid only for a session played to the end{config.unlimited ? " (finished by you)" : ""}.
-        </p>
-        <Button variant="ghost" size="sm" className="mt-2 w-full" onClick={onHowTo}>
-          <CircleHelp /> How it works
-        </Button>
-      </aside>
-    </div>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between gap-4">
-      <dt className="shrink-0 text-muted-foreground">{label}</dt>
-      <dd className="text-right font-medium">{value}</dd>
-    </div>
+        )
+      }
+      action={
+        <>
+          {startButton}
+          <Button variant="ghost" size="sm" className="mt-2 w-full" onClick={onHowTo}>
+            <CircleHelp /> How it works
+          </Button>
+        </>
+      }
+      mobileAction={startButton}
+      note={`Run out of ${LIVES} lives and it's Game Over: no coins. Coins are paid only for a session played to the end.`}
+    />
   );
 }

@@ -1,10 +1,10 @@
 "use client";
 
-import { EXERCISE_META, EXPONENT_EXAMPLES, EXPONENT_LEVEL_META, EXPONENT_MODE_META } from "@/features/skills/lib/meta";
-import { EXERCISE_TYPES, EXPONENT_LEVELS, EXPONENT_MODES } from "@/features/skills/lib/types";
+import { EXERCISE_META, EXPONENT_EXAMPLES, EXPONENT_MODE_META } from "@/features/skills/lib/meta";
+import { EXERCISE_TYPES, EXPONENT_MODES } from "@/features/skills/lib/types";
 import { EXPONENT_BASE_MAX, EXPONENT_BASE_MIN, EXPONENT_LIMIT, EXPONENT_RESULT_CHOICES } from "@/features/skills/lib/exponents";
 import { typeBlockReason } from "@/features/skills/lib/exponents-pool";
-import { chooseExponentsLevel, chooseExponentsMode, editExponents, type ExponentsSetup } from "@/features/skills/lib/practice/setup-state";
+import { chooseExponentsMode, editExponents, type ExponentsSetup } from "@/features/skills/lib/practice/setup-state";
 import { Chip, ExercisePicker } from "@/components/form/choice-controls";
 import { NumberField } from "@/components/form/number-controls";
 import { Section } from "@/components/layout/section";
@@ -15,7 +15,7 @@ const KINDS = [
   { key: "allowNegative", label: "Negative", example: "2^-3" },
 ] as const;
 
-/** The Exponents page: answer mode, difficulty level, exercise types and the ranges and limits behind them. */
+/** The Exponents options under Customize: answer mode, exercise types and the ranges and limits behind them (the level is the quick-start row). */
 export function ExponentsConfig({ state, onChange }: { state: ExponentsSetup; onChange: (next: ExponentsSetup) => void }) {
   const baseMin = Number(state.baseMin);
   const baseMax = Number(state.baseMax);
@@ -52,7 +52,7 @@ export function ExponentsConfig({ state, onChange }: { state: ExponentsSetup; on
 
   return (
     <div className="grid gap-6">
-      <Section title="Answer mode" description="What you type for each question.">
+      <Section title="Answer mode" description={`What you type for each question. ${EXPONENT_MODE_META[state.answerMode].description}`}>
         <div className="grid grid-cols-2 gap-2" role="group" aria-label="Answer mode">
           {EXPONENT_MODES.map((mode) => (
             <Chip
@@ -66,23 +66,11 @@ export function ExponentsConfig({ state, onChange }: { state: ExponentsSetup; on
             </Chip>
           ))}
         </div>
-        <p className="mt-2 text-sm text-muted-foreground">{EXPONENT_MODE_META[state.answerMode].description}</p>
-      </Section>
-
-      <Section title="Difficulty">
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" role="group" aria-label="Difficulty">
-          {EXPONENT_LEVELS.map((level) => (
-            <Chip key={level} active={state.level === level} onClick={() => onChange(chooseExponentsLevel(state, level))}>
-              {EXPONENT_LEVEL_META[level].label}
-            </Chip>
-          ))}
-        </div>
-        <p className="mt-2 text-sm text-muted-foreground">{EXPONENT_LEVEL_META[state.level].description}</p>
       </Section>
 
       <Section
         title="Exercises"
-        description={power ? "Practise one type, or switch several on for a mix. Types that need Final Value mode are unavailable here." : "Practise one type, or switch several on for a mix."}
+        description="Practise one type, or switch several on for a mix. Types that cannot be asked in the chosen answer mode are not shown."
       >
         <ExercisePicker options={options} selected={state.exerciseTypes} onChange={(exerciseTypes) => onChange(editExponents(state, { exerciseTypes }))} />
       </Section>
@@ -151,28 +139,26 @@ export function ExponentsConfig({ state, onChange }: { state: ExponentsSetup; on
         </div>
       </Section>
 
-      <Section
-        title="Maximum result"
-        description={
-          power
-            ? "Used in Final Value mode: the largest number an answer, or the top or bottom of a fraction, may have."
-            : "The largest number an answer, or the top or bottom of a fraction, may have. Keeps the arithmetic reasonable."
-        }
-      >
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" role="group" aria-label="Maximum result">
-          {EXPONENT_RESULT_CHOICES.map((choice) => (
-            <Chip
-              key={choice}
-              active={state.maxResult === choice}
-              disabled={power}
-              onClick={() => onChange(editExponents(state, { maxResult: choice }))}
-              className="font-mono tabular-nums"
-            >
-              {choice.toLocaleString("en-US")}
-            </Chip>
-          ))}
-        </div>
-      </Section>
+      {/* Final value mode only: power form has no number to cap. */}
+      {!power && (
+        <Section
+          title="Maximum result"
+          description="The largest number an answer, or the top or bottom of a fraction, may have. Keeps the arithmetic reasonable."
+        >
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" role="group" aria-label="Maximum result">
+            {EXPONENT_RESULT_CHOICES.map((choice) => (
+              <Chip
+                key={choice}
+                active={state.maxResult === choice}
+                onClick={() => onChange(editExponents(state, { maxResult: choice }))}
+                className="font-mono tabular-nums"
+              >
+                {choice.toLocaleString("en-US")}
+              </Chip>
+            ))}
+          </div>
+        </Section>
+      )}
     </div>
   );
 }
