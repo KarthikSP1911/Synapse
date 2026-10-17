@@ -2,9 +2,8 @@
 
 import { log } from "@/lib/logger";
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, Infinity as InfinityIcon, ListOrdered, Timer, Volume2, VolumeX } from "lucide-react";
+import { ArrowRight, Infinity as InfinityIcon, ListOrdered, Timer, Volume2, VolumeX } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { localFetchFor, playHref } from "@/features/offline/lib/local-store";
 import { useLocalStore } from "@/features/auth/components/viewer-provider";
@@ -171,16 +170,7 @@ export default function SkillPractice({ skill }: { skill: Skill }) {
 
   return (
     <div className="container space-y-6 py-8 sm:py-10">
-      <div className="space-y-4">
-        <Link
-          href="/"
-          className="-ml-1 inline-flex items-center gap-1.5 rounded-md px-1 py-0.5 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-        >
-          <ArrowLeft className="size-4" aria-hidden />
-          Practice
-        </Link>
-        <PageHeader accent={skill} title={SKILL_META[skill].title} description={SKILL_META[skill].description} />
-      </div>
+      <PageHeader accent={skill} title={SKILL_META[skill].title} description={SKILL_META[skill].description} />
 
       <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div>

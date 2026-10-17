@@ -53,7 +53,7 @@ function HubCard({
       data-accent-host
       style={accentStyle(accent)}
       className={cn(
-        "flex flex-col items-start gap-2 rounded-xl border border-border bg-card p-4 text-left shadow-card transition-[color,background-color,border-color,transform] duration-150 active:scale-[0.98]",
+        "flex flex-col items-start gap-3 rounded-xl border border-border bg-card p-5 text-left shadow-card transition-[color,background-color,border-color,transform,translate,scale,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_-6px_color-mix(in_oklab,var(--accent)_45%,transparent)] active:scale-[0.98] motion-reduce:transition-none motion-reduce:hover:translate-y-0",
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       )}
     >
@@ -63,7 +63,7 @@ function HubCard({
       </span>
       <span>
         <span className="accent-label block text-[15px] font-semibold tracking-tight">{title}</span>
-        <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">{description}</span>
+        <span className="mt-0.5 block text-xs leading-snug text-muted-foreground dark:text-muted-foreground/75">{description}</span>
       </span>
       <span className="mt-auto font-mono text-xs tabular-nums text-muted-foreground">{progress}</span>
     </Link>
@@ -170,7 +170,11 @@ export default function PracticeHub({
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <section aria-labelledby="skills-heading" className="space-y-3">
+        <h2 id="skills-heading" className="text-sm font-medium text-muted-foreground">
+          Skills
+        </h2>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {SKILL_ORDER.map((id) => {
           const summary = shown?.[id];
           return (
@@ -185,7 +189,8 @@ export default function PracticeHub({
             />
           );
         })}
-      </div>
+        </div>
+      </section>
       <GamesRow />
     </div>
   );
