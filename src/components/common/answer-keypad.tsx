@@ -56,6 +56,7 @@ export function AnswerKeypad({ format, disabled, onKey, onBackspace, action }: A
     <div
       role="group"
       aria-label="Number pad"
+      data-timer-clear
       className="grid grid-cols-3 gap-2 border-t border-border bg-background px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3"
     >
       {"123456789".split("").map((digit) => (

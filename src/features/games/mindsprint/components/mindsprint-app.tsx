@@ -12,6 +12,7 @@ import { useLocalStore, useViewerInfo } from "@/features/auth/components/viewer-
 import { GenerationError, generateSession } from "@/features/games/mindsprint/lib/generate";
 import { scoreSession } from "@/features/games/mindsprint/lib/scoring";
 import { createSoundPlayer } from "@/lib/sound";
+import { useStudyActivity } from "@/features/timer/components/use-study-activity";
 import { loadHistory, loadSound, saveSession, saveSound, type StoredSession } from "@/features/games/mindsprint/lib/storage";
 import { syncMindsprint } from "@/features/games/mindsprint/lib/sync";
 import type { GeneratedRound, PlayedRound, RoundConfig, SessionData } from "@/features/games/mindsprint/lib/types";
@@ -66,6 +67,9 @@ export default function MindsprintApp() {
   }, [sound]);
 
   useEffect(() => () => sound.close(), [sound]);
+
+  // The study timer waits for the whole session to be answered and saved before it alerts, and uses this game's sound setting.
+  useStudyActivity({ active: view === "playing" && !!game && !game.finished, soundOn: () => soundOn });
 
   useEffect(() => {
     if (!store) return;

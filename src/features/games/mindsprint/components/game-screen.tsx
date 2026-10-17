@@ -30,7 +30,7 @@ function FlashDisplay({ flash, index, visible }: { flash: Flash; index: number; 
   const text = flash.op === null ? displayNumber(flash.value) : displayOperand(flash.value);
   const size = text.length <= 4 ? "text-8xl sm:text-9xl" : text.length <= 7 ? "text-7xl sm:text-8xl" : "text-5xl sm:text-7xl";
   return (
-    <div className="flex h-44 items-center justify-center sm:h-56" aria-hidden>
+    <div data-timer-clear className="flex h-44 items-center justify-center sm:h-56" aria-hidden>
       {visible && (
         <div key={index} className="animate-in fade-in zoom-in-95 flex items-center gap-4 font-mono font-semibold tabular-nums duration-100 sm:gap-6">
           {flash.op !== null && <span className="text-6xl text-muted-foreground sm:text-8xl">{OPERATION_SYMBOL[flash.op]}</span>}
@@ -228,7 +228,7 @@ export function GameScreen({ rounds, sound, soundOn, onSoundChange, onFinished, 
 
   return (
     <div className="fixed inset-0 z-[70] flex flex-col overflow-hidden bg-background" aria-label="MindSprint round">
-      <header className="flex items-center justify-between gap-3 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-6">
+      <header data-timer-clear className="flex items-center justify-between gap-3 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-6">
         <Button variant="ghost" size="sm" onClick={openQuit}>
           <X /> Quit
         </Button>
@@ -295,7 +295,7 @@ export function GameScreen({ rounds, sound, soundOn, onSoundChange, onFinished, 
 
         {phase.kind === "answer" && (
           <div className="flex flex-1 flex-col justify-center">
-            <div className="mx-auto flex w-full max-w-md flex-col items-center gap-4 px-5">
+            <div data-timer-clear className="mx-auto flex w-full max-w-md flex-col items-center gap-4 px-5">
               <div className="space-y-1 text-center">
                 <p className="text-2xl font-semibold tracking-tight">What is the result?</p>
                 <p className="text-sm text-muted-foreground">
@@ -354,7 +354,7 @@ export function GameScreen({ rounds, sound, soundOn, onSoundChange, onFinished, 
         {phase.kind === "result" && (
           <div className="flex min-h-0 flex-1 flex-col">
             <div className="min-h-0 flex-1 overflow-y-auto px-5">
-              <div className="mx-auto w-full max-w-xl space-y-5 py-4">
+              <div data-timer-clear className="mx-auto w-full max-w-xl space-y-5 py-4">
                 <div className="space-y-1 text-center">
                   <p
                     className={cn(
@@ -371,7 +371,7 @@ export function GameScreen({ rounds, sound, soundOn, onSoundChange, onFinished, 
                 <RoundResult round={phase.round} outcome={phase.outcome} />
               </div>
             </div>
-            <div className="border-t border-border bg-background px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
+            <div data-timer-clear className="border-t border-border bg-background px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
               <div className="mx-auto max-w-xl">
                 <Button size="xl" className="w-full" onClick={next} autoFocus>
                   {isLast ? "See results" : "Next round"} <ArrowRight />

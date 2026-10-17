@@ -10,6 +10,7 @@ import { ServiceWorkerRegister } from "@/features/offline/components/service-wor
 import { ViewerProvider } from "@/features/auth/components/viewer-provider";
 import { SyncManager } from "@/features/offline/components/sync-manager";
 import { WalletManager } from "@/features/rewards/components/wallet-manager";
+import { FloatingTimer } from "@/features/timer/components/floating-timer";
 import { getViewer } from "@/features/auth/server/auth";
 import type { ViewerInfo } from "@/features/offline/lib/local-store";
 
@@ -87,6 +88,7 @@ export default async function RootLayout({
             <ServiceWorkerRegister />
             <SyncManager />
             <WalletManager />
+            <FloatingTimer />
           </ViewerProvider>
         </ThemeProvider>
       </body>

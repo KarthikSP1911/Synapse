@@ -1372,6 +1372,49 @@ html.play-focus body {
 /* End of N-Back. */
 
 /*
+  Study timer widget (features/timer). A two-faced card: the front shows the stopwatch with the countdown, the back is a
+  still clock for a focus view. Reduced motion keeps the flip but drops the animation, and nothing here pulses.
+*/
+.st-stage {
+  perspective: 480px;
+}
+.st-card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.45s cubic-bezier(0.3, 0.7, 0.2, 1);
+}
+.st-card[data-side="back"] {
+  transform: rotateY(180deg);
+}
+.st-face {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 9999px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.st-face-back {
+  transform: rotateY(180deg);
+}
+.st-root {
+  transition: transform 0.22s ease-out, width 0.2s ease-out, height 0.2s ease-out, opacity 0.2s ease-out;
+}
+.st-root[data-dragging="true"] {
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .st-card,
+  .st-root {
+    transition: none;
+  }
+}
+
+
+/*
   Patches board. `--pt` (the game's lime) is set inline from lib/accent.ts and `--ptn` is the number of columns, which
   sizes badges and labels from the board's width (cqw), so the board scales from a 320px phone to a desktop.
 
