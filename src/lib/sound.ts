@@ -3,7 +3,7 @@
  * offline). Browsers only allow sound after a tap or key press, so the player is `unlock`ed from the Start button.
  */
 
-type Cue = "tick" | "go" | "correct" | "wrong";
+type Cue = "tick" | "go" | "correct" | "wrong" | "alert";
 
 interface Note {
   /** Frequency in hertz. */
@@ -26,6 +26,8 @@ const CUES: Record<Cue, Note[]> = {
     { freq: 784, at: 0.1, duration: 0.2, type: "sine", volume: 0.2 },
   ],
   wrong: [{ freq: 196, at: 0, duration: 0.3, type: "triangle", volume: 0.2 }],
+  // One long, clear beep: the study timer's "time's up".
+  alert: [{ freq: 880, at: 0, duration: 0.6, type: "sine", volume: 0.3 }],
 };
 
 export interface SoundPlayer {
