@@ -116,8 +116,16 @@ describe("remembered widget state", () => {
   it("remembers which side was showing and which corner it sat in across a refresh", () => {
     const store = memory();
     assert.deepEqual(loadPrefs(store), DEFAULT_PREFS);
-    savePrefs({ side: "back", corner: "tl" }, store);
-    assert.deepEqual(loadPrefs(store), { side: "back", corner: "tl" });
+    savePrefs({ side: "back", corner: "tl", hidden: false }, store);
+    assert.deepEqual(loadPrefs(store), { side: "back", corner: "tl", hidden: false });
+  });
+
+  it("remembers that the widget was hidden into the header icon, and only for a real true", () => {
+    const store = memory();
+    assert.equal(loadPrefs(store).hidden, false);
+    savePrefs({ side: "front", corner: "br", hidden: true }, store);
+    assert.equal(loadPrefs(store).hidden, true);
+    for (const odd of ['{"hidden":"yes"}', '{"hidden":1}', '{"hidden":null}']) assert.equal(loadPrefs(memory({ [TIMER_UI_KEY]: odd })).hidden, false, odd);
   });
 
   it("falls back to the defaults for a damaged or hand-edited value", () => {
@@ -131,7 +139,7 @@ describe("remembered widget state", () => {
 
   it("survives storage being unavailable", () => {
     assert.deepEqual(loadPrefs(null), DEFAULT_PREFS);
-    savePrefs({ side: "back", corner: "tr" }, null);
+    savePrefs({ side: "back", corner: "tr", hidden: false }, null);
     const throwing: KeyValue = {
       getItem: () => {
         throw new Error("blocked");
