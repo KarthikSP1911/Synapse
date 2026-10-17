@@ -82,10 +82,11 @@ export default async function TablesPage() {
         </CardHeader>
         <CardContent>
           <div className="-mx-1 overflow-x-auto pb-2">
-            <table className="mx-1 border-separate border-spacing-[3px] text-xs" aria-label="Weakness score by multiplication pair">
+            {/* min-w-max keeps every cell at its full size: without it the browser squeezes 21 columns into a phone's width and the numbers run together, so the table scrolls sideways instead. */}
+            <table className="mx-1 min-w-max border-separate border-spacing-[3px] text-xs" aria-label="Weakness score by multiplication pair">
               <thead>
                 <tr>
-                  <th scope="col" className="size-9 rounded-md bg-secondary font-mono text-muted-foreground sm:size-10">
+                  <th scope="col" className="sticky left-0 z-10 size-9 rounded-md bg-secondary font-mono text-muted-foreground sm:size-10">
                     ×
                   </th>
                   {numbers.map((n) => (
@@ -98,7 +99,7 @@ export default async function TablesPage() {
               <tbody>
                 {numbers.map((left) => (
                   <tr key={left}>
-                    <th scope="row" className="size-9 font-mono font-medium text-muted-foreground sm:size-10">
+                    <th scope="row" className="sticky left-0 z-10 size-9 bg-card font-mono font-medium text-muted-foreground sm:size-10">
                       {left}
                     </th>
                     {numbers.map((right) => {
