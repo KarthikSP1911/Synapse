@@ -1,6 +1,8 @@
-# Synapse
+# Synapse reference
 
-Synapse is an adaptive mental-maths trainer. It drills four skills — **multiplication, percentages, fractions and squares** — in short sessions, records your accuracy and speed for every individual question, and steers practice toward what you find hardest and what is due for review.
+The detailed reference for [Synapse](../README.md): every feature, rule and formula. Start at the README for the overview.
+
+Synapse is an adaptive mental-maths trainer. It drills eight skills (multiplication, addition, subtraction, division, percentages, fractions, squares and exponents) in short sessions, records your accuracy and speed for every individual question, and steers practice toward what you find hardest and what is due for review.
 
 ## Features
 
@@ -148,7 +150,7 @@ Standalone game at `/games/patches`, built on the shared puzzle shell like Queen
 - **Rules**: every cell is in exactly one patch, every patch is connected (edges, not corners) and holds exactly one clue. A clue may give an area, a shape, both, or nothing. Square, wide and tall mean a rectangle; the freeform symbol (always with an area) allows any connected shape; a clue with neither is any rectangle.
 - **Playing**: drag from one corner of a patch to the opposite one (touch, mouse or pen); on a freeform clue, drag across the cells it should take. Drawing is free, as on paper: a patch can be any size, and one that is not the area or shape its clue asks for is placed with a dashed outline instead of being refused (a drag just stops growing where it would take in a second clue). Only a board where every patch is right counts as solved; Check says what is not. What is no patch at all (no clue in it, cells that do not touch) is refused with the reason and leaves the board as it was. Every clue has its own colour (its symbol, and the fill of its patch), and the preview fills in that colour as you drag. Nothing needs a Remove button: drag from the edge of a patch to pick it up and resize it, draw over a patch to replace it, or tap a patch to erase it (Undo takes any of it back). Undo, Redo, Reset, Restart, Check and Hint are on the play screen; Auto-check (off by default) marks, in amber, a clue or cell that no patch can serve any more. Arrow keys, Enter (starts, places, or erases the patch under the cursor), Esc and Delete work without a pointer.
 - **Hints** point at a clue that is easy to place (or at a wrong patch, with the reason), and a second press on the same clue shows its patch. A hint never places anything. Price, cooldown and order are the shared ones above.
-- **Code**: `src/features/games/patches/lib` is pure TypeScript (format, shape rules, solver, generator, rules, drawing state, game, hints, storage), `components` is the board and play screen. Details are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#patches).
+- **Code**: `src/features/games/patches/lib` is pure TypeScript (format, shape rules, solver, generator, rules, drawing state, game, hints, storage), `components` is the board and play screen. Details are in [docs/ARCHITECTURE.md](ARCHITECTURE.md#patches).
 
 ### MindSprint (flash arithmetic)
 
@@ -190,7 +192,7 @@ and shared logic in `src/lib`. The practice core is `src/features/skills/lib/`: 
 explanations (`build.ts`), pools and answer validation, all database-free. Database access lives in each feature's
 `server/` folder, pages and API routes in `src/app/`, and the schema and migrations in `src/db/`.
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full folder tree, conventions and the reasoning behind them.
+See [docs/ARCHITECTURE.md](ARCHITECTURE.md) for the full folder tree, conventions and the reasoning behind them.
 
 ### Answer validation
 
@@ -236,6 +238,6 @@ Not covered by automated tests: the SQL that updates session totals and the Reac
 
 ## Notes
 
-- There is no authentication: statistics are shared by everyone using the same database.
+- Accounts use email and password with scrypt-hashed passwords and database-backed session cookies. A visitor can also "Try without an account" (guest mode): everything then stays in this browser.
 - The app needs `DATABASE_URL` at runtime; pages that read statistics are rendered on demand, so builds do not need database access.
 - Settings live in `localStorage`, so they are per browser.
