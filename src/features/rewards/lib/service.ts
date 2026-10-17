@@ -53,7 +53,7 @@ export function requestHint(store: LocalStore | null, request: { chargeScope: st
       const events: WalletEvent[] = [{ kind: "hint", entry: result.entry, charged: result.charged }];
       return { wallet: result.wallet, result, events };
     });
-    if (!outcome.saved) return { ok: false, reason: "storage", message: "This browser is not letting Mathz save, so no hint was used." };
+    if (!outcome.saved) return { ok: false, reason: "storage", message: "This browser is not letting Synapse save, so no hint was used." };
     const result = outcome.result;
     return result.ok ? { ok: true, duplicate: result.duplicate, charged: result.charged, entry: result.entry } : result;
   } catch (error) {
@@ -74,7 +74,7 @@ export function buyShieldLocally(store: LocalStore, request: { id: string; today
     if (!result.ok || result.duplicate) return { wallet, result };
     return { wallet: result.wallet, result, events: [{ kind: "purchase", entry: result.entry } as WalletEvent] };
   });
-  if (!outcome.saved) return { ok: false, reason: "storage", message: "This browser is not letting Mathz save, so nothing was bought." };
+  if (!outcome.saved) return { ok: false, reason: "storage", message: "This browser is not letting Synapse save, so nothing was bought." };
   const result = outcome.result;
   return result.ok ? { ok: true, duplicate: result.duplicate, entry: result.entry } : result;
 }

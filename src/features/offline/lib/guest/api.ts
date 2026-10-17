@@ -26,7 +26,7 @@ import { MAX_RESPONSE_TIME_MS, QUESTION_LIMIT_SLACK_MS, TIMED_GRACE_MS, isTimedO
 /**
  * Practice runs in the browser, so this module answers the same requests as the `/api/sessions`
  * routes (same URLs, bodies, status codes and JSON) from localStorage instead of the network. That is
- * what lets Mathz work offline and on a bad connection: the practice screens call a local fetch and
+ * what lets Synapse work offline and on a bad connection: the practice screens call a local fetch and
  * never wait on the server.
  *
  * Two stores use it. A guest's data stays in the browser for good. A signed-in user's data is a local
@@ -194,7 +194,7 @@ function createSession(store: LocalStore, body: Record<string, unknown>): Respon
   data.nextId += 1;
   data.sessions.push(session);
   // The session lives only in this browser, so if it cannot be stored there is nothing to practise on.
-  if (!saveGuestData(data, store.key)) return error("This browser is not letting Mathz save your progress.", 500);
+  if (!saveGuestData(data, store.key)) return error("This browser is not letting Synapse save your progress.", 500);
   return json(publicSession(session), 201);
 }
 

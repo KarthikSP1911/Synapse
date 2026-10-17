@@ -1,4 +1,4 @@
-/* Mathz service worker: makes the app open and run with no connection, and stay usable on a poor one.
+/* Synapse service worker: makes the app open and run with no connection, and stay usable on a poor one.
  *
  *  - Screens (HTML): network first, but after NAV_TIMEOUT_MS the last copy is shown instead of waiting
  *    on a weak signal. The network request keeps going and refreshes the copy for next time.
@@ -14,14 +14,14 @@
  * are only a fallback, so a new worker keeps working copies instead of throwing them away. Bump VERSION
  * only to change the shell files below.
  */
-const VERSION = "v2";
+const VERSION = "v3";
 const SHELL_CACHE = `mathz-shell-${VERSION}`;
 const ASSET_CACHE = "mathz-assets";
 const PAGE_CACHE = "mathz-pages";
 const KNOWN_CACHES = new Set([SHELL_CACHE, ASSET_CACHE, PAGE_CACHE]);
 
 const OFFLINE_URL = "/offline.html";
-const PRECACHE = [OFFLINE_URL, "/icons/icon-192.png", "/icons/icon-512.png", "/icon.svg"];
+const PRECACHE = [OFFLINE_URL, "/icons/icon-192.png", "/icons/icon-512.png", "/icon.png", "/brand/synapse-logo.png", "/brand/synapse-splash.png"];
 
 const NAV_TIMEOUT_MS = 4000;
 const RSC_TIMEOUT_MS = 6000;
@@ -169,7 +169,7 @@ async function findPage(url) {
 // ---------------------------------------------------------------------------
 
 const isShellFile = (path) =>
-  path.startsWith("/icons/") || path === "/icon.svg" || path === "/manifest.webmanifest" || path.startsWith("/apple-icon") || path === "/favicon.ico";
+  path.startsWith("/icons/") || path.startsWith("/brand/") || path === "/icon.png" || path === "/manifest.webmanifest" || path.startsWith("/apple-icon") || path === "/favicon.ico";
 
 async function cacheFirst(request, cacheName, max) {
   const cache = await caches.open(cacheName);

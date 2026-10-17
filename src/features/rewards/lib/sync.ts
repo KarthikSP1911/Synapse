@@ -95,7 +95,7 @@ export async function purchaseShieldOnline(userId: number, id: string, deps: Wal
   try {
     res = await request(deps, "/api/wallet/purchase", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
   } catch {
-    return { ok: false, reason: "offline", message: "Could not reach Mathz, so nothing was bought. Check your connection and try again." };
+    return { ok: false, reason: "offline", message: "Could not reach Synapse, so nothing was bought. Check your connection and try again." };
   }
   if (res.status === 401) return { ok: false, reason: "server", message: "Please sign in again to buy a Streak Shield." };
   const body: PurchaseReply = await res.json().catch(() => ({}));

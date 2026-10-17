@@ -1,7 +1,7 @@
 import { compressToUTF16, decompressFromUTF16 } from "lz-string";
 
 /**
- * String compression for the two places Mathz moves bulk text around: the browser's localStorage
+ * String compression for the two places Synapse moves bulk text around: the browser's localStorage
  * (which has a small quota and only stores strings) and the upload of practice done offline.
  */
 

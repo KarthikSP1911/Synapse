@@ -17,7 +17,7 @@ export default function GlobalError({ error, retry, reset }: { error: Error & { 
       <body style={{ margin: 0, background: "#000", color: "#fafafa", font: "16px system-ui, sans-serif", display: "grid", placeItems: "center", minHeight: "100vh", textAlign: "center" }}>
         <main style={{ maxWidth: 420, padding: 24 }}>
           <h1 style={{ fontSize: 28, margin: "0 0 12px" }}>Something went wrong</h1>
-          <p style={{ color: "#a1a1a1", margin: "0 0 16px" }}>Mathz couldn&apos;t start. This is usually a temporary problem; reloading often fixes it.</p>
+          <p style={{ color: "#a1a1a1", margin: "0 0 16px" }}>Synapse couldn&apos;t start. This is usually a temporary problem; reloading often fixes it.</p>
           {error.digest && <p style={{ color: "#a1a1a1", fontSize: 12 }}>Reference {error.digest}</p>}
           <button
             type="button"

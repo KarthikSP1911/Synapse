@@ -201,7 +201,7 @@ export function RewardsShop() {
                 </span>
               </div>
               <p className="text-sm text-muted-foreground">
-                Protects your streak for one missed day. If you skip a day, a shield is used for it automatically the next time you open Mathz. A protected day does not count as
+                Protects your streak for one missed day. If you skip a day, a shield is used for it automatically the next time you open Synapse. A protected day does not count as
                 practice and earns no coins. Buy one before you need it: a shield cannot bring back a streak that has already broken.
               </p>
               <div className="flex items-center gap-3 pt-1">

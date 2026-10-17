@@ -145,15 +145,15 @@ export function InstallPrompt() {
 
   return (
     <section
-      aria-label="Install Mathz"
+      aria-label="Install Synapse"
       className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] animate-in fade-in slide-in-from-bottom-4 duration-300 sm:hidden"
       // Sits above the tab bar when there is one.
       style={tabBar ? { bottom: `calc(${MOBILE_NAV_HEIGHT} + env(safe-area-inset-bottom))`, paddingBottom: "0.75rem" } : undefined}
     >
       <div className="mx-auto flex max-w-md items-start gap-3 rounded-xl border border-border bg-card p-4 shadow-pop">
-        <LogoMark className="mt-0.5 size-9 shrink-0" />
+        <LogoMark className="mt-0.5 size-12 shrink-0" />
         <div className="min-w-0 flex-1">
-          <p className="text-[15px] font-semibold tracking-tight">Install Mathz</p>
+          <p className="text-[15px] font-semibold tracking-tight">Install Synapse</p>
           {mode === "native" ? (
             <>
               <p className="mt-0.5 text-sm text-muted-foreground">Add it to your home screen for full-screen practice that works even with no signal.</p>

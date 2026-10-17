@@ -1,4 +1,4 @@
-# Mathz architecture
+# Synapse architecture
 
 How the code is organised and why. For what the app does and how to run it, see the [README](../README.md).
 
@@ -19,7 +19,7 @@ src/
     accent.ts rational.ts   accent colours; exact rational arithmetic
     random.ts timeline.ts   seedable RNG; countdown/flash schedule
     sound.ts records.ts     Web Audio cues; validation primitives for untrusted records
-    utils.ts validation.ts nav.ts pwa-icon.tsx
+    utils.ts validation.ts nav.ts
   db/                     Drizzle schema, connection, SQL migrations (unchanged; drizzle-kit reads these)
   proxy.ts                Next.js proxy (auth redirects)
 public/                   sw.js (service worker), offline.html
@@ -149,9 +149,8 @@ One ledger, two homes. A **ledger entry** has a unique idempotency key, a signed
    being forced into a configurable super-component.
 3. **Pure logic separated from I/O.** The history upload route is `upload.ts` (pure, tested without a database) plus
    `route.ts` (auth + `NextResponse`); the per-game route files only supply their table mapping.
-4. **One logo definition.** `components/layout/logo-mark.tsx` owns the geometry. The header, splash, install prompt,
-   Apple icon and PWA icons draw from it, and a test fails if `app/icon.svg` drifts. The four symbols are cut out of
-   the tiles (even-odd paths), so no fill colour is needed for them.
+4. **One logo file.** `public/brand/synapse-logo.png` is the Synapse brain. `components/layout/logo-mark.tsx` shows it in the
+   header, splash and install prompt; the favicon, Apple icon and PWA icons are the same image on a black tile.
 5. **No behaviour changes.** Database schema, migrations, API paths, request/response shapes, storage keys, scoring,
    settings and the service worker's route list are unchanged. The restructure was done with a codemod that only
    moved files and rewrote import specifiers.
