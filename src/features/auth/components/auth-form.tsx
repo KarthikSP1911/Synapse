@@ -5,6 +5,7 @@ import { useActionState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { USERNAME_MAX, USERNAME_MIN } from "@/features/profile/lib/profile";
 import { guestAction, loginAction, signupAction, type AuthFormState } from "@/features/auth/server/auth-actions";
 
 const initial: AuthFormState = {};
@@ -40,6 +41,29 @@ export default function AuthForm({ mode, next }: { mode: "login" | "signup"; nex
         <Label htmlFor="email">Email</Label>
         <Input id="email" name="email" type="email" autoComplete="email" inputMode="email" required defaultValue={state.email} className="h-10 [@media(max-height:40rem)]:h-9 [@media(max-height:32rem)_and_(min-width:40rem)]:h-[2.125rem]" />
       </div>
+
+      {signup && (
+        <div className="col-span-full space-y-1.5 [@media(max-height:32rem)_and_(min-width:40rem)]:col-span-1">
+          <div className="flex items-baseline justify-between gap-2">
+            <Label htmlFor="username">Username</Label>
+            <span className="text-xs text-muted-foreground [@media(max-height:32rem)_and_(min-width:40rem)]:hidden">Letters, numbers, _</span>
+          </div>
+          <Input
+            id="username"
+            name="username"
+            type="text"
+            autoComplete="username"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            required
+            minLength={USERNAME_MIN}
+            maxLength={USERNAME_MAX}
+            defaultValue={state.username}
+            className="h-10 [@media(max-height:40rem)]:h-9 [@media(max-height:32rem)_and_(min-width:40rem)]:h-[2.125rem]"
+          />
+        </div>
+      )}
 
       <div className="col-span-full space-y-1.5 [@media(max-height:32rem)_and_(min-width:40rem)]:col-span-1">
         <div className="flex items-baseline justify-between gap-2">

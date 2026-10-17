@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { redirect } from "next/navigation";
 import { createHash, randomBytes } from "node:crypto";
-import { and, count, eq, gt, isNull, lt } from "drizzle-orm";
+import { and, count, eq, gt, isNull, lt, ne } from "drizzle-orm";
 import { db } from "@/db";
 import { authSessions, practiceSessions, questionAttempts, questionStats, users } from "@/db/schema";
 import { isValidTimeZone } from "@/features/progress/lib/activity";
@@ -23,11 +23,19 @@ const REMEMBER_MS = 365 * 24 * 60 * 60 * 1000;
 /** Without it the cookie dies with the browser, and the session row expires after a day regardless. */
 const SHORT_SESSION_MS = 24 * 60 * 60 * 1000;
 
-interface AuthUser {
+export interface AuthUser {
   id: number;
   email: string;
   timezone: string;
   createdAt: Date;
+  /** Null only for accounts that predate usernames. */
+  username: string | null;
+  displayName: string | null;
+  avatar: string;
+  bio: string | null;
+  location: string | null;
+  goal: string | null;
+  level: string | null;
 }
 
 const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
@@ -107,7 +115,19 @@ export const getCurrentUser = cache(async (): Promise<AuthUser | null> => {
   if (!token || token.length > 128) return null;
 
   const [row] = await db
-    .select({ id: users.id, email: users.email, timezone: users.timezone, createdAt: users.createdAt })
+    .select({
+      id: users.id,
+      email: users.email,
+      timezone: users.timezone,
+      createdAt: users.createdAt,
+      username: users.username,
+      displayName: users.displayName,
+      avatar: users.avatar,
+      bio: users.bio,
+      location: users.location,
+      goal: users.goal,
+      level: users.level,
+    })
     .from(authSessions)
     .innerJoin(users, eq(users.id, authSessions.userId))
     .where(and(eq(authSessions.tokenHash, hashToken(token)), gt(authSessions.expiresAt, new Date())))
@@ -149,23 +169,39 @@ type AuthResult = { ok: true; userId: number } | { ok: false; error: string };
 
 const zoneOrUtc = (zone: unknown) => (isValidTimeZone(zone) ? zone : "UTC");
 
+const EMAIL_TAKEN = "An account with this email already exists. Try logging in instead.";
+const USERNAME_TAKEN = "That username is already taken. Please choose another.";
+
+/** Whether a username (already normalised) belongs to any account other than `exceptUserId`. */
+export async function isUsernameTaken(username: string, exceptUserId?: number): Promise<boolean> {
+  const [row] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(exceptUserId === undefined ? eq(users.username, username) : and(eq(users.username, username), ne(users.id, exceptUserId)))
+    .limit(1);
+  return row !== undefined;
+}
+
 /**
  * Creates an account. The very first account also claims all practice data recorded before
  * accounts existed (rows with no owner), so nothing already practised is lost.
+ * `username` is already normalised (lower-case, validated). The rest of the profile is filled in afterwards, on the edit-profile page.
  */
-export async function registerUser(email: string, password: string, timezone: unknown): Promise<AuthResult> {
+export async function registerUser(email: string, password: string, timezone: unknown, username: string): Promise<AuthResult> {
   const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
-  if (existing) return { ok: false, error: "An account with this email already exists. Try logging in instead." };
+  if (existing) return { ok: false, error: EMAIL_TAKEN };
+  if (await isUsernameTaken(username)) return { ok: false, error: USERNAME_TAKEN };
 
   let userId: number;
   try {
     const [created] = await db
       .insert(users)
-      .values({ email, passwordHash: await hashPassword(password), timezone: zoneOrUtc(timezone) })
+      .values({ email, passwordHash: await hashPassword(password), timezone: zoneOrUtc(timezone), username })
       .returning({ id: users.id });
     userId = created.id;
   } catch (error) {
-    if (isUniqueViolation(error)) return { ok: false, error: "An account with this email already exists. Try logging in instead." };
+    // Two people can pass the checks above at the same moment; the unique indexes decide, and this says which one lost.
+    if (isUniqueViolation(error)) return { ok: false, error: (await isUsernameTaken(username)) ? USERNAME_TAKEN : EMAIL_TAKEN };
     throw error;
   }
 

@@ -11,6 +11,7 @@ import { ConnectionBadge } from "@/features/offline/components/connection-badge"
 import { CoinBadge } from "@/features/rewards/components/coin-badge";
 import { TimerHeaderButton } from "@/features/timer/components/timer-header-button";
 import { buttonVariants } from "@/components/ui/button";
+import { Avatar } from "@/features/profile/components/avatar";
 
 const links = [
   { href: "/", label: "Practice", icon: Target },
@@ -61,7 +62,7 @@ function NavLinks({ pathname, className, linkClassName }: { pathname: string; cl
   );
 }
 
-export function SiteHeader({ viewer }: { viewer: "user" | "guest" | null }) {
+export function SiteHeader({ viewer, avatar }: { viewer: "user" | "guest" | null; avatar?: string }) {
   const pathname = usePathname();
 
   // The live practice screen is a focus view: no navigation to distract from the question.
@@ -115,7 +116,7 @@ export function SiteHeader({ viewer }: { viewer: "user" | "guest" | null }) {
                 profileActive && "bg-accent text-foreground"
               )}
             >
-              <UserRound className="size-4" />
+              {avatar ? <Avatar id={avatar} className="size-7 pointer-coarse:size-8" /> : <UserRound className="size-4" />}
             </Link>
           )}
         </div>

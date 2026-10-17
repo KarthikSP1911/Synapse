@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { log } from "@/lib/logger";
-import { ArrowRight, UserRound } from "lucide-react";
+import { ArrowRight, MapPin, Pencil, Target, UserRound } from "lucide-react";
 import { ActivityHeatmap } from "@/features/progress/components/activity-heatmap";
 import { Page, StatTile } from "@/components/layout/page-header";
 import { SkillIcon } from "@/components/common/skill-icon";
@@ -11,6 +11,8 @@ import { ShieldPanel } from "@/features/rewards/components/shield-panel";
 import { dbRun } from "@/features/rewards/server/db-run";
 import { getSnapshot } from "@/features/rewards/server/wallet";
 import { buildHeatmap, dayKey, streaks } from "@/features/progress/lib/activity";
+import { Avatar } from "@/features/profile/components/avatar";
+import { GOALS } from "@/features/profile/lib/profile";
 import { requireViewer } from "@/features/auth/server/auth";
 import { logoutAction } from "@/features/auth/server/auth-actions";
 import { getActivityByDay, getActivityDays, getSkillSummaries, getTotalAnswered } from "@/features/progress/server/progress-queries";
@@ -71,6 +73,8 @@ export default async function ProfilePage() {
   if (viewer.kind === "guest") return <GuestProfile />;
   const user = viewer.user;
   const today = dayKey(new Date(), user.timezone);
+  const name = user.displayName ?? user.username ?? user.email;
+  const goal = GOALS.find((g) => g.id === user.goal)?.label;
 
   const [counts, activityDays, summaries, totalAnswered, protectedDays] = await Promise.all([
     getActivityByDay(user.id, user.timezone, WEEKS * 7),
@@ -96,25 +100,54 @@ export default async function ProfilePage() {
     <Page>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-center gap-4">
-          <span className="flex size-14 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground">
-            <UserRound className="size-7" />
-          </span>
+          <Avatar id={user.avatar} className="size-16 sm:size-20" />
           <div className="min-w-0 space-y-1">
             <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Profile</p>
-            <h1 className="truncate text-2xl font-semibold tracking-tight sm:text-3xl" title={user.email}>
-              {user.email}
+            <h1 className="truncate text-2xl font-semibold tracking-tight sm:text-3xl" title={name}>
+              {name}
             </h1>
-            <p className="text-sm text-muted-foreground">
-              Member since {user.createdAt.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" })}
+            {user.username && user.displayName && <p className="truncate text-sm text-muted-foreground">@{user.username}</p>}
+            {user.bio && <p className="max-w-prose whitespace-pre-line text-sm">{user.bio}</p>}
+            <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+              <span>Member since {user.createdAt.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" })}</span>
+              {user.location && (
+                <span className="inline-flex items-center gap-1">
+                  <MapPin className="size-3.5" /> {user.location}
+                </span>
+              )}
+              {goal && (
+                <span className="inline-flex items-center gap-1">
+                  <Target className="size-3.5" /> {goal}
+                </span>
+              )}
             </p>
           </div>
         </div>
-        <form action={logoutAction}>
-          <Button type="submit" variant="outline">
-            Log out
-          </Button>
-        </form>
+        <div className="flex gap-2">
+          <Link href="/profile/edit" className={buttonVariants({ variant: "outline" })}>
+            <Pencil /> Edit profile
+          </Link>
+          <form action={logoutAction}>
+            <Button type="submit" variant="outline">
+              Log out
+            </Button>
+          </form>
+        </div>
       </div>
+
+      {!user.username && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Choose a username</CardTitle>
+            <CardDescription>Accounts now have a username and a profile picture. Pick yours to finish setting up your profile.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/profile/edit" className={buttonVariants({})}>
+              Complete your profile
+            </Link>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <StreakTiles serverDays={activityDays} serverProtectedDays={protectedDays} timeZone={user.timezone} initialToday={today} />
