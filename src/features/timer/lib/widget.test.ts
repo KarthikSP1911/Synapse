@@ -86,6 +86,20 @@ describe("keeping clear of what the user is working on", () => {
     assert.equal(placeWidget("br", phone, [full, small], rows, rows), null);
   });
 
+  it("finds a pocket of free space between a header and a board before shrinking to the unreadable size", () => {
+    // 2048 on a phone with its chrome hidden: scores and tabs above, a full-width square board in the middle, buttons below.
+    const screen: Viewport = { width: 360, height: 780, insets: { top: 12, right: 12, bottom: 12, left: 12 } };
+    const readable: Size = { width: 48, height: 48 };
+    const tiny: Size = { width: 28, height: 28 };
+    const header: Rect = { left: 12, top: 12, right: 348, bottom: 130 };
+    const board: Rect = { left: 12, top: 250, right: 348, bottom: 586 };
+    const buttons: Rect = { left: 12, top: 690, right: 348, bottom: 744 };
+    const placed = placeWidget("br", screen, [readable, tiny], [board], [header, buttons]);
+    assert.ok(placed);
+    assert.equal(placed.size.width, 48, "keeps the size that has room for the digits");
+    for (const o of [board, header, buttons]) assert.ok(placed.rect.right <= o.left || placed.rect.left >= o.right || placed.rect.bottom <= o.top || placed.rect.top >= o.bottom);
+  });
+
   it("shrinks before giving up, and returns null when there is no room at all", () => {
     // Everything but a sliver is the answer area.
     const whole: Rect = { left: 0, top: 0, right: 360, bottom: 740 };

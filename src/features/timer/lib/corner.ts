@@ -23,7 +23,10 @@ export interface Viewport {
   insets: { top: number; right: number; bottom: number; left: number };
 }
 
-export type Spot = { kind: "corner"; corner: Corner } | { kind: "edge"; side: "left" | "right"; slot: 0 | 1 | 2 };
+/** How many resting places each side edge offers between the corners. Dense enough that a pocket of free space between a board and its header is found. */
+export const EDGE_SLOTS = 12;
+
+export type Spot = { kind: "corner"; corner: Corner } | { kind: "edge"; side: "left" | "right"; slot: number };
 
 export const CORNERS: readonly Corner[] = ["tl", "tr", "bl", "br"];
 /** Breathing room kept between the widget and anything marked `data-timer-clear`. */
@@ -42,7 +45,7 @@ export function spotRect(spot: Spot, viewport: Viewport, size: Size): Rect {
     top = spot.corner === "tl" || spot.corner === "tr" ? minY : maxY;
   } else {
     left = spot.side === "left" ? minX : maxX;
-    top = minY + ((maxY - minY) * (spot.slot + 1)) / 4;
+    top = minY + ((maxY - minY) * (spot.slot + 1)) / (EDGE_SLOTS + 1);
   }
   return { left, top, right: left + size.width, bottom: top + size.height };
 }
@@ -92,7 +95,7 @@ function place(preferred: Corner, viewport: Viewport, sizes: readonly Size[], ob
     const home = center(spotRect({ kind: "corner", corner: preferred }, viewport, size));
     const spots: Spot[] = [
       ...CORNERS.map((corner): Spot => ({ kind: "corner", corner })),
-      ...(["left", "right"] as const).flatMap((side) => ([0, 1, 2] as const).map((slot): Spot => ({ kind: "edge", side, slot }))),
+      ...(["left", "right"] as const).flatMap((side) => Array.from({ length: EDGE_SLOTS }, (_, slot): Spot => ({ kind: "edge", side, slot }))),
     ];
     // Corners come before edges; within each kind the nearest to the remembered corner comes first.
     const rank = (spot: Spot) => (spot.kind === "corner" ? 0 : 1_000_000) + distance(center(spotRect(spot, viewport, size)), home);

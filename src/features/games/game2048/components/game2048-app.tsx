@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
-import { ArrowLeft, Plus, RotateCcw, Undo2 } from "lucide-react";
+import { Plus, RotateCcw, Undo2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AccentTile, accentStyle } from "@/components/common/accent-tile";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
@@ -11,7 +10,8 @@ import { Board } from "@/features/games/game2048/components/board";
 import { formatDuration } from "@/features/games/game2048/components/format";
 import { StatsPanel } from "@/features/games/game2048/components/stats-panel";
 import { useSwipe } from "@/features/games/game2048/components/use-swipe";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import { HelpTip } from "@/components/form/help-tip";
 import { useStudyActivity } from "@/features/timer/components/use-study-activity";
 import { useLocalStore, useViewerInfo } from "@/features/auth/components/viewer-provider";
 import { emptyCells } from "@/features/games/game2048/lib/engine";
@@ -330,7 +330,6 @@ export default function Game2048App() {
   ] as const;
 
   const playing = tab === "play";
-  // The first move starts the game: the intro and the settings are only there before it.
   const started = !!game && hasProgress(game);
   // 2048 has no natural end: the study timer waits for game over, or 3 minutes after it expires. Viewing the stats tab is a safe point.
   useStudyActivity({ active: started && status !== "over", endless: true, paused: !playing });
@@ -346,27 +345,27 @@ export default function Game2048App() {
       {...(playing ? swipe : {})}
     >
       <div className={cn("mx-auto w-full max-w-lg", playing ? "play-landscape flex min-h-0 flex-1 flex-col gap-3" : "space-y-4")}>
-        <div data-timer-clear="soft" className="flex flex-wrap items-start justify-between gap-x-3 gap-y-3">
-          <div className="flex shrink-0 items-center gap-3">
-            {/* Once a game is under way the "Back to Games" row below is gone, and on phones the tab bar is hidden while playing. */}
-            {playing && started && (
-              <Link href="/#games" aria-label="Back to Games" className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "-ml-2 pointer-coarse:size-11")}>
-                <ArrowLeft />
-              </Link>
-            )}
+        <div data-timer-clear="soft" className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             <AccentTile id="game2048" active />
             <h1 className="accent-label text-3xl font-semibold tracking-tight sm:text-4xl" data-active style={accentStyle("game2048")}>
               2048
             </h1>
+            <HelpTip label="how to play 2048" className="-ml-1">
+              <p>Slide the tiles. When two with the same number touch, they merge. Reach 2048.</p>
+              <p className="mt-2 text-muted-foreground">
+                <span className="hidden pointer-fine:inline">Arrow keys or W A S D slide · U or Ctrl+Z undo · R new game. Dragging with the mouse works too.</span>
+                <span className="pointer-fine:hidden">Swipe anywhere to slide. Undo takes back your last move.</span>
+              </p>
+            </HelpTip>
           </div>
-          <div className="ml-auto flex shrink-0 gap-2" aria-label="Scores">
+          <div className="flex shrink-0 gap-2" aria-label="Scores">
             <ScoreBox label="Score" value={game?.score ?? 0} gain={gain} />
             <ScoreBox label="Best" value={game?.best ?? 0} />
           </div>
         </div>
-        {(!playing || !started) && <p className="text-sm text-muted-foreground">Slide the tiles. When two with the same number touch, they merge into one. Reach 2048!</p>}
 
-        <div role="tablist" aria-label="2048" className="grid w-full shrink-0 grid-cols-2 gap-1 rounded-lg bg-secondary p-1">
+        <div data-timer-clear="soft" role="tablist" aria-label="2048" className="grid w-full shrink-0 grid-cols-2 gap-1 rounded-lg bg-secondary p-1">
           {tabs.map(({ id, label }) => (
             <button
               key={id}
@@ -420,37 +419,23 @@ export default function Game2048App() {
               <Plus /> New game
             </Button>
           </div>
-
-          <p className="shrink-0 text-center text-xs text-muted-foreground">
-            <span className="hidden sm:inline pointer-coarse:hidden">Arrow keys or W A S D to slide · U or Ctrl+Z to undo · R for a new game · dragging with the mouse works too.</span>
-            <span className="sm:hidden pointer-coarse:inline">Swipe anywhere to slide. Undo takes back your last move.</span>
-          </p>
-
-          {/* Before the first move only: once a game is under way nothing here can change it mid-play. */}
-          {!started && (
-            <div className="flex shrink-0 flex-wrap items-start justify-between gap-2">
-              <Link href="/#games" className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "-ml-2")}>
-                <ArrowLeft /> Back to Games
-              </Link>
-
-              <details className="rounded-xl border border-border bg-card px-3 py-1.5 text-sm shadow-card open:w-full open:px-4 open:py-3">
-                <summary className="cursor-pointer list-none font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">Settings</summary>
-                <div className="mt-3 flex items-center justify-between gap-4">
-                  <div className="min-w-0">
-                    <p className="font-medium">Best score</p>
-                    <p className="text-xs text-muted-foreground">Starts it over from the score of this game. Your game history is kept.</p>
-                  </div>
-                  <Button variant="destructive" size="sm" onClick={() => setDialog("reset")}>
-                    Reset best
-                  </Button>
-                </div>
-              </details>
-            </div>
-          )}
         </div>
 
         <div role="tabpanel" id="g48-panel-stats" aria-labelledby="g48-tab-stats" hidden={tab !== "stats"}>
-          {tab === "stats" && <StatsPanel stats={stats} />}
+          {tab === "stats" && (
+            <div className="space-y-6">
+              <StatsPanel stats={stats} />
+              <div className="flex items-center justify-between gap-4 rounded-xl border border-border bg-card px-4 py-3 shadow-card">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">Best score</p>
+                  <p className="font-mono text-sm tabular-nums text-muted-foreground">{(game?.best ?? 0).toLocaleString()}</p>
+                </div>
+                <Button variant="destructive" size="sm" onClick={() => setDialog("reset")} disabled={!game}>
+                  Reset best
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
