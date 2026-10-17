@@ -52,7 +52,7 @@ function NavLinks({ pathname, className, linkClassName }: { pathname: string; cl
             )}
           >
             {label}
-            {active && <span className="absolute inset-x-2.5 bottom-0 h-px bg-foreground sm:inset-x-3" />}
+            {active && <span className="spectrum-underline absolute inset-x-2.5 bottom-0 h-0.5 rounded-full sm:inset-x-3" />}
           </Link>
         );
       })}

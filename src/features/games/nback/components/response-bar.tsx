@@ -10,7 +10,7 @@ const ICON: Record<StreamId, LucideIcon> = { position: Crosshair, color: Palette
 
 /**
  * One large button per active stream: "this one matches the one n back". A press is acknowledged straight away
- * (the pressed state), which says nothing about whether it was right. Only with per-trial feedback on does a
+ * (a quick dip in opacity that settles back to normal, see `.nb-response` in globals.css), which says nothing about whether it was right. Only with per-trial feedback on does a
  * button then show a tick or a cross with a word, so correctness never rests on colour alone.
  * Touch and mouse respond on press, not release, so the stored time is when the finger came down; a keyboard
  * activation (Enter or Space on a focused button, `detail === 0`) responds on click.
@@ -54,7 +54,7 @@ export function ResponseBar({
             className={cn(
               "nb-response relative flex min-h-16 flex-col items-center justify-center gap-0.5 rounded-xl border-2 px-1 py-2 text-center font-semibold select-none touch-manipulation sm:min-h-20",
               "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50",
-              pressed ? "border-foreground bg-foreground text-background" : "border-border bg-card hover:border-input hover:bg-accent",
+              "border-border bg-card hover:border-input hover:bg-accent",
               result && (result.correct ? "border-success" : "border-destructive")
             )}
           >
