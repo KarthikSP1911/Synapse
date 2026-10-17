@@ -13,8 +13,21 @@ export const users = pgTable(
     /** IANA zone name (e.g. "Asia/Kolkata"), refreshed at each login; decides which day an attempt counts toward. */
     timezone: varchar("timezone", { length: 64 }).default("UTC").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
+    /** Chosen at sign-up, stored lower-cased; null only for accounts that predate usernames. See `src/features/profile/lib/profile.ts`. */
+    username: varchar("username", { length: 20 }),
+    displayName: varchar("display_name", { length: 40 }),
+    /** An id from the picker's list (`AVATAR_IDS`); the icon and colours are drawn by `Avatar`. */
+    avatar: varchar("avatar", { length: 24 }).default("brain").notNull(),
+    bio: varchar("bio", { length: 160 }),
+    location: varchar("location", { length: 60 }),
+    /** A `GoalId` / `LevelId`, or null when not chosen. */
+    goal: varchar("goal", { length: 16 }),
+    level: varchar("level", { length: 16 }),
   },
-  (table) => [uniqueIndex("users_email_idx").on(table.email)]
+  (table) => [
+    uniqueIndex("users_email_idx").on(table.email),
+    uniqueIndex("users_username_idx").on(table.username).where(sql`${table.username} IS NOT NULL`),
+  ]
 );
 
 /** Login sessions. Only a SHA-256 hash of the cookie token is stored, so a leaked table cannot be replayed. */

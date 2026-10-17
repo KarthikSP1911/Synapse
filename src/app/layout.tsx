@@ -79,7 +79,7 @@ export default async function RootLayout({
             Skip to content
           </a>
           <ViewerProvider viewer={viewerInfo}>
-            <SiteHeader viewer={viewer?.kind ?? null} />
+            <SiteHeader viewer={viewer?.kind ?? null} avatar={viewer?.kind === "user" ? viewer.user.avatar : undefined} />
             <main id="main" className="flex-1">
               {children}
             </main>
