@@ -1351,12 +1351,6 @@ html.play-focus body {
   25% { opacity: 0.4; transform: scale(0.96); }
   100% { opacity: 1; transform: scale(1); }
 }
-@media (prefers-reduced-motion: reduce) {
-  .nb-response[aria-pressed="true"] {
-    animation: none;
-    opacity: 0.6;
-  }
-}
 /* A life that was just lost pulses once; the heart is already drawn empty, so the flash adds nothing the shape does not say. */
 @keyframes nb-heart-lose {
   0% { transform: scale(1.5); }
@@ -1368,6 +1362,11 @@ html.play-focus body {
 @media (prefers-reduced-motion: reduce) {
   .nb-heart[data-flash="true"] {
     animation: none;
+  }
+  /* No dip: the button stays slightly faded for the trial so a press still shows. */
+  .nb-response[aria-pressed="true"] {
+    animation: none;
+    opacity: 0.6;
   }
 }
 /* End of N-Back. */
