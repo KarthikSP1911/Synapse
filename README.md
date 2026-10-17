@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/banner.svg" alt="Synapse: train your mind. Adaptive mental maths, memory and logic." width="100%">
+  <img src="docs/assets/synapse-banner.svg" alt="Synapse: train your mind. Adaptive mental maths, memory and logic." width="100%">
 </p>
 
 <p align="center">
