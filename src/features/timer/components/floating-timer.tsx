@@ -244,7 +244,6 @@ export function FloatingTimer() {
   const below = (placement.rect.top + placement.rect.bottom) / 2 < layout.viewport.height / 2;
   const alignRight = (placement.rect.left + placement.rect.right) / 2 > layout.viewport.width / 2;
   const hidden = layout.placement === null;
-  const dim = compact && openPanel === null && drag === null && !showAlert;
 
   const label = !hasTimer
     ? "Start a study timer"
@@ -287,8 +286,8 @@ export function FloatingTimer() {
         }}
         className={cn(
           "st-stage block size-full touch-none select-none rounded-full outline-none transition-opacity duration-200 [-webkit-touch-callout:none] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none",
-          hidden && "pointer-events-none opacity-0",
-          dim && "opacity-50 hover:opacity-100 focus-visible:opacity-100"
+          // Fully opaque even in a game: the widget gets smaller there, never see-through, so the time is always readable.
+          hidden && "pointer-events-none opacity-0"
         )}
       >
         <span className="st-card block" data-side={side}>
@@ -310,7 +309,7 @@ export function FloatingTimer() {
           aria-label="Study timer options"
           aria-haspopup="menu"
           onClick={() => setPanel((current) => (current === "menu" ? null : "menu"))}
-          className="absolute -right-2 -top-2 grid size-5 place-items-center rounded-full border border-border bg-popover text-[11px] leading-none text-muted-foreground opacity-0 shadow-card outline-none hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100"
+          className="absolute -right-2 -top-2 grid size-5 place-items-center rounded-full border border-border bg-card text-[11px] leading-none text-muted-foreground opacity-0 shadow-card outline-none hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100"
         >
           <span aria-hidden>⋯</span>
         </button>

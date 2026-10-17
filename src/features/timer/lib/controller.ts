@@ -1,5 +1,5 @@
 import { OFF, nextDeadline, step } from "./machine";
-import type { ActivityInfo, MachineState, TimerEvent, TimerRecord } from "./types";
+import { ALERT_MS, ALERT_REPEAT_MS, type ActivityInfo, type MachineState, type TimerEvent, type TimerRecord } from "./types";
 
 /** The clock and timers the controller runs on. The browser's in production, a hand-moved one in tests (as in the N-Back runner). */
 export interface TimerHost {
@@ -48,6 +48,7 @@ export class StudyTimerController {
   private viewer: string | null = null;
   private listeners = new Set<() => void>();
   private wakeTimer: unknown = null;
+  private repeatTimer: unknown = null;
   private registrations = new Map<number, { info: ActivityInfo; extras: ActivityExtras }>();
   private nextToken = 1;
   private departing: ActivityExtras | null = null;
@@ -180,8 +181,34 @@ export class StudyTimerController {
       this.snapshot = { timer: state.timer, activity: state.activity };
       for (const listener of [...this.listeners]) listener();
     }
-    if (alert) this.onAlert(this.soundSetting());
+    if (alert && state.timer) {
+      // The sound setting is read now: the area that was open may be gone by the time of the repeats.
+      const sound = this.soundSetting();
+      this.onAlert(sound);
+      this.repeatWhileBannerShows(state.timer.endsAt, sound);
+    }
+    // A stopped timer, or one that has not alerted, has nothing to repeat.
+    if (!state.timer || state.timer.alertedAt === null) this.stopRepeating();
     this.schedule();
+  }
+
+  /** The beep repeats every couple of seconds for as long as the banner is up, in the tab that raised the alert. */
+  private repeatWhileBannerShows(endsAt: number, sound: boolean | null): void {
+    this.stopRepeating();
+    const again = () => {
+      this.repeatTimer = null;
+      const timer = this.state.timer;
+      if (!timer || timer.endsAt !== endsAt || timer.alertedAt === null || this.host.now() >= timer.alertedAt + ALERT_MS) return;
+      this.onAlert(sound);
+      this.repeatTimer = this.host.setTimeout(again, ALERT_REPEAT_MS);
+    };
+    this.repeatTimer = this.host.setTimeout(again, ALERT_REPEAT_MS);
+  }
+
+  private stopRepeating(): void {
+    if (this.repeatTimer === null) return;
+    this.host.clearTimeout(this.repeatTimer);
+    this.repeatTimer = null;
   }
 
   private schedule(): void {

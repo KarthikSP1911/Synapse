@@ -27,7 +27,7 @@ export function TimerOptionsMenu({ canExtend, onExtend, onStop }: { canExtend: b
   const item = "flex h-9 w-full items-center gap-2 rounded-md px-2.5 text-left text-sm outline-none transition-colors hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:h-11";
 
   return (
-    <div ref={rootRef} role="menu" aria-label="Study timer options" onKeyDown={onKeyDown} className="w-44 rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-pop">
+    <div ref={rootRef} role="menu" aria-label="Study timer options" onKeyDown={onKeyDown} className="w-44 rounded-xl border border-border bg-card p-1 text-card-foreground shadow-pop">
       {canExtend && (
         <button type="button" role="menuitem" className={item} onClick={onExtend}>
           <Plus className="size-4" aria-hidden /> Add 5 min

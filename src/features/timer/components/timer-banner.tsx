@@ -10,7 +10,7 @@ import { ALERT_MS } from "@/features/timer/lib/types";
 export function TimerBanner({ leftMs, onQuit }: { leftMs: number; onQuit: () => void }) {
   const seconds = Math.max(0, Math.ceil(leftMs / 1000));
   return (
-    <div className="w-64 overflow-hidden rounded-xl border border-warning bg-popover text-popover-foreground shadow-pop">
+    <div className="w-64 overflow-hidden rounded-xl border border-warning bg-card text-card-foreground shadow-pop">
       <div className="flex items-center gap-3 p-3">
         <div className="min-w-0 flex-1">
           <p role="alert" className="text-sm font-medium">

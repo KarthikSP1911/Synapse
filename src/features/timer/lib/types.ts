@@ -9,6 +9,8 @@ export const DEFAULT_MINUTES = 15;
 export const EXTEND_MS = 5 * 60 * 1000;
 /** Endless sessions and 2048 have no natural end: after expiry they get this long before the alert. */
 export const GRACE_MS = 3 * 60 * 1000;
+/** While the banner is up the beep (and vibration) repeats this often, so it cannot be missed. */
+export const ALERT_REPEAT_MS = 2 * 1000;
 /** How long the "Time's up" banner stays before it dismisses itself and leaves the badge. */
 export const ALERT_MS = 15 * 1000;
 
