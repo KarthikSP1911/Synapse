@@ -38,7 +38,7 @@ export function TimerSetupPopover({ onStart }: { onStart: (minutes: number) => v
   };
 
   return (
-    <div ref={rootRef} role="dialog" aria-label="Start a study timer" className="w-60 rounded-xl border border-border bg-popover p-3 text-popover-foreground shadow-pop">
+    <div ref={rootRef} role="dialog" aria-label="Start a study timer" className="w-60 rounded-xl border border-border bg-card p-3 text-card-foreground shadow-pop">
       <p className="text-sm font-medium">Study timer</p>
       <p className="mt-0.5 text-xs text-muted-foreground">Pick a length to start. It keeps counting on every page.</p>
       <div className="mt-3 grid grid-cols-3 gap-1.5">

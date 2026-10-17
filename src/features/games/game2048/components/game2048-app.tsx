@@ -12,6 +12,7 @@ import { formatDuration } from "@/features/games/game2048/components/format";
 import { StatsPanel } from "@/features/games/game2048/components/stats-panel";
 import { useSwipe } from "@/features/games/game2048/components/use-swipe";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { useStudyActivity } from "@/features/timer/components/use-study-activity";
 import { useLocalStore, useViewerInfo } from "@/features/auth/components/viewer-provider";
 import { emptyCells } from "@/features/games/game2048/lib/engine";
 import { applyMove, continuePlaying, freezeForStorage, hasProgress, liftBest, newGame, resetBest, startClock, stopClock, toSessionData, undo } from "@/features/games/game2048/lib/game";
@@ -331,6 +332,8 @@ export default function Game2048App() {
   const playing = tab === "play";
   // The first move starts the game: the intro and the settings are only there before it.
   const started = !!game && hasProgress(game);
+  // 2048 has no natural end: the study timer waits for game over, or 3 minutes after it expires. Viewing the stats tab is a safe point.
+  useStudyActivity({ active: started && status !== "over", endless: true, paused: !playing });
   const swipe = useSwipe(play, playing && dialog === null);
 
   // While playing, the page is exactly one screen tall and cannot scroll, so a swipe can only ever move tiles.
@@ -343,7 +346,7 @@ export default function Game2048App() {
       {...(playing ? swipe : {})}
     >
       <div className={cn("mx-auto w-full max-w-lg", playing ? "play-landscape flex min-h-0 flex-1 flex-col gap-3" : "space-y-4")}>
-        <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-3">
+        <div data-timer-clear="soft" className="flex flex-wrap items-start justify-between gap-x-3 gap-y-3">
           <div className="flex shrink-0 items-center gap-3">
             {/* Once a game is under way the "Back to Games" row below is gone, and on phones the tab bar is hidden while playing. */}
             {playing && started && (
@@ -409,7 +412,7 @@ export default function Game2048App() {
             </p>
           )}
 
-          <div className="grid shrink-0 grid-cols-2 gap-2">
+          <div data-timer-clear="soft" className="grid shrink-0 grid-cols-2 gap-2">
             <Button variant="outline" size="lg" onClick={undoMove} disabled={!canUndo}>
               <Undo2 /> Undo
             </Button>

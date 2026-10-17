@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/page-header";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { useLocalStore, useViewerInfo } from "@/features/auth/components/viewer-provider";
+import { useStudyActivity } from "@/features/timer/components/use-study-activity";
 import { PuzzleResultScreen } from "@/features/games/shared/components/puzzle-result";
 import { BURST_MS } from "@/features/games/shared/components/win-burst";
 import { WinOverlay } from "@/features/games/shared/components/win-overlay";
@@ -49,6 +50,9 @@ export default function PuzzleApp<G extends PuzzleGame, S, D extends PuzzleRecor
   /** The win card is showing over the solved board. */
   const [winOpen, setWinOpen] = useState(false);
   const historyRef = useRef<D[] | null>(null);
+
+  // The study timer waits for the puzzle to be solved or given up (Queens, Zip and Patches); a paused puzzle is a safe point.
+  useStudyActivity({ active: view === "playing" && !!game && !result, paused: game?.status === "paused" });
 
   useEffect(() => {
     historyRef.current = history;

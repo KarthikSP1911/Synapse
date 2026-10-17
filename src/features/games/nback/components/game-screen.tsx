@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { usePlayFocus } from "@/components/layout/use-play-focus";
+import { useStudyActivity } from "@/features/timer/components/use-study-activity";
 import { Board } from "@/features/games/nback/components/board";
 import { Lives } from "@/features/games/nback/components/lives";
 import { ResponseBar } from "@/features/games/nback/components/response-bar";
@@ -29,6 +30,8 @@ const clock = (ms: number): string => {
 export function GameScreen({ config, seed, onFinish, onQuit }: { config: NBackConfig; seed: number; onFinish: (result: RunnerResult) => void; onQuit: () => void }) {
   usePlayFocus(true);
   const session = useNBackSession({ config, seed, onFinish });
+  // The study timer waits for this session to end (an unlimited one gets its 3-minute grace); a paused game is a safe point.
+  useStudyActivity({ active: true, endless: config.unlimited, paused: session.paused });
   const { stage, paused, count, view, trial, lives, flash, evaluated, pressedMask, feedback, elapsedMs, pause, resume, respond, finishNow } = session;
   const [confirmQuit, setConfirmQuit] = useState(false);
   const [confirmFinish, setConfirmFinish] = useState(false);
@@ -104,7 +107,7 @@ export function GameScreen({ config, seed, onFinish, onQuit }: { config: NBackCo
   return (
     <div className="container play-screen nb-screen flex flex-col py-3 sm:py-4">
       <div className="play-landscape mx-auto flex min-h-0 w-full max-w-lg flex-1 flex-col gap-3">
-        <div className="flex shrink-0 items-center justify-between gap-2">
+        <div data-timer-clear="soft" className="flex shrink-0 items-center justify-between gap-2">
           <Button variant="ghost" size="sm" className="-ml-2" onClick={openQuit}>
             <X /> Quit
           </Button>

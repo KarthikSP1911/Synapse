@@ -10,6 +10,7 @@ import type { SaveState } from "@/features/games/shared/components/result-parts"
 import { SetupScreen } from "@/features/games/sudoku/components/setup-screen";
 import { StatsPanel } from "@/features/games/sudoku/components/stats-panel";
 import { useLocalStore, useViewerInfo } from "@/features/auth/components/viewer-provider";
+import { useStudyActivity } from "@/features/timer/components/use-study-activity";
 import { freezeForStorage, hasProgress, newGame, resumeGame, toSessionData } from "@/features/games/sudoku/lib/game";
 import { generatePuzzle } from "@/features/games/sudoku/lib/generator";
 import { computeStats } from "@/features/games/sudoku/lib/stats";
@@ -45,6 +46,9 @@ export default function SudokuApp() {
   const [failed, setFailed] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const historyRef = useRef<StoredSession[] | null>(null);
+
+  // The study timer waits for the puzzle to be solved or given up; a paused puzzle is a safe point.
+  useStudyActivity({ active: view === "playing" && !!game, paused: game?.status === "paused" });
 
   useEffect(() => {
     historyRef.current = history;

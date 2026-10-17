@@ -419,7 +419,7 @@ export function Board({
       : `${placeName(cursor, cols)}. ${at[cursor] >= 0 ? `Clue: ${describeClue(puzzle.clues[at[cursor]])}.` : owner[cursor] >= 0 ? "In a patch. Enter erases it." : "Empty."}${shownDraft ? ` Drawing, ${cells.length} ${cells.length === 1 ? "cell" : "cells"}.` : ""}`;
 
   return (
-    <div className="pt-board" data-covered={covered ? "true" : undefined} data-won={won ? "true" : undefined} data-soft={soft ? "true" : undefined} data-holding={lifted !== null ? "true" : undefined} style={style}>
+    <div data-timer-clear className="pt-board" data-covered={covered ? "true" : undefined} data-won={won ? "true" : undefined} data-soft={soft ? "true" : undefined} data-holding={lifted !== null ? "true" : undefined} style={style}>
       <div
         ref={ref}
         role="group"

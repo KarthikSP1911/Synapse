@@ -107,9 +107,11 @@ export type Corner = "tl" | "tr" | "bl" | "br";
 export interface WidgetPrefs {
   side: Side;
   corner: Corner;
+  /** The floating widget is tucked away into the header icon while a timer runs (it comes back by itself at the time's-up alert). */
+  hidden: boolean;
 }
 
-export const DEFAULT_PREFS: WidgetPrefs = { side: "front", corner: "br" };
+export const DEFAULT_PREFS: WidgetPrefs = { side: "front", corner: "br", hidden: false };
 const CORNERS: readonly Corner[] = ["tl", "tr", "bl", "br"];
 
 export function parsePrefs(raw: unknown): WidgetPrefs {
@@ -117,6 +119,7 @@ export function parsePrefs(raw: unknown): WidgetPrefs {
   return {
     side: raw.side === "back" ? "back" : "front",
     corner: CORNERS.includes(raw.corner as Corner) ? (raw.corner as Corner) : DEFAULT_PREFS.corner,
+    hidden: raw.hidden === true,
   };
 }
 

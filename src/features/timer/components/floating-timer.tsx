@@ -15,7 +15,8 @@ import { formatOver, formatRemaining } from "@/features/timer/lib/duration";
 import { LONG_PRESS_MS, exceedsSlop, releaseGesture } from "@/features/timer/lib/gesture";
 import { unlockAlertSound } from "@/features/timer/lib/alert";
 import { studyTimer } from "@/features/timer/lib/store";
-import { TIMER_STATE_KEY, loadPrefs, saveLastMinutes, savePrefs, type WidgetPrefs } from "@/features/timer/lib/storage";
+import { TIMER_STATE_KEY, saveLastMinutes } from "@/features/timer/lib/storage";
+import { useWidgetPrefs } from "@/features/timer/components/use-widget-prefs";
 
 /** Edge length of the widget: normally, while the user is in a game or session, and as a last resort when space is tight. */
 const FULL = 72;
@@ -53,7 +54,7 @@ export function FloatingTimer() {
   const viewerTag = viewer.kind === "user" ? `user:${viewer.userId}` : viewer.kind === "guest" ? "guest" : null;
   const snapshot = useTimerSnapshot();
   const view = useTimerView(snapshot);
-  const [prefs, setPrefs] = useState<WidgetPrefs>(loadPrefs);
+  const [prefs, updatePrefs] = useWidgetPrefs();
   const [panel, setPanel] = useState<Panel>(null);
   const [drag, setDrag] = useState<Point | null>(null);
 
@@ -67,8 +68,11 @@ export function FloatingTimer() {
   const expired = view.phase === "waiting" || view.phase === "alerting" || view.phase === "overrun";
   // Past zero the overrun must be visible, so the focus side is not offered.
   const side = expired ? "front" : prefs.side;
-  const openPanel: Panel = panel === "setup" && !hasTimer ? "setup" : panel === "menu" && hasTimer ? "menu" : null;
+  // The options menu opens with or without a timer (idle it offers only Hide); the length chooser only without one.
+  const openPanel: Panel = panel === "setup" && !hasTimer ? "setup" : panel === "menu" ? "menu" : null;
   const showAlert = view.phase === "alerting" || view.phase === "overrun";
+  // Hidden into the header icon, running or not; at the time's-up alert it comes back by itself so the banner and badge are seen.
+  const concealed = prefs.hidden && !showAlert;
 
   // ---- Wiring to the shared timer ------------------------------------------------
 
@@ -136,18 +140,14 @@ export function FloatingTimer() {
 
   // ---- Actions -------------------------------------------------------------------
 
-  const updatePrefs = useCallback((next: WidgetPrefs) => {
-    setPrefs(next);
-    savePrefs(next);
-  }, []);
-
   const start = useCallback(
     (minutes: number) => {
       saveLastMinutes(minutes);
       // This tap is the moment the browser lets the alert sound be unlocked.
       unlockAlertSound();
       studyTimer().start(minutes);
-      updatePrefs({ ...prefs, side: "front" });
+      // A new timer always starts visible, on the countdown side.
+      updatePrefs({ ...prefs, side: "front", hidden: false });
       closePanel(true);
     },
     [prefs, updatePrefs, closePanel]
@@ -170,9 +170,7 @@ export function FloatingTimer() {
     else if (!expired) updatePrefs({ ...prefs, side: prefs.side === "front" ? "back" : "front" });
   }, [hasTimer, expired, prefs, updatePrefs]);
 
-  const openMenu = useCallback(() => {
-    if (hasTimer) setPanel("menu");
-  }, [hasTimer]);
+  const openMenu = useCallback(() => setPanel("menu"), []);
 
   // ---- Pointer: tap flips, long-press opens options, dragging moves it ----------------------
 
@@ -229,7 +227,7 @@ export function FloatingTimer() {
 
   // ---- Render ----------------------------------------------------------------------
 
-  if (!enabled || !layout) return null;
+  if (!enabled || !layout || concealed) return null;
   let placement: Placement | null = layout.placement;
   if (!placement) {
     // No free spot for the widget itself; the alert must still be reachable, so it takes the smallest size in the remembered corner.
@@ -244,7 +242,6 @@ export function FloatingTimer() {
   const below = (placement.rect.top + placement.rect.bottom) / 2 < layout.viewport.height / 2;
   const alignRight = (placement.rect.left + placement.rect.right) / 2 > layout.viewport.width / 2;
   const hidden = layout.placement === null;
-  const dim = compact && openPanel === null && drag === null && !showAlert;
 
   const label = !hasTimer
     ? "Start a study timer"
@@ -287,8 +284,8 @@ export function FloatingTimer() {
         }}
         className={cn(
           "st-stage block size-full touch-none select-none rounded-full outline-none transition-opacity duration-200 [-webkit-touch-callout:none] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none",
-          hidden && "pointer-events-none opacity-0",
-          dim && "opacity-50 hover:opacity-100 focus-visible:opacity-100"
+          // Fully opaque even in a game: the widget gets smaller there, never see-through, so the time is always readable.
+          hidden && "pointer-events-none opacity-0"
         )}
       >
         <span className="st-card block" data-side={side}>
@@ -304,13 +301,13 @@ export function FloatingTimer() {
       </button>
       {hasTimer && <span id={descId} className="sr-only">{spoken}</span>}
 
-      {hasTimer && !hidden && size >= 36 && (
+      {!hidden && size >= 36 && (
         <button
           type="button"
           aria-label="Study timer options"
           aria-haspopup="menu"
           onClick={() => setPanel((current) => (current === "menu" ? null : "menu"))}
-          className="absolute -right-2 -top-2 grid size-5 place-items-center rounded-full border border-border bg-popover text-[11px] leading-none text-muted-foreground opacity-0 shadow-card outline-none hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100"
+          className="absolute -right-2 -top-2 grid size-5 place-items-center rounded-full border border-border bg-card text-[11px] leading-none text-muted-foreground opacity-0 shadow-card outline-none hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100"
         >
           <span aria-hidden>⋯</span>
         </button>
@@ -321,13 +318,19 @@ export function FloatingTimer() {
           {openPanel === "setup" && <TimerSetupPopover onStart={start} />}
           {openPanel === "menu" && (
             <TimerOptionsMenu
+              hasTimer={hasTimer}
               canExtend={snapshot.timer?.alertedAt === null}
               onExtend={() => {
                 studyTimer().extend();
                 closePanel(true);
               }}
+              onHide={() => {
+                updatePrefs({ ...prefs, hidden: true });
+                setPanel(null);
+              }}
               onStop={() => {
                 studyTimer().stop();
+                updatePrefs({ ...prefs, hidden: false });
                 closePanel(true);
               }}
             />

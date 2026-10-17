@@ -178,7 +178,7 @@ export function Board({
   const hintCells = useMemo(() => new Set(hint?.cells ?? []), [hint]);
 
   return (
-    <div className="qn-board" data-covered={covered ? "true" : undefined} data-won={won ? "true" : undefined}>
+    <div data-timer-clear className="qn-board" data-covered={covered ? "true" : undefined} data-won={won ? "true" : undefined}>
       <div
         ref={ref}
         role="group"

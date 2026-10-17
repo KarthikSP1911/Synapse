@@ -77,8 +77,55 @@ describe("study timer controller", () => {
     assert.equal(alerts.length, 1);
     assert.equal(view().phase, "alerting");
     host.advance(60 * MIN);
+    assert.equal(alerts.length, 8, "one beep at expiry, then every 2 s while the banner shows, and no more");
+    assert.equal(host.pending, 0, "nothing left scheduled once the banner is gone");
+  });
+
+  it("repeats the beep every 2 seconds for the 15 seconds the banner shows", () => {
+    const { host, controller, alerts } = setup();
+    controller.start(5);
+    host.advance(5 * MIN);
     assert.equal(alerts.length, 1);
-    assert.equal(host.pending, 0, "nothing left scheduled once alerted");
+    host.advance(1999);
+    assert.equal(alerts.length, 1);
+    host.advance(1);
+    assert.equal(alerts.length, 2);
+    host.advance(12_000);
+    assert.equal(alerts.length, 8, "beeps at 0, 2, 4 ... 14 s");
+    host.advance(10_000);
+    assert.equal(alerts.length, 8);
+  });
+
+  it("keeps repeating with the sound setting of the area that was open, even though it has been left", () => {
+    const { host, controller, alerts } = setup();
+    controller.start(5);
+    const handle = controller.registerActivity({ endless: false, paused: false }, { soundOn: () => false });
+    host.advance(6 * MIN);
+    handle.release();
+    host.advance(4000);
+    assert.deepEqual(alerts, [false, false, false]);
+  });
+
+  it("stops beeping the moment the user quits or stops the timer", async () => {
+    const { host, controller, alerts } = setup();
+    controller.start(5);
+    host.advance(5 * MIN + 3000);
+    assert.equal(alerts.length, 2);
+    await controller.quit();
+    host.advance(30_000);
+    assert.equal(alerts.length, 2);
+    assert.equal(host.pending, 0);
+  });
+
+  it("only the tab that raised the alert beeps repeatedly", () => {
+    const backend = new MemoryBackend();
+    const host = new FakeHost();
+    const tabA = setup("guest", backend, host);
+    tabA.controller.start(5);
+    const tabB = setup("guest", backend, host);
+    host.advance(5 * MIN + 20_000);
+    assert.equal(tabA.alerts.length + tabB.alerts.length, 8);
+    assert.ok(tabA.alerts.length === 0 || tabB.alerts.length === 0);
   });
 
   it("is correct after a refresh mid-countdown: a new controller reads the absolute end time", () => {

@@ -228,7 +228,7 @@ export function GameScreen({ rounds, sound, soundOn, onSoundChange, onFinished, 
 
   return (
     <div className="fixed inset-0 z-[70] flex flex-col overflow-hidden bg-background" aria-label="MindSprint round">
-      <header data-timer-clear className="flex items-center justify-between gap-3 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-6">
+      <header data-timer-clear="soft" className="flex items-center justify-between gap-3 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-6">
         <Button variant="ghost" size="sm" onClick={openQuit}>
           <X /> Quit
         </Button>
@@ -354,7 +354,7 @@ export function GameScreen({ rounds, sound, soundOn, onSoundChange, onFinished, 
         {phase.kind === "result" && (
           <div className="flex min-h-0 flex-1 flex-col">
             <div className="min-h-0 flex-1 overflow-y-auto px-5">
-              <div data-timer-clear className="mx-auto w-full max-w-xl space-y-5 py-4">
+              <div data-timer-clear="soft" className="mx-auto w-full max-w-xl space-y-5 py-4">
                 <div className="space-y-1 text-center">
                   <p
                     className={cn(
@@ -371,7 +371,7 @@ export function GameScreen({ rounds, sound, soundOn, onSoundChange, onFinished, 
                 <RoundResult round={phase.round} outcome={phase.outcome} />
               </div>
             </div>
-            <div data-timer-clear className="border-t border-border bg-background px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
+            <div data-timer-clear="soft" className="border-t border-border bg-background px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
               <div className="mx-auto max-w-xl">
                 <Button size="xl" className="w-full" onClick={next} autoFocus>
                   {isLast ? "See results" : "Next round"} <ArrowRight />

@@ -30,7 +30,7 @@ export function ResponseBar({
 }) {
   const active = STREAMS.filter((s) => streams[s]);
   return (
-    <div className="nb-responses grid shrink-0 gap-2 sm:gap-3" style={{ gridTemplateColumns: `repeat(${active.length}, minmax(0, 1fr))` }} role="group" aria-label="Mark a match">
+    <div data-timer-clear className="nb-responses grid shrink-0 gap-2 sm:gap-3" style={{ gridTemplateColumns: `repeat(${active.length}, minmax(0, 1fr))` }} role="group" aria-label="Mark a match">
       {active.map((stream) => {
         const Icon = ICON[stream];
         const pressed = (pressedMask & STREAM_BIT[stream]) !== 0;

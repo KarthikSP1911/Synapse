@@ -130,7 +130,7 @@ export function Board({
   const points = path.map((c) => `${(c % puzzle.cols) + 0.5},${Math.floor(c / puzzle.cols) + 0.5}`).join(" ");
 
   return (
-    <div className="zp-board" data-covered={covered ? "true" : undefined} data-won={won ? "true" : undefined} style={style}>
+    <div data-timer-clear className="zp-board" data-covered={covered ? "true" : undefined} data-won={won ? "true" : undefined} style={style}>
       <div
         ref={ref}
         role="group"

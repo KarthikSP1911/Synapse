@@ -72,6 +72,20 @@ describe("keeping clear of what the user is working on", () => {
     for (const c of corners) assert.ok(placed && (placed.rect.right <= c.left || placed.rect.left >= c.right || placed.rect.bottom <= c.top || placed.rect.top >= c.bottom));
   });
 
+  it("avoids soft obstacles while it can, but goes over them rather than disappearing", () => {
+    const softAtBr = rectAt("br", full);
+    const placed = placeWidget("br", phone, [full, small], [], [softAtBr]);
+    assert.notDeepEqual(placed?.spot, { kind: "corner", corner: "br" }, "a free spot is preferred");
+
+    // Soft rows everywhere: with no free spot the widget stays on screen, at its remembered corner.
+    const rows: Rect[] = [{ left: 0, top: 0, right: 360, bottom: 740 }];
+    const over = placeWidget("br", phone, [full, small], [], rows);
+    assert.deepEqual(over?.spot, { kind: "corner", corner: "br" });
+
+    // A hard obstacle is never covered, whatever the soft ones allow.
+    assert.equal(placeWidget("br", phone, [full, small], rows, rows), null);
+  });
+
   it("shrinks before giving up, and returns null when there is no room at all", () => {
     // Everything but a sliver is the answer area.
     const whole: Rect = { left: 0, top: 0, right: 360, bottom: 740 };
@@ -102,8 +116,16 @@ describe("remembered widget state", () => {
   it("remembers which side was showing and which corner it sat in across a refresh", () => {
     const store = memory();
     assert.deepEqual(loadPrefs(store), DEFAULT_PREFS);
-    savePrefs({ side: "back", corner: "tl" }, store);
-    assert.deepEqual(loadPrefs(store), { side: "back", corner: "tl" });
+    savePrefs({ side: "back", corner: "tl", hidden: false }, store);
+    assert.deepEqual(loadPrefs(store), { side: "back", corner: "tl", hidden: false });
+  });
+
+  it("remembers that the widget was hidden into the header icon, and only for a real true", () => {
+    const store = memory();
+    assert.equal(loadPrefs(store).hidden, false);
+    savePrefs({ side: "front", corner: "br", hidden: true }, store);
+    assert.equal(loadPrefs(store).hidden, true);
+    for (const odd of ['{"hidden":"yes"}', '{"hidden":1}', '{"hidden":null}']) assert.equal(loadPrefs(memory({ [TIMER_UI_KEY]: odd })).hidden, false, odd);
   });
 
   it("falls back to the defaults for a damaged or hand-edited value", () => {
@@ -117,7 +139,7 @@ describe("remembered widget state", () => {
 
   it("survives storage being unavailable", () => {
     assert.deepEqual(loadPrefs(null), DEFAULT_PREFS);
-    savePrefs({ side: "back", corner: "tr" }, null);
+    savePrefs({ side: "back", corner: "tr", hidden: false }, null);
     const throwing: KeyValue = {
       getItem: () => {
         throw new Error("blocked");

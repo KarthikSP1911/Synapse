@@ -25,6 +25,9 @@ export function ConnectionBadge({ className }: { className?: string }) {
     hint = `${waiting}. ${failed ? "Synapse will try again shortly." : ""}`.trim();
   }
   if (!label) return null;
+  // "Syncing…" and "Waiting to sync" come and go every minute as the app quietly uploads, which is noise on a phone's crowded header.
+  // On phones only the states that need the user's attention show: offline, and sync paused (uploads keep failing).
+  const routine = online && (syncing || (pending > 0 && !failed));
 
   const Icon = online ? RefreshCw : CloudOff;
   return (
@@ -33,6 +36,7 @@ export function ConnectionBadge({ className }: { className?: string }) {
       title={hint}
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full border border-border px-2.5 py-0.5 text-xs font-medium text-muted-foreground",
+        routine && "max-sm:hidden",
         className
       )}
     >

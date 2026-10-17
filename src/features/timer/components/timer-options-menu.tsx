@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Plus, Square } from "lucide-react";
+import { EyeOff, Plus, Square } from "lucide-react";
 
-/** Opened by a long-press, a right-click, the Menu key or the ⋯ button on a running timer. */
-export function TimerOptionsMenu({ canExtend, onExtend, onStop }: { canExtend: boolean; onExtend: () => void; onStop: () => void }) {
+/** Opened by a long-press, a right-click, the Menu key or the ⋯ button. Idle it offers only Hide; running it adds +5 min and Stop. */
+export function TimerOptionsMenu({ hasTimer, canExtend, onExtend, onHide, onStop }: { hasTimer: boolean; canExtend: boolean; onExtend: () => void; onHide: () => void; onStop: () => void }) {
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -27,15 +27,20 @@ export function TimerOptionsMenu({ canExtend, onExtend, onStop }: { canExtend: b
   const item = "flex h-9 w-full items-center gap-2 rounded-md px-2.5 text-left text-sm outline-none transition-colors hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:h-11";
 
   return (
-    <div ref={rootRef} role="menu" aria-label="Study timer options" onKeyDown={onKeyDown} className="w-44 rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-pop">
-      {canExtend && (
+    <div ref={rootRef} role="menu" aria-label="Study timer options" onKeyDown={onKeyDown} className="w-56 rounded-xl border border-border bg-card p-1 text-card-foreground shadow-pop">
+      {hasTimer && canExtend && (
         <button type="button" role="menuitem" className={item} onClick={onExtend}>
           <Plus className="size-4" aria-hidden /> Add 5 min
         </button>
       )}
-      <button type="button" role="menuitem" className={`${item} text-destructive`} onClick={onStop}>
-        <Square className="size-4" aria-hidden /> Stop timer
+      <button type="button" role="menuitem" className={item} onClick={onHide}>
+        <EyeOff className="size-4" aria-hidden /> {hasTimer ? "Hide (keeps running)" : "Hide"}
       </button>
+      {hasTimer && (
+        <button type="button" role="menuitem" className={`${item} text-destructive`} onClick={onStop}>
+          <Square className="size-4" aria-hidden /> Stop timer
+        </button>
+      )}
     </div>
   );
 }

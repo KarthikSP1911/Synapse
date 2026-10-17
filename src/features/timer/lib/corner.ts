@@ -75,11 +75,19 @@ export interface Placement {
 }
 
 /**
- * Picks where to put the widget: the remembered corner if nothing marked `data-timer-clear` is under it, otherwise the
- * nearest free corner, then a free slot on a side edge. `sizes` run from the largest to the smallest, so a tight screen
- * shrinks the widget before giving up. Null means there is no room at all.
+ * Picks where to put the widget: the remembered corner if nothing is under it, otherwise the nearest free corner, then a
+ * free slot on a side edge. `sizes` run from the largest to the smallest, so a tight screen shrinks the widget before
+ * giving up. Null means there is no room at all.
+ *
+ * There are two kinds of obstacle. `hard` ones (the board, the answer box, the keypad) are never covered. `soft` ones (rows of
+ * buttons, scores) are avoided while there is room, but when that leaves no spot at all the widget goes over them rather than
+ * disappearing: a timer nobody can see is worse than one the user may have to drag aside.
  */
-export function placeWidget(preferred: Corner, viewport: Viewport, sizes: readonly Size[], obstacles: readonly Rect[]): Placement | null {
+export function placeWidget(preferred: Corner, viewport: Viewport, sizes: readonly Size[], hard: readonly Rect[], soft: readonly Rect[] = []): Placement | null {
+  return place(preferred, viewport, sizes, [...hard, ...soft]) ?? (soft.length > 0 ? place(preferred, viewport, sizes, hard) : null);
+}
+
+function place(preferred: Corner, viewport: Viewport, sizes: readonly Size[], obstacles: readonly Rect[]): Placement | null {
   for (const size of sizes) {
     const home = center(spotRect({ kind: "corner", corner: preferred }, viewport, size));
     const spots: Spot[] = [

@@ -91,7 +91,7 @@ export function Board({ cells, puzzle, selected, errors, onSelect, covered = fal
   const tabStop = selected ?? 0;
 
   return (
-    <div className="sdk-board w-full" style={{ "--sdk": ACCENT.sudoku } as CSSProperties}>
+    <div data-timer-clear className="sdk-board w-full" style={{ "--sdk": ACCENT.sudoku } as CSSProperties}>
       <div ref={gridRef} role="group" aria-label="Sudoku board" className="sdk-grid select-none" aria-hidden={covered || undefined} style={covered ? { filter: "blur(14px)", pointerEvents: "none" } : undefined}>
         {Array.from({ length: SIZE }, (_, b) => (
           <div key={b} className="sdk-box">

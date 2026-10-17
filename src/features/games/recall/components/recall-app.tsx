@@ -10,6 +10,7 @@ import { SummaryScreen } from "@/features/games/recall/components/summary-screen
 import type { SaveState } from "@/features/games/shared/components/result-parts";
 import { useLocalStore, useViewerInfo } from "@/features/auth/components/viewer-provider";
 import { createSoundPlayer } from "@/lib/sound";
+import { useStudyActivity } from "@/features/timer/components/use-study-activity";
 import { computeStats } from "@/features/games/recall/lib/stats";
 import { defaultSetups, loadHistory, loadMode, loadSetups, loadSound, saveMode, saveSession, saveSetups, saveSound, type StoredSession } from "@/features/games/recall/lib/storage";
 import { syncRecall } from "@/features/games/recall/lib/sync";
@@ -67,6 +68,9 @@ export default function RecallApp() {
   }, [sound]);
 
   useEffect(() => () => sound.close(), [sound]);
+
+  // The study timer waits for the whole session to be answered and saved before it alerts, and uses this game's sound setting.
+  useStudyActivity({ active: view === "playing" && !!game && !game.finished, soundOn: () => soundOn });
 
   useEffect(() => {
     if (!store) return;
