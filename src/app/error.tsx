@@ -8,7 +8,7 @@ import { log } from "@/lib/logger";
 
 const COPY = {
   offline: { title: "You're offline", text: "This page needs a connection. Check your network and try again." },
-  outdated: { title: "Mathz was updated", text: "This page was opened before an update. Reload it to carry on." },
+  outdated: { title: "Synapse was updated", text: "This page was opened before an update. Reload it to carry on." },
   failed: { title: "Something went wrong", text: "We couldn't load this page. This is usually a temporary database or network problem." },
 } as const;
 

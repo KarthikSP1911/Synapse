@@ -17,11 +17,11 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: { default: "Mathz · Mental maths practice", template: "%s · Mathz" },
+  title: { default: "Synapse · Mental maths practice", template: "%s · Synapse" },
   description:
     "Build mental-maths speed with adaptive practice in multiplication, percentages, fractions and squares, plus spaced repetition and detailed progress tracking.",
-  applicationName: "Mathz",
-  appleWebApp: { capable: true, title: "Mathz", statusBarStyle: "default" },
+  applicationName: "Synapse",
+  appleWebApp: { capable: true, title: "Synapse", statusBarStyle: "default" },
   formatDetection: { telephone: false },
 };
 

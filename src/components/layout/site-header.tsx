@@ -28,9 +28,9 @@ export const MOBILE_NAV_HEIGHT = "3.75rem";
 
 function Logo() {
   return (
-    <Link href="/" className="flex items-center gap-2.5 rounded-md" aria-label="Mathz home">
-      <LogoMark className="size-7" />
-      <span className="text-[15px] font-semibold tracking-tight">Mathz</span>
+    <Link href="/" className="flex items-center gap-2.5 rounded-md" aria-label="Synapse home">
+      <LogoMark className="size-9" />
+      <span className="text-[15px] font-semibold tracking-tight">Synapse</span>
     </Link>
   );
 }

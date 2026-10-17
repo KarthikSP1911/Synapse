@@ -4,7 +4,7 @@ import { log } from "@/lib/logger";
 import { useEffect } from "react";
 
 /**
- * Registers the service worker (what makes Mathz open offline) in production builds only. In development a
+ * Registers the service worker (what makes Synapse open offline) in production builds only. In development a
  * worker would serve stale chunks and fight hot reloading.
  *
  * It also asks the browser not to evict this site's storage under pressure. Practice done offline lives in

@@ -88,7 +88,7 @@ export default function AuthForm({ mode, next }: { mode: "login" | "signup"; nex
       </Button>
 
       <p className="col-span-full text-center text-sm text-muted-foreground">
-        {signup ? "Already have an account? " : "New to Mathz? "}
+        {signup ? "Already have an account? " : "New to Synapse? "}
         <Link
           href={signup ? "/login" : "/signup"}
           className="rounded-sm text-link underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-ring"

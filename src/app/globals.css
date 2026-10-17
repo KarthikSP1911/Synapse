@@ -331,7 +331,7 @@
   place-items: center;
   background: var(--background);
   color: var(--foreground);
-  animation: splash-out 0.45s ease-in 1.5s forwards;
+  animation: splash-out 0.5s ease-in 2.6s forwards;
 }
 /* Already played this session (set by the script in the root layout), or the user asked for less motion. */
 html[data-splash="skip"] .splash {
@@ -343,23 +343,47 @@ html[data-splash="skip"] .splash {
     visibility: hidden;
   }
 }
-.splash-logo path {
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: splash-tile 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
+/* The brain is revealed left to right (circuit side, then colour side) while it settles into place, and a thin bar fills beneath it. */
+.splash-logo {
+  -webkit-mask-image: linear-gradient(90deg, #000 40%, transparent 60%);
+  mask-image: linear-gradient(90deg, #000 40%, transparent 60%);
+  -webkit-mask-size: 250% 100%;
+  mask-size: 250% 100%;
+  animation:
+    splash-wipe 1.8s cubic-bezier(0.65, 0, 0.35, 1) 0.15s both,
+    splash-settle 1.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.15s both;
 }
-.splash-logo path:nth-of-type(1) { animation-delay: 0.05s; }
-.splash-logo path:nth-of-type(2) { animation-delay: 0.15s; }
-.splash-logo path:nth-of-type(3) { animation-delay: 0.25s; }
-.splash-logo path:nth-of-type(4) { animation-delay: 0.35s; }
-.splash-name {
-  animation: splash-rise 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) 0.55s both;
+.splash-bar {
+  width: 180px;
+  height: 3px;
+  border-radius: 9999px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--foreground) 12%, transparent);
+  opacity: 0;
+  animation: splash-fade 0.3s ease-out 0.3s forwards;
 }
-@keyframes splash-tile {
-  from { opacity: 0; transform: scale(0.3); }
+.splash-bar::after {
+  content: "";
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ff2d55, #ffcc00, #04c45f, #00b4ff);
+  transform-origin: left;
+  animation: splash-fill 1.8s cubic-bezier(0.65, 0, 0.35, 1) 0.4s both;
 }
-@keyframes splash-rise {
-  from { opacity: 0; transform: translateY(10px); }
+@keyframes splash-wipe {
+  from { -webkit-mask-position: 100% 0; mask-position: 100% 0; }
+  to { -webkit-mask-position: 0 0; mask-position: 0 0; }
+}
+@keyframes splash-settle {
+  from { opacity: 0; transform: scale(0.94); filter: blur(6px); }
+  to { opacity: 1; transform: scale(1); filter: blur(0); }
+}
+@keyframes splash-fill {
+  from { transform: scaleX(0); }
+}
+@keyframes splash-fade {
+  to { opacity: 1; }
 }
 @media (prefers-reduced-motion: reduce) {
   .splash { display: none; }

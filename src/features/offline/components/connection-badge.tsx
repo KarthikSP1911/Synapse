@@ -22,7 +22,7 @@ export function ConnectionBadge({ className }: { className?: string }) {
     hint = "Sending your practice to your account.";
   } else if (waiting) {
     label = failed ? "Sync paused" : "Waiting to sync";
-    hint = `${waiting}. ${failed ? "Mathz will try again shortly." : ""}`.trim();
+    hint = `${waiting}. ${failed ? "Synapse will try again shortly." : ""}`.trim();
   }
   if (!label) return null;
 
