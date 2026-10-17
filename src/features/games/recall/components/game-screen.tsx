@@ -248,7 +248,7 @@ export function GameScreen({ config, sound, soundOn, onSoundChange, onFinished, 
 
   return (
     <div className="fixed inset-0 z-[70] flex flex-col overflow-hidden bg-background" aria-label="Number Recall round">
-      <header className="flex items-center justify-between gap-3 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-6">
+      <header data-timer-clear="soft" className="flex items-center justify-between gap-3 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-6">
         <Button variant="ghost" size="sm" onClick={openQuit}>
           <X /> Quit
         </Button>
@@ -301,7 +301,7 @@ export function GameScreen({ config, sound, soundOn, onSoundChange, onFinished, 
             {phase.kind === "flash" && (
               <>
                 {/* Only the item on screen is in the page: the rest of the sequence is not rendered anywhere. */}
-                <div className="flex h-44 items-center justify-center sm:h-56" aria-hidden>
+                <div data-timer-clear className="flex h-44 items-center justify-center sm:h-56" aria-hidden>
                   {phase.visible && (
                     <p key={phase.index} className="animate-in fade-in zoom-in-95 font-mono text-[9rem] font-semibold leading-none tabular-nums duration-100 sm:text-[12rem]">
                       {sequence[phase.index]}
@@ -320,7 +320,7 @@ export function GameScreen({ config, sound, soundOn, onSoundChange, onFinished, 
 
         {phase.kind === "answer" && (
           <div className="flex min-h-0 flex-1 flex-col justify-center overflow-y-auto">
-            <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-5 px-5 py-4">
+            <div data-timer-clear className="mx-auto flex w-full max-w-2xl flex-col items-center gap-5 px-5 py-4">
               <div className="space-y-1 text-center">
                 <p className="text-2xl font-semibold tracking-tight">Enter the sequence</p>
                 <p className="text-sm text-muted-foreground">
@@ -356,7 +356,7 @@ export function GameScreen({ config, sound, soundOn, onSoundChange, onFinished, 
         {phase.kind === "result" && (
           <div className="flex min-h-0 flex-1 flex-col">
             <div className="min-h-0 flex-1 overflow-y-auto px-5">
-              <div className="mx-auto w-full max-w-2xl space-y-5 py-4">
+              <div data-timer-clear="soft" className="mx-auto w-full max-w-2xl space-y-5 py-4">
                 <div className="space-y-1 text-center">
                   <p
                     className={cn(
@@ -381,7 +381,7 @@ export function GameScreen({ config, sound, soundOn, onSoundChange, onFinished, 
                 )}
               </div>
             </div>
-            <div className="border-t border-border bg-background px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
+            <div data-timer-clear="soft" className="border-t border-border bg-background px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
               <div className="mx-auto max-w-2xl">
                 <Button size="xl" className="w-full" onClick={next} autoFocus>
                   {isLast ? "See results" : "Next round"} <ArrowRight />

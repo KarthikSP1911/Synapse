@@ -50,14 +50,16 @@ export function measureViewport(): Viewport {
   };
 }
 
-export function measureObstacles(viewport: Viewport): Rect[] {
-  const found: Rect[] = [];
+/** What is on screen that the widget should keep off: `data-timer-clear` (never covered) and `data-timer-clear="soft"` (avoided if there is room). */
+export function measureObstacles(viewport: Viewport): { hard: Rect[]; soft: Rect[] } {
+  const hard: Rect[] = [];
+  const soft: Rect[] = [];
   for (const el of document.querySelectorAll(`[${CLEAR_ATTRIBUTE}]`)) {
     const r = el.getBoundingClientRect();
     if (r.width <= 0 || r.height <= 0 || r.bottom <= 0 || r.right <= 0 || r.top >= viewport.height || r.left >= viewport.width) continue;
-    found.push({ left: r.left, top: r.top, right: r.right, bottom: r.bottom });
+    (el.getAttribute(CLEAR_ATTRIBUTE) === "soft" ? soft : hard).push({ left: r.left, top: r.top, right: r.right, bottom: r.bottom });
   }
-  return found;
+  return { hard, soft };
 }
 
 export interface WidgetLayout {
@@ -83,7 +85,8 @@ export function useWidgetPlacement(corner: Corner, sizes: readonly Size[], enabl
     let pending: ReturnType<typeof setTimeout> | undefined;
     const compute = () => {
       const viewport = measureViewport();
-      const next: WidgetLayout = { placement: placeWidget(corner, viewport, sizes, measureObstacles(viewport)), viewport };
+      const { hard, soft } = measureObstacles(viewport);
+      const next: WidgetLayout = { placement: placeWidget(corner, viewport, sizes, hard, soft), viewport };
       setLayout((current) => (same(current, next) ? current : next));
     };
     // Content changes come in bursts (a flashing number, a typing answer): look at most every 150 ms.

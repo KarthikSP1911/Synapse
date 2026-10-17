@@ -13,6 +13,7 @@ function BoardView({ grid, stimulus, empty = false }: { grid: number; stimulus: 
   const lit = stimulus && !empty ? stimulus : null;
   return (
     <div
+      data-timer-clear
       className="nb-board"
       role="img"
       aria-label={lit ? `${grid} by ${grid} board. ${describeStimulus(lit, grid)}.` : `${grid} by ${grid} board, no stimulus`}

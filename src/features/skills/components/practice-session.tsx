@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { AnswerKeypad, useTouchKeypad } from "@/components/common/answer-keypad";
 import { Button } from "@/components/ui/button";
 import { usePracticeSound } from "@/features/skills/components/use-practice-sound";
+import { useStudyActivity } from "@/features/timer/components/use-study-activity";
 import { coinsLabel } from "@/features/rewards/components/coin-icon";
 import { HintFeedback } from "@/features/rewards/components/hint-controls";
 import { usePaidHint } from "@/features/rewards/components/use-paid-hint";
@@ -106,6 +107,8 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
   const [questionLimit, setQuestionLimit] = useState<number>(0);
   const [questionLeft, setQuestionLeft] = useState<number | null>(null);
   const [paused, setPaused] = useState(false);
+  /** Set once the session has been ended (by the user, by its own clock or by its last question). */
+  const [ended, setEnded] = useState(false);
   const summaryHref = summaryUrl(sessionId);
   const touchKeypad = useTouchKeypad();
   const { player: sound, soundOn, changeSound } = usePracticeSound();
@@ -141,6 +144,7 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
     // The countdown calls this on every tick once it reaches zero; only the first call may run.
     if (finishingRef.current) return;
     finishingRef.current = true;
+    setEnded(true);
     try {
       await request(`/api/sessions/${sessionId}/end`, { method: "POST" });
     } catch (err) {
@@ -148,6 +152,25 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
     }
     router.push(summaryUrl(sessionId));
   }, [sessionId, router, request]);
+
+  // The study timer waits for the session to end. Endless sessions have no natural end, so they get its 3-minute grace; a paused one is a safe point.
+  useStudyActivity({
+    active: !!question && !ended,
+    endless: !!question && !isTimed && targetCount === null,
+    paused,
+    soundOn: () => soundOn,
+    flush: async () => {
+      // Quit from the timer: end what has been answered so it is saved, as "End session" does. An untouched session is left as it is.
+      if (stats.total === 0 || finishingRef.current) return;
+      finishingRef.current = true;
+      setEnded(true);
+      try {
+        await request(`/api/sessions/${sessionId}/end`, { method: "POST" });
+      } catch (err) {
+        log.error("Could not end the session on the server (the timer quit goes on)", err, { sessionId });
+      }
+    },
+  });
 
   /** Expresses the server's deadline on this device's clock so a skewed clock cannot shift the countdown. */
   const syncDeadline = useCallback((startedAt: string, duration: number, pausedMs: number, serverNow: number) => {
@@ -164,6 +187,7 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
         if (!res.ok) throw new Error(`Request failed (${res.status})`);
         const data = await res.json();
         if (data.finished) {
+          setEnded(true);
           router.push(summaryUrl(sessionId));
           return;
         }
@@ -263,6 +287,7 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
 
         const next = () => {
           if (data.finished) {
+            setEnded(true);
             router.push(summaryHref);
             return;
           }
@@ -486,7 +511,7 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
 
       {/* Top bar */}
       <header className="container flex h-16 items-center justify-between gap-3">
-        <div className="flex items-center gap-1">
+        <div data-timer-clear="soft" className="flex items-center gap-1">
           <Button
             variant="ghost"
             size="sm"
@@ -505,7 +530,7 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
           </Button>
         </div>
 
-        <div className="flex items-center gap-3 text-sm tabular-nums sm:gap-4">
+        <div data-timer-clear="soft" className="flex items-center gap-3 text-sm tabular-nums sm:gap-4">
           {questionLimit > 0 && questionLeft !== null && !feedback && (
             <span
               className={cn(
@@ -553,6 +578,7 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
         </p>
         <div
           key={`${question.id}-${questionNumber}`}
+          data-timer-clear
           className={cn(
             "max-w-3xl animate-in fade-in zoom-in-95 text-center duration-200 select-none",
             promptSize(question.prompt),
@@ -563,7 +589,7 @@ export default function PracticeSession({ sessionId, store }: PracticeSessionPro
           {question.prompt}
         </div>
 
-        <form id="answer-form" onSubmit={handleSubmit} className={cn("flex w-full max-w-sm flex-col items-center gap-3", showKeypad ? "mt-6" : "mt-10 gap-4 sm:mt-14")}>
+        <form id="answer-form" data-timer-clear onSubmit={handleSubmit} className={cn("flex w-full max-w-sm flex-col items-center gap-3", showKeypad ? "mt-6" : "mt-10 gap-4 sm:mt-14")}>
           {isChoice ? (
             <div className="grid w-full gap-2" role="group" aria-label={`Answer for ${question.prompt}`}>
               {question.choices?.map((choice, index) => {

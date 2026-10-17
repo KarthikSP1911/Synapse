@@ -10,7 +10,7 @@ import { SIZE, WIN_TILE } from "@/features/games/game2048/lib/types";
  */
 export function Board({ tiles, overlay, description }: { tiles: readonly UiTile[]; overlay?: ReactNode; description: string }) {
   return (
-    <div className="g48-board relative w-full" style={{ "--g48": ACCENT.game2048 } as CSSProperties}>
+    <div data-timer-clear className="g48-board relative w-full" style={{ "--g48": ACCENT.game2048 } as CSSProperties}>
       <div className="g48-frame" role="group" aria-label={description} tabIndex={0}>
         <div className="g48-cells" aria-hidden>
           {Array.from({ length: SIZE * SIZE }, (_, i) => (

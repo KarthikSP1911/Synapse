@@ -212,7 +212,7 @@ export function GameScreen({ initial, settings, onSettingsChange, onChange, onEn
     <div className="play-screen play-below-lg sdk-screen py-3 lg:container lg:py-8" data-won={finished ? "true" : undefined}>
       <div className="sdk-layout mx-auto flex min-h-0 w-full flex-1 flex-col gap-2 lg:grid lg:max-w-5xl lg:flex-none lg:grid-cols-[minmax(0,34rem)_20rem] lg:justify-center lg:gap-8">
         <section aria-label="Game" className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 lg:block lg:flex-none lg:space-y-3">
-          <div className="sdk-side flex items-center justify-between gap-2">
+          <div data-timer-clear="soft" className="sdk-side flex items-center justify-between gap-2">
             <Button variant="ghost" size="sm" className="-ml-2 pointer-coarse:h-11" onClick={() => onLeave(latest.current)} aria-label="Back">
               <ArrowLeft /> <span className="hidden sm:inline short:hidden">Back</span>
             </Button>
@@ -241,7 +241,7 @@ export function GameScreen({ initial, settings, onSettingsChange, onChange, onEn
           </div>
 
           {/* A message (why a move was refused, what a hint did) covers the counters instead of costing a row of its own. */}
-          <div className="sdk-side relative min-h-8 text-sm">
+          <div data-timer-clear="soft" className="sdk-side relative min-h-8 text-sm">
             <dl className="flex h-full items-center gap-4" aria-label="Game statistics">
               <div className="flex items-baseline gap-1.5">
                 <dt className="text-muted-foreground">Next</dt>
@@ -282,7 +282,7 @@ export function GameScreen({ initial, settings, onSettingsChange, onChange, onEn
         </section>
 
         <aside aria-label="Controls" className="min-w-0 space-y-2 lg:space-y-3">
-          <div className="sdk-side grid grid-cols-4 gap-2">
+          <div data-timer-clear="soft" className="sdk-side grid grid-cols-4 gap-2">
             <button type="button" className={toolButton} onClick={doUndo} disabled={!playing || game.undoStack.length === 0} aria-label="Undo">
               <Undo2 className="size-5" aria-hidden />
               Undo

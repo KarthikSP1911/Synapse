@@ -31,7 +31,7 @@ export function NumberPad({
   className?: string;
 }) {
   return (
-    <div role="group" aria-label={notesMode ? "Number pad (pencil marks)" : "Number pad"} className={cn("grid grid-cols-9 gap-1 short:grid-cols-5 short:gap-2 sm:gap-2 lg:grid-cols-5", className)}>
+    <div data-timer-clear role="group" aria-label={notesMode ? "Number pad (pencil marks)" : "Number pad"} className={cn("grid grid-cols-9 gap-1 short:grid-cols-5 short:gap-2 sm:gap-2 lg:grid-cols-5", className)}>
       {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => {
         const left = Math.max(0, 9 - counts[d]);
         return (
