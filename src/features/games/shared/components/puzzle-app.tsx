@@ -15,7 +15,11 @@ import type { PuzzleGame, PuzzleKit } from "@/features/games/shared/components/p
 import type { SaveState } from "@/features/games/shared/components/result-parts";
 import { DIFFICULTIES, DIFFICULTY_LABEL, newClientId, type Difficulty } from "@/features/games/shared/lib/puzzle-session";
 import { elapsedAt } from "@/features/games/shared/lib/clock";
+import { sameValue } from "@/lib/same-value";
 import type { PuzzleRecord } from "@/features/games/shared/lib/puzzle-stats";
+
+/** The difficulty a game opens with until the player picks another. */
+const DEFAULT_DIFFICULTY: Difficulty = "easy";
 
 type View = "setup" | "playing" | "result";
 type Tab = "play" | "stats";
@@ -42,7 +46,7 @@ export default function PuzzleApp<G extends PuzzleGame, S, D extends PuzzleRecor
   const [saved, setSaved] = useState<G | null>(null);
   const [history, setHistory] = useState<D[] | null>(null);
   const [settings, setSettings] = useState<S>(kit.defaultSettings);
-  const [difficulty, setDifficulty] = useState<Difficulty>("easy");
+  const [difficulty, setDifficulty] = useState<Difficulty>(DEFAULT_DIFFICULTY);
   const [result, setResult] = useState<{ data: D; previousBestMs: number | null; previousBestScore: number; saveState: SaveState } | null>(null);
   const [generating, setGenerating] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -325,7 +329,6 @@ export default function PuzzleApp<G extends PuzzleGame, S, D extends PuzzleRecor
       <div role="tabpanel" id={`${prefix}-panel-play`} aria-labelledby={`${prefix}-tab-play`} hidden={tab !== "play"}>
         <PuzzleSetup
           accent={kit.accent}
-          idPrefix={prefix}
           difficulty={difficulty}
           onDifficulty={changeDifficulty}
           descriptions={kit.difficultyDescription}
@@ -333,6 +336,12 @@ export default function PuzzleApp<G extends PuzzleGame, S, D extends PuzzleRecor
           bestTimes={bestTimes}
           saved={saved ? { difficulty: saved.difficulty, playedMs: elapsedAt(saved, 0), progress: kit.progressLabel(saved) } : null}
           assistance={<Assistance settings={settings} onChange={changeSettings} />}
+          customized={!sameValue(settings, kit.defaultSettings)}
+          changed={!sameValue(settings, kit.defaultSettings) || difficulty !== DEFAULT_DIFFICULTY}
+          onReset={() => {
+            changeSettings(kit.defaultSettings);
+            changeDifficulty(DEFAULT_DIFFICULTY);
+          }}
           rules={kit.rules}
           generating={generating}
           failed={failed}

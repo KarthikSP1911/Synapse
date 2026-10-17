@@ -2,6 +2,7 @@
 
 import { useId } from "react";
 import { cn } from "@/lib/utils";
+import { HelpTip } from "@/components/form/help-tip";
 
 export function Chip({
   active,
@@ -55,21 +56,19 @@ export function ExercisePicker({
   };
   return (
     <div className="grid gap-2 sm:grid-cols-2" role="group" aria-label="Exercise types">
-      {options.map(({ value, label, description, disabledReason }) => {
-        const unavailable = Boolean(disabledReason);
-        const active = !unavailable && selected.includes(value);
+      {/* A type that cannot be asked right now is left out, not dimmed. */}
+      {options.filter((o) => !o.disabledReason).map(({ value, label, description }) => {
+        const active = selected.includes(value);
         return (
           <button
             key={value}
             type="button"
             aria-pressed={active}
-            disabled={unavailable}
             onClick={() => toggle(value)}
             className={cn(
               "flex flex-col items-start gap-0.5 rounded-lg border px-3.5 py-2.5 text-left transition-[color,background-color,border-color,transform] duration-150 active:scale-[0.98]",
               "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-              unavailable && "cursor-not-allowed border-dashed opacity-60 active:scale-100",
-              !unavailable && (active ? "border-foreground bg-accent" : "border-border hover:border-input hover:bg-accent/60")
+              active ? "border-foreground bg-accent" : "border-border hover:border-input hover:bg-accent/60"
             )}
           >
             <span className="flex items-center gap-2 text-sm font-medium">
@@ -85,7 +84,6 @@ export function ExercisePicker({
               {label}
             </span>
             <span className="pl-6 font-mono text-xs text-muted-foreground">{description}</span>
-            {disabledReason && <span className="pl-6 text-xs text-muted-foreground">{disabledReason}</span>}
           </button>
         );
       })}
@@ -94,15 +92,32 @@ export function ExercisePicker({
 }
 
 /** An on/off switch with a label. */
-export function Switch({ label, hint, checked, onChange }: { label: string; hint?: string; checked: boolean; onChange: (next: boolean) => void }) {
+export function Switch({
+  label,
+  hint,
+  note,
+  checked,
+  onChange,
+}: {
+  label: string;
+  /** Explanation shown only when the "?" is opened. */
+  hint?: string;
+  /** A line that is always visible, for anything that changes the rules. */
+  note?: string;
+  checked: boolean;
+  onChange: (next: boolean) => void;
+}) {
   const id = useId();
   return (
     <div className="flex items-center justify-between gap-4">
       <div className="min-w-0">
-        <p id={id} className="text-sm font-medium">
-          {label}
-        </p>
-        {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+        <div className="flex items-center gap-0.5">
+          <p id={id} className="text-sm font-medium">
+            {label}
+          </p>
+          {hint && <HelpTip label={label}>{hint}</HelpTip>}
+        </div>
+        {note && <p className="text-xs text-muted-foreground">{note}</p>}
       </div>
       <button
         type="button"

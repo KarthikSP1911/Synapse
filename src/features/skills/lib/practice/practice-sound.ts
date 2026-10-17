@@ -1,27 +1,11 @@
 import { createSoundPlayer, type SoundPlayer } from "@/lib/sound";
 
 /**
- * Sound for skill practice: the countdown cues and, in a session, a short cue after each answer. The choice is
- * remembered on this device, separately from the games' (`mathz:mindsprint:sound`), and defaults to on.
+ * Sound for skill practice: the countdown cues and, in a session, a short cue after each answer. The choice is the app-wide sound
+ * setting (`src/lib/sound-preference.ts`) and defaults to on.
  */
 
-export const PRACTICE_SOUND_KEY = "mathz:practice:sound";
-
-export function loadPracticeSound(): boolean {
-  try {
-    return localStorage.getItem(PRACTICE_SOUND_KEY) !== "off";
-  } catch {
-    return true;
-  }
-}
-
-export function savePracticeSound(enabled: boolean): void {
-  try {
-    localStorage.setItem(PRACTICE_SOUND_KEY, enabled ? "on" : "off");
-  } catch {
-    // Remembering the choice is a convenience only.
-  }
-}
+export { loadSoundPreference as loadPracticeSound, saveSoundPreference as savePracticeSound } from "@/lib/sound-preference";
 
 let shared: SoundPlayer | null = null;
 

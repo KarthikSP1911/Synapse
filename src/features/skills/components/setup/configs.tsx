@@ -1,9 +1,8 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { DEFAULT_BASE_RANGE, SQUARE_PRESETS } from "@/features/skills/lib/pools";
-import { DIFFICULTY_META, EXERCISE_META } from "@/features/skills/lib/meta";
-import { EXERCISE_TYPES, DIFFICULTIES, MAX_DIGITS, MAX_DIVISOR_DIGITS, type Difficulty } from "@/features/skills/lib/types";
+import { EXERCISE_META } from "@/features/skills/lib/meta";
+import { EXERCISE_TYPES, MAX_DIGITS, MAX_DIVISOR_DIGITS } from "@/features/skills/lib/types";
 import { MAX_BASE } from "@/features/skills/lib/ids";
 import type { SetupState } from "@/features/skills/lib/practice/setup-state";
 import { Chip, ExercisePicker } from "@/components/form/choice-controls";
@@ -251,29 +250,6 @@ export function DivisionConfig({ state, onChange }: { state: SetupState["divisio
   );
 }
 
-function DifficultyPicker({
-  value,
-  skill,
-  onChange,
-}: {
-  value: Difficulty;
-  skill: "percentage" | "fraction";
-  onChange: (next: Difficulty) => void;
-}) {
-  return (
-    <div>
-      <div className="grid grid-cols-3 gap-2" role="group" aria-label="Difficulty">
-        {DIFFICULTIES.map((d) => (
-          <Chip key={d} active={value === d} onClick={() => onChange(d)}>
-            {DIFFICULTY_META[d].label}
-          </Chip>
-        ))}
-      </div>
-      <p className="mt-2 text-sm text-muted-foreground">{DIFFICULTY_META[value].description[skill]}</p>
-    </div>
-  );
-}
-
 const exerciseOptions = (skill: "percentage" | "fraction" | "square") =>
   EXERCISE_TYPES[skill].map((value) => ({ value, ...EXERCISE_META[skill][value] }));
 
@@ -294,20 +270,6 @@ export function PercentageConfig({
           options={exerciseOptions("percentage")}
           selected={state.exerciseTypes}
           onChange={(exerciseTypes) => onChange({ ...state, exerciseTypes })}
-        />
-      </Section>
-      <Section title="Difficulty">
-        <DifficultyPicker
-          skill="percentage"
-          value={state.difficulty}
-          onChange={(difficulty) =>
-            onChange({
-              ...state,
-              difficulty,
-              baseMin: String(DEFAULT_BASE_RANGE[difficulty].baseMin),
-              baseMax: String(DEFAULT_BASE_RANGE[difficulty].baseMax),
-            })
-          }
         />
       </Section>
       <Section title="Number range" description="The size of the numbers you take a percentage of.">
@@ -336,9 +298,6 @@ export function FractionConfig({
           onChange={(exerciseTypes) => onChange({ ...state, exerciseTypes })}
         />
       </Section>
-      <Section title="Difficulty" description="Controls the size of the numerators and denominators and how tricky the simplifying is.">
-        <DifficultyPicker skill="fraction" value={state.difficulty} onChange={(difficulty) => onChange({ ...state, difficulty })} />
-      </Section>
     </div>
   );
 }
@@ -353,7 +312,6 @@ export function SquareConfig({
   const min = Number(state.rangeMin);
   const max = Number(state.rangeMax);
   const invalidRange = !(min >= 1 && max <= 100 && min <= max);
-  const activePreset = DIFFICULTIES.find((d) => SQUARE_PRESETS[d].rangeMin === min && SQUARE_PRESETS[d].rangeMax === max);
   return (
     <div className="grid gap-6">
       <Section title="Exercises" description="Squares and cubes, direct recall, reverse recall, or any mix. Cubes only go up to 20.">
@@ -363,24 +321,8 @@ export function SquareConfig({
           onChange={(exerciseTypes) => onChange({ ...state, exerciseTypes })}
         />
       </Section>
-      <Section title="Range" description="Which numbers to use. Pick a preset or set your own within 1–100; cubes use the part of the range up to 20.">
-        <div className="grid grid-cols-3 gap-2" role="group" aria-label="Range presets">
-          {DIFFICULTIES.map((d) => (
-            <Chip
-              key={d}
-              active={activePreset === d}
-              onClick={() => onChange({ ...state, rangeMin: String(SQUARE_PRESETS[d].rangeMin), rangeMax: String(SQUARE_PRESETS[d].rangeMax) })}
-              // On phones the three chips are too narrow for a label and its range side by side, so the range drops below the label.
-              className="h-auto min-h-11 flex-col gap-0.5 px-1 py-1.5 pointer-coarse:h-auto sm:h-9 sm:min-h-0 sm:flex-row sm:gap-0 sm:px-3 sm:py-0 pointer-coarse:sm:h-11"
-            >
-              {DIFFICULTY_META[d].label}
-              <span className="font-mono text-xs opacity-70 sm:ml-1.5">
-                {SQUARE_PRESETS[d].rangeMin}–{SQUARE_PRESETS[d].rangeMax}
-              </span>
-            </Chip>
-          ))}
-        </div>
-        <div className="mt-4 grid max-w-sm grid-cols-2 gap-3">
+      <Section title="Range" description="Which numbers to use, within 1–100. Cubes use the part of the range up to 20.">
+        <div className="grid max-w-sm grid-cols-2 gap-3">
           <NumberField id="range-min" label="From" value={state.rangeMin} min={1} max={100} invalid={invalidRange} onChange={(rangeMin) => onChange({ ...state, rangeMin })} />
           <NumberField id="range-max" label="To" value={state.rangeMax} min={1} max={100} invalid={invalidRange} onChange={(rangeMax) => onChange({ ...state, rangeMax })} />
         </div>

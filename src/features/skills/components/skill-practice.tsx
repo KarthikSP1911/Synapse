@@ -3,17 +3,20 @@
 import { log } from "@/lib/logger";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Infinity as InfinityIcon, ListOrdered, Timer, Volume2, VolumeX } from "lucide-react";
+import { Infinity as InfinityIcon, ListOrdered, Timer } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { localFetchFor, playHref } from "@/features/offline/lib/local-store";
 import { useLocalStore } from "@/features/auth/components/viewer-provider";
 import { DEFAULT_SETTINGS, isSessionChoice, loadSettings, type Settings } from "@/features/settings/lib/settings";
-import { configFromState, initialSetupState, loadExponentsSetup, saveExponentsSetup, type SetupState } from "@/features/skills/lib/practice/setup-state";
-import { buildPool } from "@/features/skills/lib/pools";
+import { configFromState, initialSetupState, type SetupState } from "@/features/skills/lib/practice/setup-state";
+import { loadFocus, loadSkillSetup, saveFocus, saveSkillSetup } from "@/features/skills/lib/practice/skill-memory";
+import { activePreset, applyPreset, isCustomized, presetRow, questionPoolSize, summarizeSkillSetup } from "@/features/skills/lib/practice/skill-presets";
 import { SKILL_META, exerciseLabel } from "@/features/skills/lib/meta";
 import { EXERCISE_TYPES, type Focus, type PracticeConfig, type Skill } from "@/features/skills/lib/types";
-import { Button } from "@/components/ui/button";
+import { sameValue } from "@/lib/same-value";
 import { PageHeader } from "@/components/layout/page-header";
+import { Section } from "@/components/layout/section";
+import { PresetRow, SettingsStatus, SetupLayout, StartButton } from "@/components/setup/setup-layout";
 import ReviewButton from "@/features/skills/components/review-button";
 import { StartCountdown } from "@/features/skills/components/start-countdown";
 import { usePracticeSound } from "@/features/skills/components/use-practice-sound";
@@ -58,7 +61,11 @@ interface SessionPlan {
   sessionMode: string;
 }
 
-/** One skill's page: its options, the session panel and the Start button. `/` only lists the skills. */
+/**
+ * One skill's page: a preset row and the Start button, with the detailed options under Customize. The options are remembered per
+ * skill on this device; the session length is not, because its starting point is the "Default session" in Settings.
+ * `/` only lists the skills.
+ */
 export default function SkillPractice({ skill }: { skill: Skill }) {
   const router = useRouter();
   // Sessions run on this device (see `src/features/offline/lib/guest/api.ts`), so starting one never waits on the network.
@@ -81,9 +88,9 @@ export default function SkillPractice({ skill }: { skill: Skill }) {
     const timer = setTimeout(() => {
       const loaded = loadSettings();
       setSettings(loaded);
-      const initial = initialSetupState(loaded);
-      // Exponents has many options, so it remembers the last ones used on this device.
-      setState(skill === "exponents" ? { ...initial, exponents: loadExponentsSetup(initial.exponents) } : initial);
+      // Every skill opens with the options it was last left with (the defaults the first time, or after Reset).
+      setState(loadSkillSetup(skill, initialSetupState(loaded)));
+      setFocus(loadFocus(skill));
       setSetupLoaded(true);
       setSessionMode(loaded.defaultSession);
       setKind(loaded.defaultSession.startsWith("timed:") ? "timed" : "count");
@@ -92,8 +99,12 @@ export default function SkillPractice({ skill }: { skill: Skill }) {
   }, [skill]);
 
   useEffect(() => {
-    if (skill === "exponents" && setupLoaded) saveExponentsSetup(state.exponents);
-  }, [skill, setupLoaded, state.exponents]);
+    if (setupLoaded) saveSkillSetup(skill, state);
+  }, [skill, setupLoaded, state]);
+
+  useEffect(() => {
+    if (setupLoaded) saveFocus(skill, focus);
+  }, [skill, setupLoaded, focus]);
 
   const switchKind = (next: "count" | "timed") => {
     setKind(next);
@@ -103,10 +114,8 @@ export default function SkillPractice({ skill }: { skill: Skill }) {
   };
 
   const built = useMemo(() => configFromState(skill, state), [skill, state]);
-  const poolSize = useMemo(() => {
-    if (!built.ok) return 0;
-    return built.config.skill === "multiplication" ? built.config.left.length * built.config.right.length : buildPool(built.config).length;
-  }, [built]);
+  const poolSize = useMemo(() => (built.ok ? questionPoolSize(built.config) : 0), [built]);
+  const defaults = useMemo(() => initialSetupState(settings), [settings]);
 
   const canStart = built.ok && poolSize > 0;
   const problem = !built.ok
@@ -161,141 +170,105 @@ export default function SkillPractice({ skill }: { skill: Skill }) {
   };
 
   const options = kind === "count" ? countModes : timedModes;
-  const formatSummary =
-    sessionMode === "endless"
-      ? "Endless session"
-      : sessionMode.startsWith("timed:")
-        ? `${timedModes.find((m) => m.value === sessionMode)?.label} challenge`
-        : `${sessionMode} questions`;
+  const row = presetRow(skill);
+  const presetOptions = [
+    ...row.presets,
+    ...(row.hasCustom ? [{ id: "custom", label: "Custom", description: "Set the options yourself under Customize. Changing any of them switches to Custom." }] : []),
+  ];
+  /** Different from a fresh page: the options came back from last time, or were changed here. */
+  const changed = setupLoaded && (!sameValue(state[skill], defaults[skill]) || focus !== "adaptive");
+
+  const reset = () => {
+    setState((current) => ({ ...current, [skill]: defaults[skill] }));
+    setFocus("adaptive");
+  };
 
   return (
     <div className="container space-y-6 py-8 sm:py-10">
       <PageHeader accent={skill} title={SKILL_META[skill].title} description={SKILL_META[skill].description} />
 
-      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
-        <div>
-          {skill === "multiplication" && (
-            <MultiplicationConfig state={state.multiplication} onChange={(multiplication) => setState((s) => ({ ...s, multiplication }))} />
-          )}
-          {skill === "addition" && <AdditionConfig state={state.addition} onChange={(addition) => setState((s) => ({ ...s, addition }))} />}
-          {skill === "subtraction" && (
-            <SubtractionConfig state={state.subtraction} onChange={(subtraction) => setState((s) => ({ ...s, subtraction }))} />
-          )}
-          {skill === "division" && <DivisionConfig state={state.division} onChange={(division) => setState((s) => ({ ...s, division }))} />}
-          {skill === "percentage" && (
-            <PercentageConfig state={state.percentage} onChange={(percentage) => setState((s) => ({ ...s, percentage }))} />
-          )}
-          {skill === "fraction" && <FractionConfig state={state.fraction} onChange={(fraction) => setState((s) => ({ ...s, fraction }))} />}
-          {skill === "square" && <SquareConfig state={state.square} onChange={(square) => setState((s) => ({ ...s, square }))} />}
-          {skill === "exponents" && <ExponentsConfig state={state.exponents} onChange={(exponents) => setState((s) => ({ ...s, exponents }))} />}
-        </div>
+      <SetupLayout
+        status={<SettingsStatus changed={changed} onReset={reset} />}
+        quick={<PresetRow label={row.label} options={presetOptions} value={activePreset(skill, state)} onChange={(id) => setState((current) => applyPreset(skill, current, id))} />}
+        customized={isCustomized(skill, state, defaults)}
+        customize={
+          <>
+            {skill === "multiplication" && <MultiplicationConfig state={state.multiplication} onChange={(multiplication) => setState((s) => ({ ...s, multiplication }))} />}
+            {skill === "addition" && <AdditionConfig state={state.addition} onChange={(addition) => setState((s) => ({ ...s, addition }))} />}
+            {skill === "subtraction" && <SubtractionConfig state={state.subtraction} onChange={(subtraction) => setState((s) => ({ ...s, subtraction }))} />}
+            {skill === "division" && <DivisionConfig state={state.division} onChange={(division) => setState((s) => ({ ...s, division }))} />}
+            {skill === "percentage" && <PercentageConfig state={state.percentage} onChange={(percentage) => setState((s) => ({ ...s, percentage }))} />}
+            {skill === "fraction" && <FractionConfig state={state.fraction} onChange={(fraction) => setState((s) => ({ ...s, fraction }))} />}
+            {skill === "square" && <SquareConfig state={state.square} onChange={(square) => setState((s) => ({ ...s, square }))} />}
+            {skill === "exponents" && <ExponentsConfig state={state.exponents} onChange={(exponents) => setState((s) => ({ ...s, exponents }))} />}
 
-        <aside
-          className="rounded-xl border border-border bg-card p-5 shadow-card lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto"
-          aria-label="Session options"
-        >
-          <h2 className="text-[15px] font-semibold tracking-tight">Session</h2>
-
-          <div role="tablist" aria-label="Session type" className="mt-4 grid grid-cols-2 gap-1 rounded-lg bg-secondary p-1">
-            {(
-              [
-                { id: "count", label: "Questions", icon: ListOrdered },
-                { id: "timed", label: "Timed", icon: Timer },
-              ] as const
-            ).map(({ id, label, icon: Icon }) => (
-              <button
-                key={id}
-                type="button"
-                role="tab"
-                aria-selected={kind === id}
-                onClick={() => switchKind(id)}
-                className={cn(
-                  "flex h-8 items-center justify-center gap-1.5 rounded-md text-sm font-medium transition-colors pointer-coarse:h-10",
-                  kind === id ? "bg-background text-foreground shadow-card" : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <Icon className="size-3.5" />
-                {label}
-              </button>
-            ))}
-          </div>
-
-          <div className="mt-4 grid grid-cols-3 gap-2" role="group" aria-label={kind === "count" ? "Number of questions" : "Duration"}>
-            {options.map(({ value, label }) => (
-              <Chip key={value} active={sessionMode === value} onClick={() => setSessionMode(value)} className="gap-1">
-                {value === "endless" && <InfinityIcon className="size-3.5" />}
-                {label}
-              </Chip>
-            ))}
-          </div>
-          <p className="mt-3 text-xs text-muted-foreground">
-            {kind === "count"
-              ? "Finish a fixed number of questions, or practise endlessly and end whenever you like."
-              : "Answer as many as you can before the clock runs out. Beat your personal best."}
-          </p>
-
-          <div className="mt-5 border-t border-border pt-4">
-            <h3 className="text-sm font-medium">Focus</h3>
-            <div className="mt-2 grid grid-cols-3 gap-2" role="group" aria-label="Practice focus">
-              {focuses.map(({ value, label }) => (
-                <Chip key={value} active={focus === value} onClick={() => setFocus(value)} className="px-1 text-[13px]">
-                  {label}
-                </Chip>
-              ))}
-            </div>
-            <p className="mt-2 text-xs text-muted-foreground">{focuses.find((f) => f.value === focus)?.help}</p>
-          </div>
-
-          <dl className="mt-5 space-y-2 border-t border-border pt-4 text-sm">
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">Skill</dt>
-              <dd className="font-medium">{SKILL_META[skill].title}</dd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">Format</dt>
-              <dd className="font-medium">{formatSummary}</dd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">Question pool</dt>
-              <dd className="font-mono font-medium tabular-nums">
-                {poolSize} {skill === "multiplication" ? "pairs" : "questions"}
-              </dd>
-            </div>
-          </dl>
-
-          {error && (
-            <p role="alert" className="mt-4 rounded-md bg-destructive-soft px-3 py-2 text-sm text-destructive">
-              {error}
-            </p>
-          )}
-          {problem && (
-            <p role="status" className="mt-4 rounded-md bg-warning-soft px-3 py-2 text-sm text-warning">
-              {problem}
-            </p>
-          )}
-
-          <div className="mt-5 flex gap-2">
-            <Button size="xl" className="min-w-0 flex-1 px-4" onClick={handleStart} disabled={!canStart || plan !== null || !store}>
-              Start practice
-              <ArrowRight />
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="xl"
-              className="w-12 px-0"
-              aria-label={soundOn ? "Sound on" : "Sound off"}
-              title={soundOn ? "Sound on. Plays the countdown and answer cues." : "Sound off"}
-              aria-pressed={soundOn}
-              onClick={() => changeSound(!soundOn)}
+            <Section
+              title="Session length"
+              description={kind === "count" ? "Finish a fixed number of questions, or practise endlessly and end whenever you like." : "Answer as many as you can before the clock runs out. Beat your personal best."}
             >
-              {soundOn ? <Volume2 /> : <VolumeX />}
-            </Button>
-          </div>
+              <div role="tablist" aria-label="Session type" className="grid max-w-xs grid-cols-2 gap-1 rounded-lg bg-secondary p-1">
+                {(
+                  [
+                    { id: "count", label: "Questions", icon: ListOrdered },
+                    { id: "timed", label: "Timed", icon: Timer },
+                  ] as const
+                ).map(({ id, label, icon: Icon }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    role="tab"
+                    aria-selected={kind === id}
+                    onClick={() => switchKind(id)}
+                    className={cn(
+                      "flex h-8 items-center justify-center gap-1.5 rounded-md text-sm font-medium transition-colors pointer-coarse:h-10",
+                      kind === id ? "bg-background text-foreground shadow-card" : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <Icon className="size-3.5" />
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6" role="group" aria-label={kind === "count" ? "Number of questions" : "Duration"}>
+                {options.map(({ value, label }) => (
+                  <Chip key={value} active={sessionMode === value} onClick={() => setSessionMode(value)} className="gap-1">
+                    {value === "endless" && <InfinityIcon className="size-3.5" />}
+                    {label}
+                  </Chip>
+                ))}
+              </div>
+            </Section>
 
-          <div className="mt-3 space-y-2 border-t border-border pt-4">
+            <Section title="Focus" description={focuses.find((f) => f.value === focus)?.help}>
+              <div className="grid max-w-md grid-cols-3 gap-2" role="group" aria-label="Practice focus">
+                {focuses.map(({ value, label }) => (
+                  <Chip key={value} active={focus === value} onClick={() => setFocus(value)} className="px-1 text-[13px]">
+                    {label}
+                  </Chip>
+                ))}
+              </div>
+            </Section>
+          </>
+        }
+        summary={built.ok ? summarizeSkillSetup({ skill, state, session: sessionMode, focus, pool: poolSize }) : "Choose your options under Customize to begin."}
+        problems={
+          <>
+            {error && (
+              <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive-soft px-4 py-3 text-sm text-destructive">
+                {error}
+              </p>
+            )}
+            {problem && (
+              <p role="status" className="rounded-lg border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning">
+                {problem}
+              </p>
+            )}
+          </>
+        }
+        footer={
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card px-5 py-3 shadow-card">
             {EXERCISE_TYPES[skill].length > 1 && (
-              <label className="flex items-center justify-between gap-3 text-sm">
+              <label className="flex items-center gap-3 text-sm">
                 <span className="text-muted-foreground">Review type</span>
                 <select
                   value={reviewType}
@@ -317,11 +290,11 @@ export default function SkillPractice({ skill }: { skill: Skill }) {
               source={{ reviewRecentDays: 7, skill, ...(reviewType ? { exerciseType: reviewType } : {}) }}
               label="Review mistakes from the last 7 days"
               variant="outline"
-              className="w-full"
             />
           </div>
-        </aside>
-      </div>
+        }
+        action={<StartButton label="Start practice" disabled={!canStart || plan !== null || !store} onClick={handleStart} />}
+      />
 
       {plan && <StartCountdown sound={sound} soundOn={soundOn} onSoundChange={changeSound} onComplete={createSession} onCancel={() => setPlan(null)} />}
     </div>

@@ -13,12 +13,14 @@ src/
     ui/                     primitives (button, card, input, ...)
     layout/                 page chrome: site header, page header + stat tiles, section card, logo, splash
     form/                   generic controls: choice-controls (Chip, ExercisePicker, Switch),
-                            number-controls (NumberField, Stepper, Slider)
+                            number-controls (NumberField, Stepper, Slider), help-tip (the "?" popover)
+    setup/                  setup-layout: the shared shape of every setup screen (see "Setup screens")
     common/                 small shared pieces: accent tile, skill icon, answer keypad, confirm dialog
   lib/                    Code shared by several features, UI-free.
     accent.ts rational.ts   accent colours; exact rational arithmetic
     random.ts timeline.ts   seedable RNG; countdown/flash schedule
     sound.ts records.ts     Web Audio cues; validation primitives for untrusted records
+    sound-preference.ts     the one app-wide sound setting; same-value.ts structural equality for "changed from defaults"
     utils.ts validation.ts nav.ts
   db/                     Drizzle schema, connection, SQL migrations (unchanged; drizzle-kit reads these)
   proxy.ts                Next.js proxy (auth redirects)
@@ -144,9 +146,10 @@ One ledger, two homes. A **ledger entry** has a unique idempotency key, a signed
 1. **Features over layers.** The code used to be `components/` and `lib/` with a folder per game inside each, so one
    change touched two distant trees. Grouping by feature keeps a game's UI, engine and storage together and makes
    cross-feature imports visible (and therefore fixable).
-2. **Shared only when shared.** Code moved to `lib/` or `components/` only if two features already used it. Setup
-   screens and stats panels differ per game (about 90% of their lines differ), so they stay per game rather than
-   being forced into a configurable super-component.
+2. **Shared only when shared.** Code moved to `lib/` or `components/` only if two features already used it. The
+   *controls* on a setup screen differ per game (about 90% of their lines differ) and stay per game; what every setup
+   screen has in common (layout, preset row, Customize, status line, Start button) is `components/setup`. Stats panels
+   still differ per game.
 3. **Pure logic separated from I/O.** The history upload route is `upload.ts` (pure, tested without a database) plus
    `route.ts` (auth + `NextResponse`); the per-game route files only supply their table mapping.
 4. **One logo file.** `public/brand/synapse-logo.png` is the Synapse brain. `components/layout/logo-mark.tsx` shows it in the
@@ -154,6 +157,20 @@ One ledger, two homes. A **ledger entry** has a unique idempotency key, a signed
 5. **No behaviour changes.** Database schema, migrations, API paths, request/response shapes, storage keys, scoring,
    settings and the service worker's route list are unchanged. The restructure was done with a codemod that only
    moved files and rewrote import specifiers.
+
+## Setup screens
+
+Every skill and game opens on the same two blocks (`components/setup/setup-layout.tsx`):
+
+- **Quick start**: one preset row (`PresetRow`: Difficulty, Mode, Tables, Size of numbers, Range) and a big Start button in the "Your session" card, which also holds the settings in one plain sentence (`summarizeConfig` / `summarizeSetup` / `summarizeSkillSetup`, each a pure function with tests).
+- **Customize**: a disclosure holding every detailed control. It is closed unless the settings are already custom (the preset is "Custom", or something outside the preset row differs from a fresh page), and picking "Custom" opens it. Inside it `Section` drops its own card (`BareSections`), so there are no boxes inside boxes.
+
+Choices that keep the screens quiet:
+
+- **Help on request.** `Stepper`, `Slider`, `Switch` and `Section` show their `hint` / `description` behind a "?" (`form/help-tip.tsx`, a Base UI popover). A rule-changing sentence (for example "Game Over: no coins") is passed as `note` or to `SetupLayout`'s `note` and stays visible; keep it to one line.
+- **Hide, do not dim.** A control that does not apply is not rendered (N-Back's colour and letter counts, Exponents' maximum result in power form, exercise types the answer mode cannot ask).
+- **Remembered, and said so.** Every screen restores its last settings: skills per skill (`lib/practice/skill-memory.ts`, `mathz:setup:<skill>` and `mathz:focus:<skill>`; Exponents keeps its older key), the games as before. When they differ from the defaults `SettingsStatus` shows "Using your last settings · Reset to defaults". The session length of a skill is deliberately *not* remembered: it starts from "Default session" in Settings.
+- **Global vs per session.** Sound and theme are global and live only on the Settings page (and the in-game mute). Sound is one preference, `mathz:sound` (`lib/sound-preference.ts`); the three older per-area keys are only read when the new one has never been saved, so an earlier mute is kept.
 
 ## Queens and Zip
 
@@ -251,7 +268,7 @@ An opt-in timer for a study session across every skill and game (`features/timer
 - **Controller** (`lib/controller.ts`): runs the machine against an injected clock (the same fake-clock pattern as the N-Back runner), sleeps until the next moment the state can change instead of polling, and asks again on `visibilitychange`, `pageshow`, `focus` and `storage`. Two tabs share one alert (the first to save owns it). While the banner shows, the beep and vibration repeat every 2 s in the tab that raised it.
 - **Rules**: idle at expiry alerts at once; mid-session it waits for the whole session, puzzle or game to end (a **paused** one is a safe point); endless activities (endless practice, 2048, unlimited N-Back) alert at game over or 3 minutes after expiry, whichever is first. "+5 min" works only before the alert (afterwards it would be a snooze). Quit flushes the activity (endless practice ends and saves what was answered), clears the timer and goes home, which also makes `SyncManager` upload.
 - **Storage** (device only): `mathz:timer:state` (`{ v, viewer, endsAt, alertedAt }`, validated; the viewer tag means another person on the device never inherits it), `mathz:timer:last` (last length) and `mathz:timer:ui` (flipped side and corner).
-- **Sound**: one beep from `lib/sound` (cue `alert`), silent when the area the user was in is muted (`mathz:practice:sound`, MindSprint or Recall; practice's flag when idle or in a game without sound; there is no separate mute). Vibration uses `navigator.vibrate` where it exists. After a page refresh browsers keep audio locked until the next tap, so the banner, not the beep, is the signal that always arrives.
+- **Sound**: one beep from `lib/sound` (cue `alert`), silent when sound is off (the one app-wide setting, `mathz:sound`; there is no separate mute). Vibration uses `navigator.vibrate` where it exists. After a page refresh browsers keep audio locked until the next tap, so the banner, not the beep, is the signal that always arrives.
 - **Screens report in through one hook**, `useStudyActivity({ active, endless, paused, soundOn, flush })`; becoming inactive or unmounting is the "session ended" report. Skills (`practice-session.tsx`), MindSprint, Recall, N-Back, Queens/Zip/Patches (`puzzle-app.tsx`), Sudoku and 2048 use it. Features do not import each other through it: the timer imports no game.
-- **Widget** (`components/floating-timer.tsx`, mounted once in the root layout): a stopwatch that opens the chooser; running it is a flip card (digital countdown / still analog dial); tap flips, long-press, right-click, the Menu key or the ⋯ button open the options (idle: just **Hide**; running: +5 min, **Hide**, Stop), and it can be dragged and snaps to the nearest corner. **Hide** tucks the widget into a stopwatch icon next to the theme toggle in the header (`timer-header-button.tsx`; the choice is `hidden` in `mathz:timer:ui`, shared through `lib/prefs-store.ts`); the timer keeps running, tapping the icon brings the widget back, and at the time's-up alert it returns by itself so the banner can be seen. In a game it shrinks but stays solid. Screens mark what it must keep off with a plain attribute (no imports): `data-timer-clear` is never covered (boards, answer boxes, prompts, keypads), `data-timer-clear="soft"` (rows of buttons) is avoided while there is room and covered when there is not, because an invisible timer is worse than one the user drags aside. `lib/corner.ts` holds the placement rules.
+- **Widget** (`components/floating-timer.tsx`, mounted once in the root layout): a stopwatch that opens the chooser; running it is a flip card (digital countdown / still analog dial); tap flips, long-press, right-click, the Menu key or the ⋯ button open the options (idle: just **Hide**; running: +5 min, **Hide**, Stop), and it can be dragged and snaps to the nearest corner. **Hide** tucks the widget into a stopwatch icon next to the theme toggle in the header (`timer-header-button.tsx`; the choice is `hidden` in `mathz:timer:ui`, shared through `lib/prefs-store.ts`); the timer keeps running, tapping the icon brings the widget back, and at the time's-up alert it returns by itself so the banner can be seen. In a game it shrinks but stays solid. Screens mark what it must keep off with a plain attribute (no imports): `data-timer-clear` is never covered (boards, answer boxes, prompts, keypads), `data-timer-clear="soft"` (rows of buttons) is avoided while there is room and covered when there is not, because an invisible timer is worse than one the user drags aside. `lib/corner.ts` holds the placement rules: corners first, then twelve resting places down each side edge, shrinking only when none is free, because the smallest size (28 px) has no room for digits and would look like a timer that is not running.
 - **Known limits**: the timer follows the system clock (changing it shifts the timer); a background tab with no foreground game cannot know a game is open in another tab, so it may alert while the other tab is mid-game.

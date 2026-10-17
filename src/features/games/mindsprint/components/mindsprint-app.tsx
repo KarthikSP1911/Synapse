@@ -209,7 +209,7 @@ export default function MindsprintApp() {
       </div>
 
       <div role="tabpanel" id="ms-panel-play" aria-labelledby="ms-tab-play" hidden={tab !== "play"}>
-        <SetupScreen sound={soundOn} onSoundChange={changeSound} problem={problem} starting={starting} onStart={start} />
+        <SetupScreen problem={problem} starting={starting} onStart={start} />
       </div>
       <div role="tabpanel" id="ms-panel-stats" aria-labelledby="ms-tab-stats" hidden={tab !== "stats"}>
         {tab === "stats" && <StatsPanel history={history} />}
