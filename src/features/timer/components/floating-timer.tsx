@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { Timer } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { headerCarriesTimerIcon } from "@/components/layout/site-header";
 import { useViewerInfo } from "@/features/auth/components/viewer-provider";
 import { BackFace, FrontFace, IdleFace } from "@/features/timer/components/timer-faces";
 import { TimerBanner, TimeUpBadge } from "@/features/timer/components/timer-banner";
@@ -227,7 +229,26 @@ export function FloatingTimer() {
 
   // ---- Render ----------------------------------------------------------------------
 
-  if (!enabled || !layout || concealed) return null;
+  if (!enabled || !layout) return null;
+  if (concealed) {
+    // The header icon is where a hidden timer lives; screens without a header (practice, auth) get a small restore button instead.
+    if (headerCarriesTimerIcon(pathname)) return null;
+    return (
+      <button
+        type="button"
+        aria-label={hasTimer ? "Study timer is running. Show it." : "Show the study timer"}
+        title="Show the study timer"
+        onClick={() => updatePrefs({ ...prefs, hidden: false })}
+        className={cn(
+          "fixed z-[75] grid size-8 place-items-center rounded-full border border-border bg-card text-muted-foreground shadow-card outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
+          prefs.corner.startsWith("t") ? "top-[max(0.75rem,env(safe-area-inset-top))]" : "bottom-[max(0.75rem,env(safe-area-inset-bottom))]",
+          prefs.corner.endsWith("l") ? "left-3" : "right-3"
+        )}
+      >
+        <Timer className="size-4" aria-hidden />
+      </button>
+    );
+  }
   let placement: Placement | null = layout.placement;
   if (!placement) {
     // No free spot for the widget itself; the alert must still be reachable, so it takes the smallest size in the remembered corner.
