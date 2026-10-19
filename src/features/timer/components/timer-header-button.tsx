@@ -8,7 +8,7 @@ import { useWidgetPrefs } from "@/features/timer/components/use-widget-prefs";
 /**
  * Where the floating timer goes when it is hidden from its options menu: a small stopwatch next to the theme toggle. The timer
  * keeps running (or stays unstarted); tapping the icon brings the widget back. It is only there while the widget is hidden and the
- * timer has not yet alerted (at the alert the widget returns by itself so the banner can be seen).
+ * timer has not yet alerted. Screens with no header (practice, auth) use a restore button in FloatingTimer instead (at the alert the widget returns by itself so the banner can be seen).
  */
 export function TimerHeaderButton() {
   const snapshot = useTimerSnapshot();

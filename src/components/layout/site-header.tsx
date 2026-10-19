@@ -25,6 +25,11 @@ export function showsMobileNav(pathname: string, viewer: "user" | "guest" | null
   return viewer !== null && !/^\/(practice\/\d+|play|login|signup)$/.test(pathname);
 }
 
+/** Whether the page has a header at all, so a hidden study timer has somewhere to collapse into (not the focus screens or the auth screens). */
+export function headerCarriesTimerIcon(pathname: string) {
+  return !/^\/(practice\/\d+|play|login|signup)$/.test(pathname);
+}
+
 /** Height of the tab bar without the device's bottom inset; other bottom-fixed UI offsets itself by this much. */
 export const MOBILE_NAV_HEIGHT = "3.75rem";
 
