@@ -231,8 +231,9 @@ export function FloatingTimer() {
 
   if (!enabled || !layout) return null;
   if (concealed) {
-    // The header icon is where a hidden timer lives; screens without a header (practice, auth) get a small restore button instead.
-    if (headerCarriesTimerIcon(pathname)) return null;
+    // The header icon is where a hidden timer lives; where the header is missing (practice, auth) or hidden (a game on a phone)
+    // there is nothing to tap, so a small restore button takes its place.
+    if (layout.headerShown && headerCarriesTimerIcon(pathname)) return null;
     return (
       <button
         type="button"
