@@ -66,9 +66,11 @@ export interface WidgetLayout {
   /** Where the widget goes, or null when there is no room anywhere (it then hides; the banner still works). */
   placement: Placement | null;
   viewport: Viewport;
+  /** Whether the page header is on screen right now (phones hide it while a game is on), i.e. whether its timer icon can be seen. */
+  headerShown: boolean;
 }
 
-const key = (l: WidgetLayout) => JSON.stringify([l.placement?.spot ?? null, l.placement?.size ?? null, l.viewport]);
+const key = (l: WidgetLayout) => JSON.stringify([l.placement?.spot ?? null, l.placement?.size ?? null, l.viewport, l.headerShown]);
 const same = (a: WidgetLayout | null, b: WidgetLayout): boolean => !!a && key(a) === key(b);
 
 /**
@@ -86,7 +88,7 @@ export function useWidgetPlacement(corner: Corner, sizes: readonly Size[], enabl
     const compute = () => {
       const viewport = measureViewport();
       const { hard, soft } = measureObstacles(viewport);
-      const next: WidgetLayout = { placement: placeWidget(corner, viewport, sizes, hard, soft), viewport };
+      const next: WidgetLayout = { placement: placeWidget(corner, viewport, sizes, hard, soft), viewport, headerShown: shown("header[data-chrome]") !== null };
       setLayout((current) => (same(current, next) ? current : next));
     };
     // Content changes come in bursts (a flashing number, a typing answer): look at most every 150 ms.
